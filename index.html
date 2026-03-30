@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DND TCG</title>
+<link rel="stylesheet" href="css/style.css" />
+<!-- Font Awesome para iconos de redes sociales -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+<!-- NAVBAR -->
+<nav>
+    <div class="nav-container">
+    <div class="name">Deck & Drift TCG</div>
+    <ul>
+        <li><a href="#" id="abrirModalProductos">Productos</a></li>
+        <li><a href="#" id="abrirCarrito"><i class="fas fa-shopping-cart"></i> Carrito <span id="cartCounter" class="cart-counter">0</span></a></li>
+    </ul>
+    </div>
+</nav>
+
+<!-- CONTENIDO PRINCIPAL ENVOLVIDO EN UN CONTENEDOR PARA EL FONDO -->
+<div class="main-content-wrapper">
+    <h1>Bienvenido a DND TCG</h1>
+    <p>¡Empieza tu aventura!</p>
+</div>
+
+<!-- CONTENEDOR PARA LAS TARJETAS DE SECCIÓN (CARTAS Y REDES SOCIALES) -->
+<div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; padding: 20px;">
+    <!-- NUEVA SECCIÓN: CARTAS FLOTANTES -->
+    <section id="floating-cards-section" class="content-section">
+        <h2>Explora Nuestras Cartas</h2>
+        <!-- Contenedor para el carrusel infinito -->
+        <div class="carousel-wrapper">
+            <div id="dynamicFloatingCardsContainer" class="floating-cards-container">
+                <!-- Las cartas se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+        <button id="viewAllCardsBtn" class="view-all-cards-button">Ver Todas las Cartas</button>
+    </section>
+
+    <!-- NUEVA SECCIÓN: REDES SOCIALES -->
+    <section id="social-media-section" class="content-section">
+        <h2>Síguenos en Redes</h2>
+        <p>Conéctate con nosotros y no te pierdas ninguna novedad.</p>
+        <div class="social-icons-container" style="margin-top: 25px;">
+            <a href="https://www.facebook.com/profile.php?id=61563669292858" target="_blank" aria-label="Visita nuestra página de Facebook">
+                <i class="fab fa-facebook"></i>
+            </a>
+            <a href="https://www.instagram.com/deckanddrift_sv/" target="_blank" aria-label="Visita nuestro perfil de Instagram">
+                <i class="fab fa-instagram"></i>
+            </a>
+            <a href="https://www.tiktok.com/@deckanddrift.sv?_t=ZM-8yT5h5LSCzo&_r=1" target="_blank" aria-label="Visita nuestro perfil de TikTok">
+                <i class="fab fa-tiktok"></i>
+            </a>
+            <a href="https://wa.link/nq7vky" target="_blank" aria-label="Envíanos un mensaje por WhatsApp">
+                <i class="fab fa-whatsapp"></i>
+            </a>
+        </div>
+    </section>
+</div>
+
+
+<!-- MODAL DE SELECCIÓN DE PRODUCTOS -->
+<div id="productSelectionModal" class="modal">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <span class="close" id="closeProductSelectionModal">&times;</span>
+        <h2>¿Qué te gustaría ver?</h2>
+        <div class="selection-options">
+            <button id="openCardsModalBtn" class="selection-button">Cartas</button>
+            <button id="openSealedProductsModalBtn" class="selection-button">Productos Sellados</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE CARTAS -->
+<div id="cardsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="close" id="closeCardsModal">&times;</span>
+            <h2>Cartas Disponibles</h2>
+            <input type="text" id="searchInput" placeholder="Buscar carta..." />
+            <select id="categoryFilter"></select>
+        </div>
+        <div id="cardsContainer" class="modal-body"></div>
+        <div id="paginationControls">
+            <button id="prevPageBtn">-</button>
+            <span id="pageInfo">Página 1 de 1</span>
+            <button id="nextPageBtn">+</button>
+        </div>
+        <!-- Botón de carrito flotante -->
+        <button class="modal-cart-btn">
+            <i class="fas fa-shopping-cart"></i>
+            <span class="cart-counter">0</span>
+        </button>
+    </div>
+</div>
+
+<!-- MODAL DE PRODUCTOS SELLADOS -->
+<div id="sealedProductsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="close" id="closeSealedProductsModal">&times;</span>
+            <h2>Productos Sellados Disponibles</h2>
+            <input type="text" id="sealedSearchInput" placeholder="Buscar producto sellado..." />
+            <select id="sealedTypeFilter"></select>
+        </div>
+        <div id="sealedProductsContainer" class="modal-body"></div>
+        <div id="sealedPaginationControls">
+            <button id="sealedPrevPageBtn">-</button>
+            <span id="sealedPageInfo">Página 1 de 1</span>
+            <button id="sealedNextPageBtn">+</button>
+        </div>
+        <!-- Botón de carrito flotante -->
+        <button class="modal-cart-btn">
+            <i class="fas fa-shopping-cart"></i>
+            <span class="cart-counter">0</span>
+        </button>
+    </div>
+</div>
+
+
+<!-- MODAL DEL CARRITO -->
+<div id="modalCarrito" class="modal">
+    <div class="modal-content">
+    <span class="close" id="cerrarCarrito">&times;</span>
+    <h2>Tu carrito</h2>
+    <div id="lista-carrito"></div>
+    <div>
+        <button id="vaciarCarrito">Vaciar carrito</button>
+        <button id="openCheckoutModalBtn">Proceder al Checkout</button>
+    </div>
+    </div>
+</div>
+
+<!-- NUEVO: MODAL DE SELECCIÓN DE MÉTODO DE ENTREGA -->
+<div id="deliveryMethodModal" class="modal">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <span class="close" id="closeDeliveryMethodModal">&times;</span>
+        <h2>Elige un método de entrega</h2>
+        <div class="selection-options">
+            <button id="deliveryOptionBtn" class="selection-button">Envío a Domicilio</button>
+            <button id="pickupOptionBtn" class="selection-button">Retiro en Tienda</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- MODAL DE CHECKOUT (AJUSTADO) -->
+<div id="checkoutModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close" id="closeCheckoutModal">&times;</span>
+        <h2 id="checkoutTitle">Confirmar Pedido</h2>
+        <form id="checkoutForm">
+            <div class="form-group">
+                <label for="customerName">Nombre de quien recibe:</label>
+                <input type="text" id="customerName" required placeholder="Tu nombre completo">
+            </div>
+            <div class="form-group" id="phoneField">
+                <label for="customerPhone">Número de Teléfono (WhatsApp):</label>
+                <input type="tel" id="customerPhone" required placeholder="Ej: +5037xxxxxxx">
+            </div>
+            <div class="form-group" id="addressField">
+                <label for="customerAddress">Dirección de Envío:</label>
+                <textarea id="customerAddress" required placeholder="Calle, número, colonia, ciudad, etc."></textarea>
+            </div>
+            <button type="button" id="confirmOrderBtn">
+                <span id="checkoutLoadingSpinner" class="spinner" style="display:none;"></span>
+                Confirmar Pedido
+            </button>
+        </form>
+    </div>
+</div>
+
+
+<!-- MODAL PARA MENSAJES (éxito/error) -->
+<div id="messageModal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="closeMessageModal">&times;</span>
+        <h2 id="messageModalTitle"></h2>
+        <p id="messageModalText" style="text-align: center; margin-bottom: 20px;"></p>
+        <div style="text-align: center;">
+            <button id="okMessageModal">Aceptar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Notificación "Agregado al carrito" -->
+<div id="addedToCartNotification" class="added-to-cart-notification"></div>
+
+<!-- FOOTER -->
+<footer>
+    <p>&copy; 2025 DND TCG. Todos los derechos reservados.</p>
+</footer>
+
+<!-- SCRIPT -->
+<script src="js/index.js" type="module"></script>
+</body>
+</html>
