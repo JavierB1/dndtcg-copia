@@ -3,100 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administración - DND TCG</title>
-    <!-- Fuentes y Iconos -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Panel de Administración DND TCG</title>
+    <!-- Incluir CSS del panel de administración (separado del de la tienda) -->
     <link rel="stylesheet" href="css/admin.css">
+    <!-- Opcional: Para iconos, si se usa FontAwesome u otra librería -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
 </head>
 <body>
-    <!-- Overlay para móvil -->
-    <div id="sidebar-overlay" class="sidebar-overlay"></div>
-
     <div class="admin-container">
-        <!-- Sidebar Navigation -->
-        <aside id="sidebar-menu" class="sidebar">
+        <!-- Sidebar (Barra Lateral) / Menú Desplegable en Móvil -->
+        <aside class="sidebar" id="sidebar-menu">
             <div class="sidebar-header">
-                <img src="https://placehold.co/40x40/6366f1/ffffff?text=DND" alt="Logo" class="sidebar-logo">
-                <span class="sidebar-title">DND TCG Admin</span>
-                <button id="closeSidebarBtn" class="close-sidebar-btn"><i class="fas fa-times"></i></button>
+                <h3>Admin DND TCG</h3>
+                <!-- Botón de cerrar añadido para la vista móvil -->
+                <button id="closeSidebarBtn" class="close-sidebar-btn">&times;</button>
             </div>
             <nav class="sidebar-nav">
                 <ul>
-                    <li><a href="#" id="nav-dashboard" class="active"><i class="fas fa-chart-line"></i> Dashboard</a></li>
-                    <li><a href="#" id="nav-cards"><i class="fas fa-id-card"></i> Cartas</a></li>
-                    <li><a href="#" id="nav-sealed-products"><i class="fas fa-box-open"></i> Productos Sellados</a></li>
-                    <li><a href="#" id="nav-categories"><i class="fas fa-tags"></i> Categorías</a></li>
-                    <li><a href="#" id="nav-orders"><i class="fas fa-shopping-cart"></i> Pedidos</a></li>
-                    <li class="nav-divider"></li>
-                    <li><a href="#" id="nav-logout" class="nav-logout"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
+                    <li><a href="#" id="nav-dashboard"><i class="fas fa-tachometer-alt"></i>&nbsp;Dashboard</a></li>
+                    <li><a href="#" id="nav-cards"><i class="fas fa-file-alt"></i>&nbsp;Gestión de Cartas</a></li>
+                    <li><a href="#" id="nav-sealed-products"><i class="fas fa-box-open"></i>&nbsp;Gestión Productos Sellados</a></li>
+                    <li><a href="#" id="nav-categories"><i class="fas fa-tags"></i>&nbsp;Gestión de Categorías</a></li>
+                    <li><a href="#" id="nav-orders"><i class="fas fa-shopping-cart"></i>&nbsp;Pedidos</a></li>
+                    <li><a href="#" id="nav-logout"><i class="fas fa-sign-out-alt"></i>&nbsp;Cerrar Sesión</a></li>
                 </ul>
             </nav>
         </aside>
 
-        <!-- Main Content Area -->
+        <!-- Overlay para cuando el menú desplegable está abierto en móvil -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- Contenido Principal del Panel -->
         <main class="main-content">
             <header class="main-header">
-                <button id="sidebarToggleBtn" class="menu-toggle"><i class="fas fa-bars"></i></button>
-                <div class="header-info">
-                    <h1 id="section-title">Dashboard</h1>
-                    <button id="refreshAdminPageBtn" class="btn-refresh"><i class="fas fa-sync-alt"></i></button>
+                <!-- Botón para abrir el menú desplegable en móvil -->
+                <button id="sidebarToggleBtn" class="sidebar-toggle-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>Bienvenido <span class="desktop-only-title"></span></h1>
+                <div class="header-right-controls">
+                    <button id="refreshAdminPageBtn" class="refresh-button">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <div class="user-info">
+                        <span>Admin User</span>
+                        <!-- Aquí podrías mostrar el ID del usuario si implementas Firebase Auth -->
+                    </div>
                 </div>
             </header>
 
-            <div class="content-body">
-                <!-- Dashboard Section -->
-                <section id="dashboard-section" class="admin-section active">
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-id-card"></i></div>
-                            <div class="stat-details">
-                                <h3 id="totalCardsCount">0</h3>
-                                <p>Total de Cartas</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-box"></i></div>
-                            <div class="stat-details">
-                                <h3 id="totalSealedProductsCount">0</h3>
-                                <p>Productos Sellados</p>
-                            </div>
-                        </div>
-                        <div class="stat-card warning">
-                            <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                            <div class="stat-details">
-                                <h3 id="outOfStockCount">0</h3>
-                                <p>Sin Stock</p>
-                            </div>
-                        </div>
-                        <div class="stat-card info">
-                            <div class="stat-icon"><i class="fas fa-tags"></i></div>
-                            <div class="stat-details">
-                                <h3 id="uniqueCategoriesCount">0</h3>
-                                <p>Categorías</p>
-                            </div>
-                        </div>
+            <!-- Sección de Dashboard (por defecto) -->
+            <section id="dashboard-section" class="admin-section active">
+                <h2>Dashboard</h2>
+                <p>Resumen rápido de tu tienda.</p>
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <h3>Total de Cartas</h3>
+                        <p id="totalCardsCount">Cargando...</p>
                     </div>
-                </section>
-
-                <!-- Cards Management Section -->
-                <section id="cards-section" class="admin-section">
-                    <div class="section-header-actions">
-                        <h2>Gestión de Cartas</h2>
-                        <button id="addCardBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                    <div class="stat-card">
+                        <h3>Total Productos Sellados</h3>
+                        <p id="totalSealedProductsCount">Cargando...</p>
                     </div>
-
-                    <div class="filter-bar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="adminSearchInput" placeholder="Buscar por nombre o ID...">
-                        </div>
-                        <select id="adminCategoryFilter">
-                            <option value="">Todas las categorías</option>
-                        </select>
+                    <div class="stat-card">
+                        <h3>Cartas sin Stock</h3>
+                        <p id="outOfStockCount">Cargando...</p>
                     </div>
+                    <div class="stat-card">
+                        <h3>Categorías Únicas</h3>
+                        <p id="uniqueCategoriesCount">Cargando...</p>
+                    </div>
+                </div>
+            </section>
 
-                    <div class="table-container">
+            <!-- Sección de Gestión de Cartas -->
+            <section id="cards-section" class="admin-section">
+                <h2>Gestión de Cartas</h2>
+                <button id="addCardBtn" class="add-button">Añadir Nueva Carta</button>
+                <div class="card-list-container">
+                    <h3>Lista de Cartas</h3>
+                    <input type="text" id="adminSearchInput" placeholder="Buscar carta por nombre o ID..." class="admin-search-input">
+                    <select id="adminCategoryFilter" class="admin-select-filter">
+                        <option value="">Todas las categorías</option>
+                        <!-- Las opciones se cargarán dinámicamente -->
+                    </select>
+                    <div class="table-responsive">
                         <table id="cardsTable">
                             <thead>
                                 <tr>
@@ -109,82 +101,84 @@
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="cardsTableBody">
-                                <!-- Datos cargados por JS -->
+                            <tbody>
+                                <!-- Las filas de las cartas se cargarán aquí con JavaScript -->
                             </tbody>
                         </table>
                     </div>
-                    
-                    <div class="pagination">
-                        <button id="adminPrevPageBtn" disabled><i class="fas fa-chevron-left"></i></button>
+                    <div class="pagination-controls">
+                        <button id="adminPrevPageBtn" class="pagination-btn">-</button>
                         <span id="adminPageInfo">Página 1 de 1</span>
-                        <button id="adminNextPageBtn" disabled><i class="fas fa-chevron-right"></i></button>
+                        <button id="adminNextPageBtn">+</button>
                     </div>
-                </section>
+                </div>
+            </section>
 
-                <!-- Sealed Products Section -->
-                <section id="sealed-products-section" class="admin-section">
-                    <div class="section-header-actions">
-                        <h2>Gestión de Productos Sellados</h2>
-                        <button id="addSealedProductBtn" class="add-button"><i class="fas fa-plus"></i></button>
-                    </div>
-
-                    <div class="filter-bar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="adminSealedSearchInput" placeholder="Buscar producto sellado...">
-                        </div>
-                    </div>
-
-                    <div class="table-container">
+            <!-- Sección de Gestión de Productos Sellados -->
+            <section id="sealed-products-section" class="admin-section">
+                <h2>Gestión de Productos Sellados</h2>
+                <button id="addSealedProductBtn" class="add-button">Añadir Nuevo Producto Sellado</button>
+                <div class="sealed-product-list-container">
+                    <h3>Lista de Productos Sellados</h3>
+                    <input type="text" id="adminSealedSearchInput" placeholder="Buscar producto por nombre o ID..." class="admin-search-input">
+                    <select id="adminSealedCategoryFilter" class="admin-select-filter">
+                        <option value="">Todos los tipos</option>
+                        <!-- Las opciones se cargarán dinámicamente -->
+                    </select>
+                    <div class="table-responsive">
                         <table id="sealedProductsTable">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>ID Producto</th>
                                     <th>Imagen</th>
-                                    <th>Nombre</th>
+                                    <th>Nombre Producto</th>
+                                    <th>Tipo</th>
                                     <th>Precio</th>
                                     <th>Stock</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="sealedProductsTableBody">
-                                <!-- Datos cargados por JS -->
+                            <tbody>
+                                <!-- Las filas de los productos sellados se cargarán aquí con JavaScript -->
                             </tbody>
                         </table>
                     </div>
-                </section>
-
-                <!-- Categories Section -->
-                <section id="categories-section" class="admin-section">
-                    <div class="section-header-actions">
-                        <h2>Gestión de Categorías</h2>
-                        <button id="addCategoryBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                    <div class="pagination-controls">
+                        <button id="adminSealedPrevPageBtn">-</button>
+                        <span id="adminSealedPageInfo">Página 1 de 1</span>
+                        <button id="adminSealedNextPageBtn">+</button>
                     </div>
+                </div>
+            </section>
 
-                    <div class="table-container">
+            <!-- Sección de Gestión de Categorías -->
+            <section id="categories-section" class="admin-section">
+                <h2>Gestión de Categorías</h2>
+                <button id="addCategoryBtn" class="add-button">Añadir Nueva Categoría</button>
+                <div class="category-list-container">
+                    <h3>Lista de Categorías</h3>
+                    <div class="table-responsive">
                         <table id="categoriesTable">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
+                                    <th>Nombre de Categoría</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="categoriesTableBody">
-                                <!-- Datos cargados por JS -->
+                            <tbody>
+                                <!-- Las filas de las categorías se cargarán aquí con JavaScript -->
                             </tbody>
                         </table>
                     </div>
-                </section>
-
-                <!-- Orders Section -->
-                <section id="orders-section" class="admin-section">
-                    <div class="section-header-actions">
-                        <h2>Gestión de Pedidos</h2>
-                    </div>
-
-                    <div class="table-container">
+                </div>
+            </section>
+            
+            <!-- NUEVA SECCIÓN: Gestión de Pedidos -->
+            <section id="orders-section" class="admin-section">
+                <h2>Gestión de Pedidos</h2>
+                <div class="order-list-container">
+                    <h3>Lista de Pedidos</h3>
+                    <div class="table-responsive">
                         <table id="ordersTable">
                             <thead>
                                 <tr>
@@ -196,129 +190,153 @@
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="ordersTableBody">
-                                <!-- Datos cargados por JS -->
+                            <tbody>
+                                <!-- Las filas de los pedidos se cargarán aquí -->
                             </tbody>
                         </table>
                     </div>
-                </section>
+                </div>
+            </section>
+
+
+            <!-- Modal para Añadir/Editar Carta -->
+            <div id="cardModal" class="admin-modal">
+                <div class="admin-modal-content">
+                    <span class="close-button">&times;</span>
+                    <h3 id="cardModalTitle">Añadir/Editar Carta</h3>
+                    <form id="cardForm">
+                        <input type="hidden" id="cardId">
+                        <label for="cardName">Nombre:</label>
+                        <input type="text" id="cardName" required>
+                        <label for="cardImage">URL Imagen:</label>
+                        <input type="url" id="cardImage" required>
+                        <label for="cardPrice">Precio:</label>
+                        <input type="number" id="cardPrice" step="0.01" required>
+                        <label for="cardStock">Stock:</label>
+                        <input type="number" id="cardStock" required>
+                        <!-- CAMBIO: Ahora es un menú desplegable SELECT -->
+                        <label for="cardCategory">Categoría:</label>
+                        <select id="cardCategory" required>
+                            <!-- Las opciones se llenarán dinámicamente -->
+                        </select>
+                        <button type="submit" id="saveCardBtn">Guardar Carta</button>
+                    </form>
+                </div>
             </div>
+
+            <!-- Modal para Añadir/Editar Producto Sellado -->
+            <div id="sealedProductModal" class="admin-modal">
+                <div class="admin-modal-content">
+                    <span class="close-button">&times;</span>
+                    <h3 id="sealedProductModalTitle">Añadir/Editar Producto Sellado</h3>
+                    <form id="sealedProductForm">
+                        <input type="hidden" id="sealedProductId">
+                        <label for="sealedProductName">Nombre Producto:</label>
+                        <input type="text" id="sealedProductName" required>
+                        <label for="sealedProductImage">URL Imagen:</label>
+                        <input type="url" id="sealedProductImage" required>
+                        <!-- CAMBIO: Ahora es un menú desplegable SELECT -->
+                        <label for="sealedProductCategory">Tipo Producto:</label>
+                        <select id="sealedProductCategory" required>
+                            <!-- Las opciones se llenarán dinámicamente -->
+                        </select>
+                        <label for="sealedProductPrice">Precio:</label>
+                        <input type="number" id="sealedProductPrice" step="0.01" required>
+                        <label for="sealedProductStock">Stock:</label>
+                        <input type="number" id="sealedProductStock" required>
+                        <button type="submit" id="saveSealedProductBtn">Guardar Producto</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal para Añadir/Editar Categoría -->
+            <div id="categoryModal" class="admin-modal">
+                <div class="admin-modal-content">
+                    <span class="close-button">&times;</span>
+                    <h3 id="categoryModalTitle">Añadir/Editar Categoría</h3>
+                    <form id="categoryForm">
+                        <input type="hidden" id="categoryId">
+                        <label for="categoryName">Nombre de Categoría:</label>
+                        <input type="text" id="categoryName" required>
+                        <button type="submit" id="saveCategoryBtn">Guardar Categoría</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal de Confirmación para Eliminar -->
+            <div id="confirmModal" class="admin-modal">
+                <div class="admin-modal-content">
+                    <h3>Confirmar Eliminación</h3>
+                    <p id="confirmMessage">¿Estás seguro de que quieres eliminar este elemento?</p>
+                    <div class="modal-buttons">
+                        <button id="cancelDeleteBtn" class="cancel-button">Cancelar</button>
+                        <button id="confirmDeleteBtn" class="confirm-button">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Inicio de Sesión -->
+            <div id="loginModal" class="admin-modal">
+                <div class="admin-modal-content login-container">
+                    <h3>Inicio de Sesión</h3>
+                    <p id="loginMessage" class="error-message"></p>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label for="username">Usuario:</label>
+                            <input type="text" id="username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Contraseña:</label>
+                            <div class="password-container">
+                                <input type="password" id="password" required>
+                                <button type="button" id="togglePasswordVisibilityBtn" class="password-toggle-btn">
+                                    <i class="fas fa-eye-slash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" id="loginBtn" class="login-button">Iniciar Sesión</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- NUEVO: Modal para Ver Detalles del Pedido -->
+            <div id="orderDetailsModal" class="admin-modal">
+                <div class="admin-modal-content">
+                    <span class="close-button" id="closeOrderDetailsModal">&times;</span>
+                    <h3>Detalles del Pedido</h3>
+                    <div id="orderDetailsContent">
+                        <!-- El contenido se llenará dinámicamente -->
+                    </div>
+                    <div class="order-actions">
+                        <h4>Cambiar Estado:</h4>
+                        <select id="orderStatusSelect">
+                            <option value="pending">Pendiente</option>
+                            <option value="shipped">Enviado</option>
+                            <option value="completed">Completado</option>
+                            <option value="cancelled">Cancelado</option>
+                        </select>
+                        <button id="updateOrderStatusBtn" class="confirm-button">Actualizar Estado</button>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- MODAL PARA MENSAJES (éxito/error) - AÑADIDO -->
+            <div id="messageModal" class="admin-modal">
+                <div class="admin-modal-content">
+                    <span class="close-button" id="closeMessageModal">&times;</span>
+                    <h3 id="messageModalTitle" style="text-align: center;"></h3>
+                    <p id="messageModalText" style="text-align: center; margin-bottom: 20px;"></p>
+                    <div class="modal-buttons">
+                        <button id="okMessageModal" class="confirm-button">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 
-    <!-- Modals -->
-    <!-- Card Modal -->
-    <div id="cardModal" class="admin-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="cardModalTitle">Añadir Nueva Carta</h3>
-                <span class="close-button">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="cardForm">
-                    <input type="hidden" id="cardId">
-                    <div class="form-group">
-                        <label for="cardName">Nombre de la Carta</label>
-                        <input type="text" id="cardName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="cardImage">URL de la Imagen</label>
-                        <input type="url" id="cardImage">
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="cardPrice">Precio ($)</label>
-                            <input type="number" id="cardPrice" step="0.01" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="cardStock">Stock</label>
-                            <input type="number" id="cardStock" required>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="cardCategory">Categoría</label>
-                        <select id="cardCategory" required></select>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" id="saveCardBtn" class="btn-save">Guardar Carta</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sealed Product Modal -->
-    <div id="sealedProductModal" class="admin-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="sealedProductModalTitle">Añadir Producto Sellado</h3>
-                <span class="close-button">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="sealedProductForm">
-                    <input type="hidden" id="sealedProductId">
-                    <div class="form-group">
-                        <label for="sealedProductName">Nombre del Producto</label>
-                        <input type="text" id="sealedProductName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="sealedProductImage">URL de la Imagen</label>
-                        <input type="url" id="sealedProductImage">
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="sealedProductPrice">Precio ($)</label>
-                            <input type="number" id="sealedProductPrice" step="0.01" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="sealedProductStock">Stock</label>
-                            <input type="number" id="sealedProductStock" required>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" id="saveSealedProductBtn" class="btn-save">Guardar Producto</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Category Modal -->
-    <div id="categoryModal" class="admin-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="categoryModalTitle">Añadir Categoría</h3>
-                <span class="close-button">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="categoryForm">
-                    <input type="hidden" id="categoryId">
-                    <div class="form-group">
-                        <label for="categoryName">Nombre de la Categoría</label>
-                        <input type="text" id="categoryName" required>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" id="saveCategoryBtn" class="btn-save">Guardar Categoría</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Order Detail Modal -->
-    <div id="orderDetailModal" class="admin-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Detalle del Pedido</h3>
-                <span class="close-button">&times;</span>
-            </div>
-            <div class="modal-body" id="orderDetailContent">
-                <!-- Se llena por JS -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts -->
+    <!-- Incluir JavaScript del panel de administración -->
     <script type="module" src="js/admin.js"></script>
 </body>
 </html>
