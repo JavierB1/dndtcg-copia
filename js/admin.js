@@ -18,9 +18,7 @@ import {
     addDoc, 
     doc, 
     updateDoc, 
-    deleteDoc, 
-    query, 
-    where 
+    deleteDoc 
 } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -49,7 +47,8 @@ let currentSealedPage = 1;
 // ==========================================================================
 // DOM ELEMENTS
 // ==========================================================================
-let sidebarMenu, sidebarOverlay, loginModal, cardModal, quickSearchModal, sealedProductModal, categoryModal, confirmModal, messageModal, orderDetailsModal;
+let loginScreen, adminContainer; // Contenedores de pantalla completa
+let sidebarMenu, sidebarOverlay, cardModal, quickSearchModal, sealedProductModal, categoryModal, confirmModal, messageModal, orderDetailsModal;
 let cardForm, sealedProductForm, categoryForm;
 let dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection;
 let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBtn;
@@ -63,18 +62,13 @@ function openModal(m) { if(m){ m.style.display='flex'; document.body.style.overf
 function closeModal(m) { if(m){ m.style.display='none'; document.body.style.overflow=''; } }
 
 function showSection(sectionToShow, navId) {
-    // Ocultar todas las secciones
     const sections = [dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection];
     sections.forEach(s => s?.classList.remove('active'));
-    
-    // Mostrar la elegida
     sectionToShow?.classList.add('active');
 
-    // Actualizar clase active en el menú lateral
     Object.values(navLinks).forEach(link => link?.classList.remove('active'));
     if (navLinks[navId]) navLinks[navId].classList.add('active');
 
-    // Cerrar sidebar en móviles/iPad
     if(window.innerWidth < 1024) {
         sidebarMenu?.classList.remove('show');
         if(sidebarOverlay) sidebarOverlay.style.display='none';
@@ -90,7 +84,7 @@ function showMessage(title, text) {
 }
 
 // ==========================================================================
-// LÓGICA DE BÚSQUEDA TCGPLAYER (CORREGIDA)
+// LÓGICA DE BÚSQUEDA TCGPLAYER
 // ==========================================================================
 
 async function handleQuickSearch() {
@@ -166,23 +160,19 @@ function fillCardFormWithData(card) {
 
 async function loadAllData() {
     try {
-        // Cargar Categorías
         const catSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'categories'));
         allCategories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCategoriesTable();
         updateCategorySelects();
 
-        // Cargar Cartas
         const cardSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'cards'));
         allCards = cardSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCardsTable();
 
-        // Cargar Sellados
         const sealedSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'));
         allSealedProducts = sealedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderSealedProductsTable();
 
-        // Cargar Pedidos
         const orderSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
         allOrders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.timestamp - a.timestamp);
         renderOrdersTable();
@@ -372,6 +362,10 @@ async function confirmDelete() {
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Referencias Principales de Pantalla
+    loginScreen = document.getElementById('loginModal');
+    adminContainer = document.querySelector('.admin-container');
+
     // Referencias Secciones
     dashboardSection = document.getElementById('dashboard-section');
     cardsSection = document.getElementById('cards-section');
@@ -382,7 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Referencias Modales
     sidebarMenu = document.getElementById('sidebar-menu');
     sidebarOverlay = document.getElementById('sidebar-overlay');
-    loginModal = document.getElementById('loginModal');
     cardModal = document.getElementById('cardModal');
     quickSearchModal = document.getElementById('scannerModal');
     sealedProductModal = document.getElementById('sealedProductModal');
@@ -414,10 +407,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('nav-logout')?.addEventListener('click', (e) => { 
         e.preventDefault(); 
-        signOut(auth).then(() => location.reload()); 
+        signOut(auth).then(() => {
+            // Forzar cierre de sesión y reinicio de UI
+            if(adminContainer) adminContainer.style.display = 'none';
+            if(loginScreen) loginScreen.style.display = 'flex';
+            location.reload();
+        }); 
     });
 
-    // Control del Sidebar (Hamburguesa)
+    // Control del Sidebar
     document.getElementById('sidebarToggleBtn')?.addEventListener('click', () => {
         sidebarMenu?.classList.add('show');
         if(sidebarOverlay) sidebarOverlay.style.display = 'block';
@@ -446,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('confirmDeleteBtn')?.addEventListener('click', confirmDelete);
     document.getElementById('cancelDeleteBtn')?.addEventListener('click', () => closeModal(confirmModal));
 
-    // Delegación de eventos para Tablas (Editar/Eliminar)
+    // Delegación de eventos para Tablas
     document.body.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
@@ -534,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
         submitSearchBtn?.addEventListener('click', handleQuickSearch);
     }
 
-    // Cierre de Modales (Botón X)
+    // Cierre de Modales
     document.querySelectorAll('.close-button').forEach(b => b.addEventListener('click', () => {
         closeModal(cardModal); closeModal(quickSearchModal); closeModal(sealedProductModal); closeModal(categoryModal); closeModal(confirmModal); closeModal(messageModal); closeModal(orderDetailsModal);
     }));
@@ -544,23 +542,59 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const email = document.getElementById('username')?.value.trim();
         const pass = document.getElementById('password')?.value;
+        const btn = e.target.querySelector('button[type="submit"]');
+        
         try {
-            // Establecer persistencia: se borra al cerrar el navegador/pestaña
+            if(btn) { btn.disabled = true; btn.textContent = "Validando..."; }
             await setPersistence(auth, browserSessionPersistence);
             await signInWithEmailAndPassword(auth, email, pass);
-            closeModal(loginModal);
-            await loadAllData();
+            // El observador onAuthStateChanged manejará el cambio de pantalla
         } catch(err) { 
+            if(btn) { btn.disabled = false; btn.textContent = "Ingresar"; }
             showMessage("Acceso Denegado", "Correo o contraseña incorrectos."); 
         }
     });
 
+    // OBSERVADOR DE ESTADO (Maneja la visibilidad total de la pantalla)
     onAuthStateChanged(auth, (user) => {
         if (user) { 
-            closeModal(loginModal); 
+            // Usuario Autenticado: Ocultar login, mostrar panel
+            if(loginScreen) loginScreen.style.display = 'none';
+            if(adminContainer) adminContainer.style.display = 'flex';
             loadAllData(); 
         } else { 
-            openModal(loginModal); 
+            // Usuario No Autenticado: Mostrar login a pantalla completa, ocultar panel
+            if(adminContainer) adminContainer.style.display = 'none';
+            if(loginScreen) {
+                loginScreen.style.display = 'flex';
+                // Convertir el modal de login en pantalla completa mediante estilos inline si es necesario
+                loginScreen.style.position = 'fixed';
+                loginScreen.style.top = '0';
+                loginScreen.style.left = '0';
+                loginScreen.style.width = '100%';
+                loginScreen.style.height = '100%';
+                loginScreen.style.zIndex = '9999';
+                loginScreen.style.backgroundColor = '#f7fafc';
+                
+                // Asegurar que el contenido del login se vea bien
+                const content = loginScreen.querySelector('.admin-modal-content');
+                if(content) {
+                    content.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+                    content.style.border = 'none';
+                    // Añadir SVG decorativo si no existe
+                    if(!loginScreen.querySelector('.login-svg-decor')) {
+                        const svgDiv = document.createElement('div');
+                        svgDiv.className = 'login-svg-decor';
+                        svgDiv.style.marginBottom = '20px';
+                        svgDiv.innerHTML = `
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 15V17M12 7V13M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#3182ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        `;
+                        content.prepend(svgDiv);
+                    }
+                }
+            }
         }
     });
 });
