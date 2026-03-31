@@ -237,14 +237,8 @@ async function startCamera() {
         scannerStatusMessage.textContent = "Solicitando permisos de cámara...";
         scannerStatusMessage.style.color = "#3b82f6";
         
-        // FORZAMOS LA CÁMARA A ALTA RESOLUCIÓN Y AUTOENFOQUE
         mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { 
-                facingMode: 'environment',
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                advanced: [{ focusMode: "continuous" }] 
-            }
+            video: { facingMode: 'environment' }
         });
         
         cameraStream.srcObject = mediaStream;
@@ -253,7 +247,7 @@ async function startCamera() {
         startScanningProcess();
     } catch (err) {
         console.error("Error al acceder a la cámara:", err);
-        scannerStatusMessage.textContent = "Error: Por favor permite el acceso a la cámara y verifica la resolución.";
+        scannerStatusMessage.textContent = "Error: Por favor permite el acceso a la cámara.";
         scannerStatusMessage.style.color = "#ef4444";
     }
 }
@@ -275,7 +269,7 @@ async function startScanningProcess() {
     
     await loadTesseractAPI();
     
-    scannerStatusMessage.textContent = "Enfoca bien el CÓDIGO de abajo (Ej: 025/165).";
+    scannerStatusMessage.textContent = "Buscando código (Ej: 025/165). Mantén la carta quieta...";
     scannerStatusMessage.style.color = "#10b981";
     
     // Inicia un bucle que toma una foto cada 3 segundos hasta encontrar algo
@@ -299,13 +293,8 @@ async function processScannedFrame() {
         const result = await Tesseract.recognize(captureCanvas, 'eng');
         const text = result.data.text;
 
-        // --- IMPRIMIR EN CONSOLA PARA DEPURACIÓN ---
-        console.log("------- NUEVO INTENTO DE ESCANEO -------");
-        console.log("Texto que logró leer la cámara:\n", text);
-        console.log("----------------------------------------");
-
-        // Buscamos un patrón típico de Pokémon, permitiendo posibles espacios accidentales de la lectura
-        const numberMatch = text.match(/([a-zA-Z0-9]{1,4})\s*\/\s*(\d{1,3})/);
+        // Buscamos un patrón típico de Pokémon (números divididos por un slash, ej. 025/165)
+        const numberMatch = text.match(/([a-zA-Z0-9]{1,4})\/(\d{1,3})/);
 
         if (numberMatch) {
             let cardNumber = numberMatch[1];
@@ -316,13 +305,11 @@ async function processScannedFrame() {
             scannerStatusMessage.style.color = "#10b981";
 
             // CONEXIÓN A LA API REAL DE POKÉMON TCG
-            console.log(`Buscando en API Pokémon: número ${cardNumber}`);
             const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:${cardNumber}`);
             const data = await response.json();
 
             if (data.data && data.data.length > 0) {
                 // Si encontramos la carta, autocompletamos
-                console.log("Carta encontrada en API:", data.data[0]);
                 fillFormWithAPIData(data.data[0], numberMatch[0]);
             } else {
                 scannerStatusMessage.textContent = `Código ${numberMatch[0]} no encontrado. Intentando de nuevo...`;
@@ -331,7 +318,7 @@ async function processScannedFrame() {
             }
         } else {
             // Si la IA no logró leer el texto
-            scannerStatusMessage.textContent = "No detecto el código. Ilumina bien la parte de abajo de la carta.";
+            scannerStatusMessage.textContent = "No detecto el código. Ilumina bien la carta y acércala.";
             scannerStatusMessage.style.color = "#ef4444";
             scanTimeout = setTimeout(processScannedFrame, 3000);
         }
@@ -844,4 +831,287 @@ document.addEventListener('DOMContentLoaded', () => {
         @media (max-width: 768px) {
             .sidebar { position: fixed; left: -260px; height: 100%; z-index: 50; transition: left 0.3s ease; }
             .sidebar.show { left: 0; }
-            .sidebar-
+            .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 45; }
+            .main-content { width: 100%; margin-left: 0; }
+            .desktop-only-title { display: none; }
+            .sidebar-toggle-btn { display: block !important; margin-right: 15px; font-size: 1.5rem; }
+            .close-sidebar-btn { display: block !important; }
+            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .action-btn { padding: 12px; margin-right: 5px; font-size: 1.2rem; }
+            .add-button { width: 55px; height: 55px; font-size: 2.2rem; }
+            .admin-modal-content { width: 95%; max-height: 90vh; overflow-y: auto; padding: 20px; }
+            .dashboard-stats { grid-template-columns: 1fr 1fr; }
+        }
+    `;
+    document.head.appendChild(mobileStyles);
+
+    // ================= DOM =================
+    sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+    closeSidebarBtn = document.getElementById('closeSidebarBtn');
+    sidebarMenu = document.getElementById('sidebar-menu');
+    sidebarOverlay = document.getElementById('sidebar-overlay');
+    loginModal = document.getElementById('loginModal');
+    loginForm = document.getElementById('loginForm');
+    loginMessage = document.getElementById('loginMessage');
+    usernameInput = document.getElementById('username');
+    passwordInput = document.getElementById('password');
+    togglePasswordVisibilityBtn = document.getElementById('togglePasswordVisibilityBtn');
+
+    navDashboard = document.getElementById('nav-dashboard');
+    navCards = document.getElementById('nav-cards');
+    navSealedProducts = document.getElementById('nav-sealed-products');
+    navCategories = document.getElementById('nav-categories');
+    navOrders = document.getElementById('nav-orders');
+    navLogout = document.getElementById('nav-logout');
+
+    dashboardSection = document.getElementById('dashboard-section');
+    cardsSection = document.getElementById('cards-section');
+    sealedProductsSection = document.getElementById('sealed-products-section');
+    categoriesSection = document.getElementById('categories-section');
+    ordersSection = document.getElementById('orders-section'); 
+
+    addCardBtn = document.getElementById('addCardBtn');
+    addSealedProductBtn = document.getElementById('addSealedProductBtn');
+    addCategoryBtn = document.getElementById('addCategoryBtn');
+
+    cardModal = document.getElementById('cardModal');
+    cardModalTitle = document.getElementById('cardModalTitle');
+    cardForm = document.getElementById('cardForm');
+    cardId = document.getElementById('cardId');
+    cardName = document.getElementById('cardName');
+    cardCode = document.getElementById('cardCode'); 
+    cardExpansion = document.getElementById('cardExpansion'); 
+    cardImage = document.getElementById('cardImage');
+    cardPrice = document.getElementById('cardPrice');
+    cardStock = document.getElementById('cardStock');
+    cardCategory = document.getElementById('cardCategory');
+
+    sealedProductModal = document.getElementById('sealedProductModal');
+    sealedProductModalTitle = document.getElementById('sealedProductModalTitle');
+    sealedProductForm = document.getElementById('sealedProductForm');
+    sealedProductId = document.getElementById('sealedProductId');
+    sealedProductName = document.getElementById('sealedProductName');
+    sealedProductImage = document.getElementById('sealedProductImage');
+    sealedProductCategory = document.getElementById('sealedProductCategory');
+    sealedProductPrice = document.getElementById('sealedProductPrice');
+    sealedProductStock = document.getElementById('sealedProductStock');
+
+    categoryModal = document.getElementById('categoryModal');
+    categoryModalTitle = document.getElementById('categoryModalTitle');
+    categoryForm = document.getElementById('categoryForm');
+    categoryId = document.getElementById('categoryId');
+    categoryName = document.getElementById('categoryName');
+
+    confirmModal = document.getElementById('confirmModal');
+    confirmMessage = document.getElementById('confirmMessage');
+    cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+    cardsTable = document.getElementById('cardsTable');
+    sealedProductsTable = document.getElementById('sealedProductsTable');
+    categoriesTable = document.getElementById('categoriesTable');
+    ordersTable = document.getElementById('ordersTable'); 
+
+    adminSearchInput = document.getElementById('adminSearchInput');
+    adminCategoryFilter = document.getElementById('adminCategoryFilter');
+    adminPrevPageBtn = document.getElementById('adminPrevPageBtn');
+    adminNextPageBtn = document.getElementById('adminNextPageBtn');
+    adminPageInfo = document.getElementById('adminPageInfo');
+
+    adminSealedSearchInput = document.getElementById('adminSealedSearchInput');
+    adminSealedCategoryFilter = document.getElementById('adminSealedCategoryFilter');
+    adminSealedPrevPageBtn = document.getElementById('adminSealedPrevPageBtn');
+    adminSealedNextPageBtn = document.getElementById('adminSealedNextPageBtn');
+    adminSealedPageInfo = document.getElementById('adminSealedPageInfo');
+
+    totalCardsCount = document.getElementById('totalCardsCount');
+    totalSealedProductsCount = document.getElementById('totalSealedProductsCount');
+    outOfStockCount = document.getElementById('outOfStockCount');
+    uniqueCategoriesCount = document.getElementById('uniqueCategoriesCount');
+
+    messageModal = document.getElementById('messageModal');
+    closeMessageModalBtn = document.getElementById('closeMessageModal');
+    messageModalTitle = document.getElementById('messageModalTitle');
+    messageModalText = document.getElementById('messageModalText');
+    okMessageModalBtn = document.getElementById('okMessageModal');
+
+    orderDetailsModal = document.getElementById('orderDetailsModal');
+    closeOrderDetailsModalBtn = document.getElementById('closeOrderDetailsModal');
+    orderDetailsContent = document.getElementById('orderDetailsContent');
+    orderStatusSelect = document.getElementById('orderStatusSelect');
+    updateOrderStatusBtn = document.getElementById('updateOrderStatusBtn');
+
+    scannerModal = document.getElementById('scannerModal');
+    openScannerBtn = document.getElementById('openScannerBtn');
+    closeScannerBtn = document.getElementById('closeScannerBtn');
+    cameraStream = document.getElementById('cameraStream');
+    captureCanvas = document.getElementById('captureCanvas');
+    scannerStatusMessage = document.getElementById('scannerStatusMessage');
+
+    openModal(loginModal);
+    hideAllSections();
+
+    // ================= EVENTOS DEL MENÚ MÓVIL =================
+    if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', () => { 
+        sidebarMenu.classList.add('show'); 
+        if(sidebarOverlay) sidebarOverlay.style.display = 'block'; 
+    });
+    
+    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', () => { 
+        sidebarMenu.classList.remove('show'); 
+        if(sidebarOverlay) sidebarOverlay.style.display = 'none'; 
+    });
+    
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', () => { 
+        sidebarMenu.classList.remove('show'); 
+        sidebarOverlay.style.display = 'none'; 
+    });
+
+    const navs = [{btn: navDashboard, sec: dashboardSection}, {btn: navCards, sec: cardsSection}, {btn: navSealedProducts, sec: sealedProductsSection}, {btn: navCategories, sec: categoriesSection}, {btn: navOrders, sec: ordersSection}];
+    navs.forEach(nav => {
+        if(nav.btn) nav.btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection(nav.sec);
+            navs.forEach(n => { if(n.btn) n.btn.classList.remove('active'); });
+            nav.btn.classList.add('active');
+            
+            // Cierra el menú en móviles automáticamente
+            if (window.innerWidth <= 768) {
+                sidebarMenu.classList.remove('show');
+                if(sidebarOverlay) sidebarOverlay.style.display = 'none';
+            }
+        });
+    });
+
+    if (navLogout) navLogout.addEventListener('click', handleLogout);
+
+    // Eventos de Modales
+    document.querySelectorAll('.close-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            closeModal(cardModal);
+            closeModal(sealedProductModal);
+            closeModal(categoryModal);
+            closeModal(confirmModal);
+            closeModal(loginModal);
+            closeModal(messageModal);
+            closeModal(orderDetailsModal);
+            if (scannerModal && scannerModal.style.display === 'flex') {
+                stopCamera();
+                closeModal(scannerModal);
+            }
+        });
+    });
+
+    if (closeMessageModalBtn) closeMessageModalBtn.addEventListener('click', () => closeModal(messageModal));
+    if (okMessageModalBtn) okMessageModalBtn.addEventListener('click', () => closeModal(messageModal));
+
+    // EVENTOS DEL ESCÁNER
+    if (openScannerBtn) {
+        openScannerBtn.addEventListener('click', () => {
+            openModal(scannerModal);
+            startCamera();
+        });
+    }
+
+    // Formularios CRUD
+    if (addCardBtn) addCardBtn.addEventListener('click', () => { cardForm.reset(); cardId.value = ''; openModal(cardModal); });
+    if (cardForm) cardForm.addEventListener('submit', handleSaveCard);
+    
+    if (addSealedProductBtn) addSealedProductBtn.addEventListener('click', () => { sealedProductForm.reset(); sealedProductId.value = ''; openModal(sealedProductModal); });
+    if (sealedProductForm) sealedProductForm.addEventListener('submit', handleSaveSealedProduct);
+
+    if (addCategoryBtn) addCategoryBtn.addEventListener('click', () => { categoryForm.reset(); categoryId.value = ''; openModal(categoryModal); });
+    if (categoryForm) categoryForm.addEventListener('submit', handleSaveCategory);
+
+    // Tablas CRUD
+    if (cardsTable) cardsTable.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if(!btn) return;
+
+        if (btn.classList.contains('edit-card-btn')) {
+            const card = allCards.find(c => c.id === btn.dataset.id);
+            if (card) {
+                cardId.value = card.id; 
+                cardName.value = card.nombre; 
+                cardCode.value = card.codigo || ''; 
+                cardExpansion.value = card.expansion || ''; 
+                cardImage.value = card.imagen_url || '';
+                cardPrice.value = card.precio; 
+                cardStock.value = card.stock; 
+                cardCategory.value = card.categoria;
+                openModal(cardModal);
+            }
+        }
+        if (btn.classList.contains('delete-card-btn')) {
+            currentDeleteTarget = { type: 'card', id: btn.dataset.id };
+            openModal(confirmModal);
+        }
+    });
+
+    if (sealedProductsTable) sealedProductsTable.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if(!btn) return;
+
+        if (btn.classList.contains('edit-sealed-product-button')) {
+            const prod = allSealedProducts.find(p => p.id === btn.dataset.id);
+            if (prod) {
+                sealedProductId.value = prod.id; sealedProductName.value = prod.nombre; sealedProductImage.value = prod.imagen_url || '';
+                sealedProductCategory.value = prod.categoria; sealedProductPrice.value = prod.precio; sealedProductStock.value = prod.stock;
+                openModal(sealedProductModal);
+            }
+        }
+        if (btn.classList.contains('delete-sealed-product-button')) {
+            currentDeleteTarget = { type: 'sealedProduct', id: btn.dataset.id };
+            openModal(confirmModal);
+        }
+    });
+
+    if (categoriesTable) categoriesTable.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if(!btn) return;
+
+        if (btn.classList.contains('edit-category-button')) {
+            const cat = allCategories.find(c => c.id === btn.dataset.id);
+            if (cat) { categoryId.value = cat.id; categoryName.value = cat.name; openModal(categoryModal); }
+        }
+        if (btn.classList.contains('delete-category-button')) {
+            currentDeleteTarget = { type: 'category', id: btn.dataset.id };
+            openModal(confirmModal);
+        }
+    });
+
+    if (ordersTable) ordersTable.addEventListener('click', (e) => {
+        if (e.target.classList.contains('view-order-details-btn')) showOrderDetails(e.target.dataset.id);
+    });
+
+    if (updateOrderStatusBtn) updateOrderStatusBtn.addEventListener('click', handleUpdateOrderStatus);
+
+    if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', () => closeModal(confirmModal));
+    if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', handleDeleteConfirmed);
+
+    // Filtros y Paginación
+    if (adminSearchInput) adminSearchInput.addEventListener('input', () => { currentCardsPage = 1; renderCardsTable(); });
+    if (adminCategoryFilter) adminCategoryFilter.addEventListener('change', () => { currentCardsPage = 1; renderCardsTable(); });
+    if (adminPrevPageBtn) adminPrevPageBtn.addEventListener('click', () => { if (currentCardsPage > 1) { currentCardsPage--; renderCardsTable(); } });
+    if (adminNextPageBtn) adminNextPageBtn.addEventListener('click', () => { currentCardsPage++; renderCardsTable(); });
+
+    if (adminSealedSearchInput) adminSealedSearchInput.addEventListener('input', () => { currentSealedProductsPage = 1; renderSealedProductsTable(); });
+    if (adminSealedCategoryFilter) adminSealedCategoryFilter.addEventListener('change', () => { currentSealedProductsPage = 1; renderSealedProductsTable(); });
+    if (adminSealedPrevPageBtn) adminSealedPrevPageBtn.addEventListener('click', () => { if (currentSealedProductsPage > 1) { currentSealedProductsPage--; renderSealedProductsTable(); } });
+    if (adminSealedNextPageBtn) adminSealedNextPageBtn.addEventListener('click', () => { currentSealedProductsPage++; renderSealedProductsTable(); });
+
+    document.getElementById('refreshAdminPageBtn')?.addEventListener('click', async () => {
+        await loadAllData();
+        showMessageModal("Datos Recargados", "Todos los datos han sido actualizados.");
+    });
+
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
+    
+    if (togglePasswordVisibilityBtn && passwordInput) {
+        togglePasswordVisibilityBtn.addEventListener('click', function() {
+            passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+            this.querySelector('i').classList.toggle('fa-eye');
+            this.querySelector('i').classList.toggle('fa-eye-slash');
+        });
+    }
+});
