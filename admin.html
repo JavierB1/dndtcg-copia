@@ -87,9 +87,9 @@
                 </div>
                 
                 <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                    <input type="text" id="adminSearchInput" placeholder="Buscar carta..." class="admin-search-input" style="margin-bottom: 0;">
+                    <input type="text" id="adminSearchInput" placeholder="Buscar carta o código..." class="admin-search-input" style="margin-bottom: 0;">
                     <select id="adminCategoryFilter" class="admin-select-filter" style="max-width: 250px;">
-                        <option value="">Todas las categorías</option>
+                        <option value="">Todas las expansiones</option>
                     </select>
                 </div>
 
@@ -100,9 +100,10 @@
                                 <th>ID</th>
                                 <th>Imagen</th>
                                 <th>Nombre</th>
+                                <th>Código</th> <!-- NUEVA COLUMNA -->
                                 <th>Precio</th>
                                 <th>Stock</th>
-                                <th>Categoría</th>
+                                <th>Expansión</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -156,15 +157,15 @@
             <!-- SECCIÓN: Categorías -->
             <section id="categories-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <h2>Gestión de Categorías</h2>
-                    <button id="addCategoryBtn" class="add-button" title="Añadir categoría">+</button>
+                    <h2>Gestión de Categorías / Expansiones</h2>
+                    <button id="addCategoryBtn" class="add-button" title="Añadir expansión">+</button>
                 </div>
                 
                 <div class="table-responsive">
                     <table id="categoriesTable">
                         <thead>
                             <tr>
-                                <th>Nombre de Categoría</th>
+                                <th>Nombre de Expansión/Categoría</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -225,10 +226,19 @@
             <form id="cardForm">
                 <input type="hidden" id="cardId">
                 <label>Nombre de la Carta</label>
-                <input type="text" id="cardName" required>
+                <input type="text" id="cardName" placeholder="Ej: Charizard VMAX" required>
                 
-                <label>Categoría / Set</label>
-                <select id="cardCategory" required></select>
+                <!-- NUEVO CAMPO DE CÓDIGO -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label>Código (Ej: 020/189)</label>
+                        <input type="text" id="cardCode" placeholder="Ej: SV1, 001/165" required>
+                    </div>
+                    <div>
+                        <label>Expansión</label>
+                        <select id="cardCategory" required></select>
+                    </div>
+                </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div>
@@ -309,12 +319,12 @@
     <div id="categoryModal" class="admin-modal">
         <div class="admin-modal-content">
             <span class="close-button">&times;</span>
-            <h3 id="categoryModalTitle">Añadir Categoría</h3>
+            <h3 id="categoryModalTitle">Añadir Expansión/Categoría</h3>
             <form id="categoryForm">
                 <input type="hidden" id="categoryId">
-                <label>Nombre de la Categoría</label>
+                <label>Nombre</label>
                 <input type="text" id="categoryName" required>
-                <button type="submit" id="saveCategoryBtn" class="confirm-button" style="width: 100%;">Guardar Categoría</button>
+                <button type="submit" id="saveCategoryBtn" class="confirm-button" style="width: 100%;">Guardar</button>
             </form>
         </div>
     </div>
