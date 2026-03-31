@@ -3,396 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DnD TCG - Admin Panel</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>D&D TCG - Admin Panel</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --bg-dark: #0f172a;
-            --card-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-            --red: #ef4444;
-            --green: #22c55e;
+        /* Bloqueo preventivo para evitar parpadeos al recargar */
+        body.auth-loading #adminPanelContainer,
+        body.auth-loading #loginModal {
+            display: none !important;
+        }
+        
+        /* Solo mostramos el login si explícitamente no hay sesión */
+        body.auth-guest #loginModal {
+            display: flex !important;
         }
 
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            overflow-x: hidden;
+        /* Solo mostramos el panel si la sesión está confirmada */
+        body.auth-ready #adminPanelContainer {
+            display: flex !important;
         }
-
-        /* Estados de Autenticación */
-        .auth-guest #adminPanelContainer,
-        .auth-ready #loginModal,
-        .auth-loading #adminPanelContainer,
-        .auth-loading #loginModal {
-            display: none;
-        }
-
-        /* Modal de Login */
-        #loginModal {
-            position: fixed;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-            z-index: 1000;
-        }
-
-        .login-card {
-            background: var(--card-bg);
-            padding: 2.5rem;
-            border-radius: 1rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            width: 100%;
-            max-width: 400px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .login-input {
-            width: 100%;
-            background: #0f172a;
-            border: 1px solid #334155;
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            color: white;
-            margin-top: 0.5rem;
-            outline: none;
-        }
-
-        .login-input:focus { border-color: var(--primary); }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            margin-top: 1.5rem;
-            transition: all 0.2s;
-        }
-
-        .btn-primary:hover { background: var(--primary-dark); }
-
-        /* Panel Admin */
-        #adminPanelContainer {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 260px;
-            background: var(--card-bg);
-            border-right: 1px solid #334155;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .nav-link {
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            color: var(--text-dim);
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-
-        .nav-link:hover, .nav-link.active {
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--primary);
-            border-right: 3px solid var(--primary);
-        }
-
-        .main-content {
-            flex: 1;
-            padding: 2rem;
-            max-height: 100vh;
-            overflow-y: auto;
-        }
-
-        .admin-section { display: none; }
-        .admin-section.active { display: block; }
-
-        /* Estilo de Cabeceras con Botones de Acción */
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #334155;
-        }
-
-        .btn-add {
-            background: var(--primary);
-            padding: 0.6rem 1.2rem;
-            border-radius: 0.5rem;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            transition: all 0.2s;
-            color: white;
-        }
-
-        .btn-add:hover { 
-            background: var(--primary-dark);
-            transform: translateY(-2px); 
-        }
-
-        /* Tablas */
-        .table-container {
-            background: var(--card-bg);
-            border-radius: 0.75rem;
-            overflow: hidden;
-            border: 1px solid #334155;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            background: #0f172a;
-            text-align: left;
-            padding: 1rem;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            color: var(--text-dim);
-        }
-
-        td {
-            padding: 1rem;
-            border-top: 1px solid #334155;
-            vertical-align: middle;
-        }
-
-        /* Botones de acción en cada fila */
-        .btn-icon {
-            width: 34px;
-            height: 34px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 0.5rem;
-            background: #334155;
-            color: white;
-            margin-right: 5px;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn-icon:hover { 
-            background: #475569;
-            color: var(--primary);
-        }
-
-        .btn-icon.text-red:hover { 
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--red); 
-        }
-
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: bold;
-        }
-
-        .status-pending { background: #f59e0b; color: white; }
-        .status-completed { background: var(--green); color: white; }
-
-        #loadingOverlay {
-            position: fixed;
-            inset: 0;
-            background: var(--bg-dark);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-
-        .loader {
-            width: 48px;
-            height: 48px;
-            border: 5px solid #FFF;
-            border-bottom-color: var(--primary);
-            border-radius: 50%;
-            display: inline-block;
-            box-sizing: border-box;
-            animation: rotation 1s linear infinite;
-        }
-
-        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="auth-loading">
 
-    <!-- Pantalla de Carga -->
-    <div id="loadingOverlay">
-        <div class="loader"></div>
-    </div>
-
-    <!-- Modal de Login -->
-    <div id="loginModal">
-        <div class="login-card">
-            <h2 class="text-2xl font-bold mb-2 text-center text-white">Acceso Admin</h2>
-            <p class="text-center text-slate-400 mb-6 text-sm">DnD TCG Gestión Interna</p>
-            
-            <form id="loginForm">
-                <div class="mb-4">
-                    <label class="text-sm font-medium text-slate-300">Email</label>
-                    <input type="email" id="loginEmail" class="login-input" placeholder="admin@dndtcg.com" required>
+    <!-- PANTALLA DE LOGIN -->
+    <div id="loginModal" class="admin-login-full-screen" style="display: none;">
+        <div class="login-content">
+            <div class="login-branding">
+                <i class="fas fa-dice-d20" style="font-size: 4rem; color: #6366f1; margin-bottom: 1rem;"></i>
+                <h1>D&D TCG Admin</h1>
+                <p>Introduzca sus credenciales para acceder</p>
+            </div>
+            <form id="loginForm" class="login-form-clean">
+                <div class="form-input-wrapper">
+                    <label>CORREO ELECTRÓNICO</label>
+                    <input type="email" id="username" placeholder="admin@dndtcg.com" required>
                 </div>
-                <div class="mb-6">
-                    <label class="text-sm font-medium text-slate-300">Contraseña</label>
-                    <input type="password" id="loginPass" class="login-input" placeholder="••••••••" required>
+                <div class="form-input-wrapper">
+                    <label>CONTRASEÑA</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
                 </div>
-                <button type="submit" id="btnLoginSubmit" class="btn-primary">Iniciar Sesión</button>
+                <button type="submit" id="btnLoginSubmit" class="login-action-btn">Entrar al Panel</button>
+                <p id="loginMessage" class="login-feedback"></p>
             </form>
-            <p id="loginError" class="text-red-500 text-xs mt-4 text-center hidden"></p>
         </div>
     </div>
 
-    <!-- Panel Principal -->
-    <div id="adminPanelContainer">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="p-6 border-b border-slate-700">
-                <h1 class="text-xl font-bold text-indigo-400 flex items-center gap-2">
-                    <i class="fas fa-dragon"></i> DnD Admin
-                </h1>
+    <!-- CONTENEDOR DEL PANEL -->
+    <div id="adminPanelContainer" class="admin-container" style="display: none;">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-dragon" style="color: #6366f1; font-size: 1.5rem;"></i>
+                <span>D&D TCG</span>
             </div>
-            <nav class="flex-1 mt-4">
-                <a href="#stats" class="nav-link active" data-section="stats">
-                    <i class="fas fa-chart-pie w-5"></i> Dashboard
-                </a>
-                <a href="#cards" class="nav-link" data-section="cards">
-                    <i class="fas fa-layer-group w-5"></i> Cartas
-                </a>
-                <a href="#sealed" class="nav-link" data-section="sealed">
-                    <i class="fas fa-box w-5"></i> Sellado
-                </a>
-                <a href="#categories" class="nav-link" data-section="categories">
-                    <i class="fas fa-tags w-5"></i> Categorías
-                </a>
-                <a href="#orders" class="nav-link" data-section="orders">
-                    <i class="fas fa-shopping-cart w-5"></i> Pedidos
-                </a>
+            <nav class="sidebar-nav">
+                <a href="#dashboard-section" class="nav-link active"><i class="fas fa-th-large"></i> Dashboard</a>
+                <a href="#cards-section" class="nav-link"><i class="fas fa-clone"></i> Cartas</a>
+                <a href="#sealed-products-section" class="nav-link"><i class="fas fa-box-open"></i> Productos</a>
+                <a href="#categories-section" class="nav-link"><i class="fas fa-tags"></i> Categorías</a>
+                <a href="#orders-section" class="nav-link"><i class="fas fa-shopping-cart"></i> Pedidos</a>
+                <div class="sidebar-divider" style="height: 1px; background: rgba(255,255,255,0.1); margin: 1rem 0;"></div>
+                <a href="#" id="btnLogout" class="nav-link logout-link" style="color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
             </nav>
-            <div class="p-4 border-t border-slate-700">
-                <button id="btnLogout" class="w-full p-2 rounded hover:bg-slate-700 text-slate-400 text-sm flex items-center gap-2 transition-colors">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                </button>
-            </div>
-        </div>
+        </aside>
 
-        <!-- Contenido Dinámico -->
         <main class="main-content">
-            
-            <!-- Dashboard / Stats -->
-            <section id="stats-section" class="admin-section active">
-                <div class="section-header">
-                    <h2 class="text-2xl font-bold">Resumen de Tienda</h2>
+            <!-- DASHBOARD -->
+            <section id="dashboard-section" class="admin-section active">
+                <div class="content-header">
+                    <h1>Resumen General</h1>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-                        <div class="flex justify-between items-center mb-4">
-                            <p class="text-slate-400 text-sm uppercase tracking-wider font-semibold">Total Cartas</p>
-                            <i class="fas fa-id-card text-indigo-400"></i>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-clone"></i></div>
+                        <div class="stat-info">
+                            <h3 id="stat-total-cards">0</h3>
+                            <p>Cartas en Base</p>
                         </div>
-                        <h3 id="count-cards" class="text-4xl font-bold text-white">0</h3>
                     </div>
-                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
-                        <div class="flex justify-between items-center mb-4">
-                            <p class="text-slate-400 text-sm uppercase tracking-wider font-semibold">Stock Sellado</p>
-                            <i class="fas fa-archive text-emerald-400"></i>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-boxes"></i></div>
+                        <div class="stat-info">
+                            <h3 id="stat-total-stock">0</h3>
+                            <p>Stock Total</p>
                         </div>
-                        <h3 id="count-sealed" class="text-4xl font-bold text-white">0</h3>
                     </div>
-                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg border-l-4 border-l-indigo-500">
-                        <div class="flex justify-between items-center mb-4">
-                            <p class="text-slate-400 text-sm uppercase tracking-wider font-semibold">Pedidos Pendientes</p>
-                            <i class="fas fa-clock text-amber-400"></i>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
+                        <div class="stat-info">
+                            <h3 id="stat-total-orders">0</h3>
+                            <p>Pedidos</p>
                         </div>
-                        <h3 id="count-orders" class="text-4xl font-bold text-indigo-400">0</h3>
                     </div>
                 </div>
             </section>
 
-            <!-- Sección Cartas -->
+            <!-- SECCIÓN CARTAS -->
             <section id="cards-section" class="admin-section">
-                <div class="section-header">
-                    <h2 class="text-2xl font-bold">Gestión de Cartas</h2>
-                    <button class="btn-add" onclick="alert('Abriendo formulario para añadir carta...')">
-                        <i class="fas fa-plus"></i> Nueva Carta
-                    </button>
+                <div class="content-header">
+                    <h2>Gestión de Cartas</h2>
                 </div>
-                <div class="table-container shadow-2xl">
-                    <table id="table-cards">
+                <div class="table-container">
+                    <table id="cardsTable">
                         <thead>
                             <tr>
                                 <th>Imagen</th>
                                 <th>Nombre</th>
                                 <th>Precio</th>
                                 <th>Stock</th>
-                                <th class="text-center">Acciones</th>
+                                <th>Categoría</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
                     </table>
                 </div>
             </section>
-
-            <!-- Sección Categorías -->
-            <section id="categories-section" class="admin-section">
-                <div class="section-header">
-                    <h2 class="text-2xl font-bold">Categorías</h2>
-                    <button class="btn-add" onclick="alert('Crear nueva categoría...')">
-                        <i class="fas fa-folder-plus"></i> Añadir Categoría
-                    </button>
+            
+            <!-- SECCIÓN PRODUCTOS -->
+            <section id="sealed-products-section" class="admin-section">
+                <div class="content-header">
+                    <h2>Productos Sellados</h2>
                 </div>
-                <div class="table-container max-w-4xl shadow-2xl">
-                    <table id="table-categories">
+                <div class="table-container">
+                    <table id="sealedProductsTable">
                         <thead>
                             <tr>
                                 <th>Nombre</th>
-                                <th>ID Colección</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Sección Sellado -->
-            <section id="sealed-section" class="admin-section">
-                <div class="section-header">
-                    <h2 class="text-2xl font-bold">Productos Sellados</h2>
-                    <button class="btn-add" onclick="alert('Añadir producto sellado...')">
-                        <i class="fas fa-box-open"></i> Nuevo Producto
-                    </button>
-                </div>
-                <div class="table-container shadow-2xl">
-                    <table id="table-sealed">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
                                 <th>Precio</th>
                                 <th>Stock</th>
-                                <th class="text-center">Acciones</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -400,203 +140,48 @@
                 </div>
             </section>
 
-            <!-- Sección Pedidos -->
-            <section id="orders-section" class="admin-section">
-                <div class="section-header">
-                    <h2 class="text-2xl font-bold">Historial de Pedidos</h2>
+            <!-- SECCIÓN CATEGORÍAS -->
+            <section id="categories-section" class="admin-section">
+                <div class="content-header">
+                    <h2>Categorías</h2>
                 </div>
-                <div class="table-container shadow-2xl">
-                    <table id="table-orders">
+                <div class="table-container">
+                    <table id="categoriesTable">
                         <thead>
                             <tr>
-                                <th>ID Pedido</th>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECCIÓN PEDIDOS -->
+            <section id="orders-section" class="admin-section">
+                <div class="content-header">
+                    <h2>Pedidos</h2>
+                </div>
+                <div class="table-container">
+                    <table id="ordersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
                                 <th>Cliente</th>
                                 <th>Total</th>
                                 <th>Estado</th>
-                                <th class="text-center">Acciones</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
                     </table>
                 </div>
             </section>
-
         </main>
     </div>
 
-    <!-- Firebase y Lógica Integrada -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { 
-            getAuth, 
-            onAuthStateChanged, 
-            signInWithEmailAndPassword, 
-            signOut,
-            setPersistence,
-            browserSessionPersistence
-        } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { 
-            getFirestore, 
-            collection, 
-            getDocs 
-        } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
-            authDomain: "dndtcgadmin.firebaseapp.com",
-            projectId: "dndtcgadmin",
-            storageBucket: "dndtcgadmin.firebasestorage.app",
-            messagingSenderId: "754642671504",
-            appId: "1:754642671504:web:c087cc703862cf8c228515"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = firebaseConfig.projectId;
-
-        const ui = {
-            overlay: document.getElementById('loadingOverlay'),
-            loginForm: document.getElementById('loginForm'),
-            loginError: document.getElementById('loginError'),
-            btnLogout: document.getElementById('btnLogout')
-        };
-
-        let data = { cards: [], categories: [], sealed: [], orders: [] };
-
-        // Monitoreo de autenticación
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                try {
-                    await fetchData();
-                    document.body.className = 'auth-ready';
-                } catch (e) {
-                    handleLogout();
-                }
-            } else {
-                document.body.className = 'auth-guest';
-            }
-            ui.overlay.classList.add('hidden');
-        });
-
-        async function fetchData() {
-            const coll = (name) => collection(db, 'artifacts', appId, 'public', 'data', name);
-            
-            const [snapCards, snapCats, snapSealed, snapOrders] = await Promise.all([
-                getDocs(coll('cards')),
-                getDocs(coll('categories')),
-                getDocs(coll('sealed_products')),
-                getDocs(coll('orders'))
-            ]);
-
-            data.cards = snapCards.docs.map(d => ({id: d.id, ...d.data()}));
-            data.categories = snapCats.docs.map(d => ({id: d.id, ...d.data()}));
-            data.sealed = snapSealed.docs.map(d => ({id: d.id, ...d.data()}));
-            data.orders = snapOrders.docs.map(d => ({id: d.id, ...d.data()}));
-
-            renderDashboard();
-        }
-
-        function renderDashboard() {
-            // Stats
-            document.getElementById('count-cards').textContent = data.cards.length;
-            document.getElementById('count-sealed').textContent = data.sealed.length;
-            document.getElementById('count-orders').textContent = data.orders.length;
-
-            // Tabla Cartas
-            const cardsBody = document.querySelector('#table-cards tbody');
-            cardsBody.innerHTML = data.cards.map(c => `
-                <tr>
-                    <td><img src="${c.imagen_url || ''}" class="w-10 h-10 object-cover rounded bg-slate-700 shadow-sm" onerror="this.src='https://via.placeholder.com/40?text=?'"></td>
-                    <td class="font-medium text-white">${c.nombre}</td>
-                    <td class="text-slate-300">$${parseFloat(c.precio || 0).toFixed(2)}</td>
-                    <td><span class="bg-slate-700 px-2 py-1 rounded text-xs font-mono">${c.stock}</span></td>
-                    <td class="text-center">
-                        <button class="btn-icon" title="Editar" onclick="alert('Editar carta: ${c.id}')"><i class="fas fa-edit"></i></button>
-                        <button class="btn-icon text-red" title="Eliminar" onclick="confirm('¿Borrar carta?')"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-
-            // Tabla Categorías
-            const catsBody = document.querySelector('#table-categories tbody');
-            catsBody.innerHTML = data.categories.map(c => `
-                <tr>
-                    <td class="font-semibold text-white">${c.name}</td>
-                    <td class="text-xs text-slate-500 font-mono">${c.id}</td>
-                    <td class="text-center">
-                        <button class="btn-icon text-red" onclick="alert('Eliminar categoría')"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-
-            // Tabla Sellado
-            const sealedBody = document.querySelector('#table-sealed tbody');
-            sealedBody.innerHTML = data.sealed.map(p => `
-                <tr>
-                    <td class="font-medium text-white">${p.nombre}</td>
-                    <td class="text-slate-300">$${parseFloat(p.precio || 0).toFixed(2)}</td>
-                    <td>${p.stock}</td>
-                    <td class="text-center">
-                        <button class="btn-icon" onclick="alert('Editar producto')"><i class="fas fa-edit"></i></button>
-                        <button class="btn-icon text-red" onclick="alert('Borrar producto')"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-
-            // Tabla Pedidos
-            const ordersBody = document.querySelector('#table-orders tbody');
-            ordersBody.innerHTML = data.orders.map(o => `
-                <tr>
-                    <td class="text-xs font-mono">#${o.id.substring(0, 8)}</td>
-                    <td>${o.customer?.nombre || 'Anónimo'}</td>
-                    <td class="font-bold text-indigo-300">$${(o.total || 0).toFixed(2)}</td>
-                    <td><span class="status-badge status-${o.status || 'pending'}">${o.status || 'pendiente'}</span></td>
-                    <td class="text-center">
-                        <button class="btn-icon" onclick="alert('Ver detalle del pedido')"><i class="fas fa-eye"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        ui.loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            const pass = document.getElementById('loginPass').value;
-            const btn = document.getElementById('btnLoginSubmit');
-
-            try {
-                btn.disabled = true;
-                btn.innerText = "Accediendo...";
-                await setPersistence(auth, browserSessionPersistence);
-                await signInWithEmailAndPassword(auth, email, pass);
-            } catch (err) {
-                btn.disabled = false;
-                btn.innerText = "Iniciar Sesión";
-                ui.loginError.textContent = "Acceso denegado: Credenciales incorrectas.";
-                ui.loginError.classList.remove('hidden');
-            }
-        });
-
-        async function handleLogout() {
-            await signOut(auth);
-            window.location.reload();
-        }
-
-        ui.btnLogout.addEventListener('click', handleLogout);
-
-        // Navegación fluida
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const sectionId = link.dataset.section;
-                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-                document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-                document.getElementById(`${sectionId}-section`).classList.add('active');
-            });
-        });
-
-    </script>
+    <script type="module" src="js/admin.js"></script>
 </body>
 </html>
