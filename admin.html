@@ -4,14 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración DND TCG</title>
+    <!-- Incluir CSS del panel de administración (separado del de la tienda) -->
     <link rel="stylesheet" href="css/admin.css">
+    <!-- Opcional: Para iconos, si se usa FontAwesome u otra librería -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
 </head>
 <body>
     <div class="admin-container">
+        <!-- Sidebar (Barra Lateral) / Menú Desplegable en Móvil -->
         <aside class="sidebar" id="sidebar-menu">
             <div class="sidebar-header">
                 <h3>Admin DND TCG</h3>
+                <!-- Botón de cerrar añadido para la vista móvil -->
                 <button id="closeSidebarBtn" class="close-sidebar-btn">&times;</button>
             </div>
             <nav class="sidebar-nav">
@@ -26,10 +31,13 @@
             </nav>
         </aside>
 
+        <!-- Overlay para cuando el menú desplegable está abierto en móvil -->
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
+        <!-- Contenido Principal del Panel -->
         <main class="main-content">
             <header class="main-header">
+                <!-- Botón para abrir el menú desplegable en móvil -->
                 <button id="sidebarToggleBtn" class="sidebar-toggle-btn">
                     <i class="fas fa-bars"></i>
                 </button>
@@ -40,10 +48,12 @@
                     </button>
                     <div class="user-info">
                         <span>Admin User</span>
+                        <!-- Aquí podrías mostrar el ID del usuario si implementas Firebase Auth -->
                     </div>
                 </div>
             </header>
 
+            <!-- Sección de Dashboard (por defecto) -->
             <section id="dashboard-section" class="admin-section active">
                 <h2>Dashboard</h2>
                 <p>Resumen rápido de tu tienda.</p>
@@ -67,6 +77,7 @@
                 </div>
             </section>
 
+            <!-- Sección de Gestión de Cartas -->
             <section id="cards-section" class="admin-section">
                 <h2>Gestión de Cartas</h2>
                 <button id="addCardBtn" class="add-button">Añadir Nueva Carta</button>
@@ -75,6 +86,7 @@
                     <input type="text" id="adminSearchInput" placeholder="Buscar carta por nombre o ID..." class="admin-search-input">
                     <select id="adminCategoryFilter" class="admin-select-filter">
                         <option value="">Todas las categorías</option>
+                        <!-- Las opciones se cargarán dinámicamente -->
                     </select>
                     <div class="table-responsive">
                         <table id="cardsTable">
@@ -89,7 +101,9 @@
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                <!-- Las filas de las cartas se cargarán aquí con JavaScript -->
+                            </tbody>
                         </table>
                     </div>
                     <div class="pagination-controls">
@@ -100,6 +114,7 @@
                 </div>
             </section>
 
+            <!-- Sección de Gestión de Productos Sellados -->
             <section id="sealed-products-section" class="admin-section">
                 <h2>Gestión de Productos Sellados</h2>
                 <button id="addSealedProductBtn" class="add-button">Añadir Nuevo Producto Sellado</button>
@@ -108,6 +123,7 @@
                     <input type="text" id="adminSealedSearchInput" placeholder="Buscar producto por nombre o ID..." class="admin-search-input">
                     <select id="adminSealedCategoryFilter" class="admin-select-filter">
                         <option value="">Todos los tipos</option>
+                        <!-- Las opciones se cargarán dinámicamente -->
                     </select>
                     <div class="table-responsive">
                         <table id="sealedProductsTable">
@@ -122,7 +138,9 @@
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                <!-- Las filas de los productos sellados se cargarán aquí con JavaScript -->
+                            </tbody>
                         </table>
                     </div>
                     <div class="pagination-controls">
@@ -133,6 +151,7 @@
                 </div>
             </section>
 
+            <!-- Sección de Gestión de Categorías -->
             <section id="categories-section" class="admin-section">
                 <h2>Gestión de Categorías</h2>
                 <button id="addCategoryBtn" class="add-button">Añadir Nueva Categoría</button>
@@ -146,12 +165,15 @@
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                <!-- Las filas de las categorías se cargarán aquí con JavaScript -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
             </section>
             
+            <!-- NUEVA SECCIÓN: Gestión de Pedidos -->
             <section id="orders-section" class="admin-section">
                 <h2>Gestión de Pedidos</h2>
                 <div class="order-list-container">
@@ -168,12 +190,16 @@
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                <!-- Las filas de los pedidos se cargarán aquí -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
+
+            <!-- Modal para Añadir/Editar Carta -->
             <div id="cardModal" class="admin-modal">
                 <div class="admin-modal-content">
                     <span class="close-button">&times;</span>
@@ -188,13 +214,17 @@
                         <input type="number" id="cardPrice" step="0.01" required>
                         <label for="cardStock">Stock:</label>
                         <input type="number" id="cardStock" required>
+                        <!-- CAMBIO: Ahora es un menú desplegable SELECT -->
                         <label for="cardCategory">Categoría:</label>
-                        <select id="cardCategory" required></select>
+                        <select id="cardCategory" required>
+                            <!-- Las opciones se llenarán dinámicamente -->
+                        </select>
                         <button type="submit" id="saveCardBtn">Guardar Carta</button>
                     </form>
                 </div>
             </div>
 
+            <!-- Modal para Añadir/Editar Producto Sellado -->
             <div id="sealedProductModal" class="admin-modal">
                 <div class="admin-modal-content">
                     <span class="close-button">&times;</span>
@@ -205,8 +235,11 @@
                         <input type="text" id="sealedProductName" required>
                         <label for="sealedProductImage">URL Imagen:</label>
                         <input type="url" id="sealedProductImage" required>
+                        <!-- CAMBIO: Ahora es un menú desplegable SELECT -->
                         <label for="sealedProductCategory">Tipo Producto:</label>
-                        <select id="sealedProductCategory" required></select>
+                        <select id="sealedProductCategory" required>
+                            <!-- Las opciones se llenarán dinámicamente -->
+                        </select>
                         <label for="sealedProductPrice">Precio:</label>
                         <input type="number" id="sealedProductPrice" step="0.01" required>
                         <label for="sealedProductStock">Stock:</label>
@@ -216,6 +249,7 @@
                 </div>
             </div>
 
+            <!-- Modal para Añadir/Editar Categoría -->
             <div id="categoryModal" class="admin-modal">
                 <div class="admin-modal-content">
                     <span class="close-button">&times;</span>
@@ -229,6 +263,7 @@
                 </div>
             </div>
 
+            <!-- Modal de Confirmación para Eliminar -->
             <div id="confirmModal" class="admin-modal">
                 <div class="admin-modal-content">
                     <h3>Confirmar Eliminación</h3>
@@ -240,6 +275,7 @@
                 </div>
             </div>
 
+            <!-- Modal de Inicio de Sesión -->
             <div id="loginModal" class="admin-modal">
                 <div class="admin-modal-content login-container">
                     <h3>Inicio de Sesión</h3>
@@ -263,11 +299,14 @@
                 </div>
             </div>
 
+            <!-- NUEVO: Modal para Ver Detalles del Pedido -->
             <div id="orderDetailsModal" class="admin-modal">
                 <div class="admin-modal-content">
                     <span class="close-button" id="closeOrderDetailsModal">&times;</span>
                     <h3>Detalles del Pedido</h3>
-                    <div id="orderDetailsContent"></div>
+                    <div id="orderDetailsContent">
+                        <!-- El contenido se llenará dinámicamente -->
+                    </div>
                     <div class="order-actions">
                         <h4>Cambiar Estado:</h4>
                         <select id="orderStatusSelect">
@@ -281,6 +320,8 @@
                 </div>
             </div>
 
+
+            <!-- MODAL PARA MENSAJES (éxito/error) - AÑADIDO -->
             <div id="messageModal" class="admin-modal">
                 <div class="admin-modal-content">
                     <span class="close-button" id="closeMessageModal">&times;</span>
@@ -291,8 +332,11 @@
                     </div>
                 </div>
             </div>
+
         </main>
     </div>
+
+    <!-- Incluir JavaScript del panel de administración -->
     <script type="module" src="js/admin.js"></script>
 </body>
 </html>
