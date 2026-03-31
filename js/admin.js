@@ -16,38 +16,45 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = firebaseConfig.projectId;
 
-// --- ELEMENTOS ---
+// --- ELEMENTOS DEL DOM ---
 const loginForm = document.getElementById('loginForm');
 const loginMessage = document.getElementById('loginMessage');
 const btnLogout = document.getElementById('btnLogout');
+const adminPanelContainer = document.getElementById('adminPanelContainer');
 
 let allData = { cards: [], products: [], categories: [], orders: [] };
 
-// --- VERIFICACIÓN DE SESIÓN (EL CORAZÓN DEL CÓDIGO) ---
+// --- GESTIÓN DE ESTADO DE AUTENTICACIÓN ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        console.log("Acceso concedido a:", user.email);
-        // 1. Mostrar el panel ANTES de cargar datos para que se vea la interfaz
-        document.body.classList.add('auth-ready');
-        // 2. Cargar datos de Firestore de forma segura
-        await loadDashboardData();
+        console.log("Sesión activa detectada:", user.email);
+        try {
+            // Intentamos cargar los datos. Si falla por permisos, cerramos sesión.
+            await loadDashboardData();
+            document.body.classList.add('auth-ready');
+        } catch (err) {
+            console.error("Error crítico de acceso:", err);
+            // Si hay error de permisos al inicio, forzamos el logout para limpiar el estado
+            handleLogout();
+        }
     } else {
-        console.log("No hay sesión activa.");
+        console.log("No hay usuario autenticado.");
         document.body.classList.remove('auth-ready');
-        // Limpiar tablas para evitar que queden datos viejos al cerrar sesión
         clearAllTables();
     }
 });
 
-// --- CARGA DE DATOS ---
+// --- CARGA DE DATOS DESDE FIRESTORE ---
 async function loadDashboardData() {
+    // Definimos las rutas siguiendo la estructura obligatoria de la documentación
+    const publicPath = (coll) => collection(db, 'artifacts', appId, 'public', 'data', coll);
+
     try {
-        // Ejecutamos todo en paralelo para máxima velocidad
         const [catSnap, cardSnap, prodSnap, orderSnap] = await Promise.all([
-            getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'categories')),
-            getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'cards')),
-            getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products')),
-            getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'orders'))
+            getDocs(publicPath('categories')),
+            getDocs(publicPath('cards')),
+            getDocs(publicPath('sealed_products')),
+            getDocs(publicPath('orders'))
         ]);
 
         allData.categories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -57,13 +64,12 @@ async function loadDashboardData() {
 
         renderAll();
     } catch (err) {
-        console.error("Error cargando Firestore:", err);
-        // Si hay error de permisos (Missing or insufficient permissions), 
-        // probablemente el usuario no está logueado correctamente en Firestore.
+        // Propagamos el error para que onAuthStateChanged lo maneje
+        throw err;
     }
 }
 
-// --- RENDERIZADO ---
+// --- RENDERIZADO DE INTERFAZ ---
 function renderAll() {
     updateStats();
     renderCardsTable();
@@ -74,10 +80,16 @@ function renderAll() {
 }
 
 function updateStats() {
-    document.getElementById('stat-total-cards').textContent = allData.cards.length;
-    const totalStock = allData.cards.reduce((acc, c) => acc + (parseInt(c.stock) || 0), 0);
-    document.getElementById('stat-total-stock').textContent = totalStock;
-    document.getElementById('stat-total-orders').textContent = allData.orders.length;
+    const cardEl = document.getElementById('stat-total-cards');
+    const stockEl = document.getElementById('stat-total-stock');
+    const orderEl = document.getElementById('stat-total-orders');
+
+    if (cardEl) cardEl.textContent = allData.cards.length;
+    if (stockEl) {
+        const totalStock = allData.cards.reduce((acc, c) => acc + (parseInt(c.stock) || 0), 0);
+        stockEl.textContent = totalStock;
+    }
+    if (orderEl) orderEl.textContent = allData.orders.length;
 }
 
 function renderCardsTable() {
@@ -85,14 +97,14 @@ function renderCardsTable() {
     if (!tbody) return;
     tbody.innerHTML = allData.cards.map(c => `
         <tr>
-            <td><img src="${c.imagen_url}" width="40" onerror="this.src='https://via.placeholder.com/40'"></td>
-            <td>${c.nombre}</td>
+            <td><img src="${c.imagen_url || ''}" width="40" alt="${c.nombre}" onerror="this.src='https://via.placeholder.com/40'"></td>
+            <td>${c.nombre || 'Sin nombre'}</td>
             <td>$${parseFloat(c.precio || 0).toFixed(2)}</td>
             <td>${c.stock || 0}</td>
             <td>${c.categoria || 'N/A'}</td>
             <td>
-                <button class="btn-icon"><i class="fas fa-edit"></i></button>
-                <button class="btn-icon text-red"><i class="fas fa-trash"></i></button>
+                <button class="btn-icon" title="Editar"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon text-red" title="Eliminar"><i class="fas fa-trash"></i></button>
             </td>
         </tr>
     `).join('');
@@ -103,9 +115,9 @@ function renderCategoriesTable() {
     if (!tbody) return;
     tbody.innerHTML = allData.categories.map(c => `
         <tr>
-            <td>${c.id.substring(0,6)}</td>
-            <td>${c.name}</td>
-            <td><button class="btn-icon text-red"><i class="fas fa-trash"></i></button></td>
+            <td>${c.id.substring(0, 6)}</td>
+            <td>${c.name || 'Sin nombre'}</td>
+            <td><button class="btn-icon text-red" title="Eliminar"><i class="fas fa-trash"></i></button></td>
         </tr>
     `).join('');
 }
@@ -115,10 +127,10 @@ function renderProductsTable() {
     if (!tbody) return;
     tbody.innerHTML = allData.products.map(p => `
         <tr>
-            <td>${p.nombre}</td>
+            <td>${p.nombre || 'Sin nombre'}</td>
             <td>$${parseFloat(p.precio || 0).toFixed(2)}</td>
             <td>${p.stock || 0}</td>
-            <td><button class="btn-icon"><i class="fas fa-edit"></i></button></td>
+            <td><button class="btn-icon" title="Editar"><i class="fas fa-edit"></i></button></td>
         </tr>
     `).join('');
 }
@@ -128,11 +140,11 @@ function renderOrdersTable() {
     if (!tbody) return;
     tbody.innerHTML = allData.orders.map(o => `
         <tr>
-            <td>#${o.id.substring(0,8)}</td>
+            <td>#${o.id.substring(0, 8)}</td>
             <td>${o.customer?.nombre || 'Anónimo'}</td>
             <td>$${(o.total || 0).toFixed(2)}</td>
             <td><span class="status-badge status-${o.status || 'pending'}">${o.status || 'pendiente'}</span></td>
-            <td><button class="btn-icon"><i class="fas fa-eye"></i></button></td>
+            <td><button class="btn-icon" title="Ver detalle"><i class="fas fa-eye"></i></button></td>
         </tr>
     `).join('');
 }
@@ -148,7 +160,17 @@ function populateFilters() {
     select.innerHTML = '<option value="">Todas las categorías</option>' + options;
 }
 
-// --- LOGIN ---
+// --- ACCIONES DE USUARIO ---
+
+async function handleLogout() {
+    try {
+        await signOut(auth);
+        window.location.reload();
+    } catch (err) {
+        console.error("Error al cerrar sesión:", err);
+    }
+}
+
 loginForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('btnLoginSubmit');
@@ -156,35 +178,36 @@ loginForm?.addEventListener('submit', async (e) => {
     const pass = document.getElementById('password').value;
 
     try {
-        btn.disabled = true;
-        loginMessage.textContent = "Verificando...";
+        if (btn) btn.disabled = true;
+        loginMessage.textContent = "Verificando credenciales...";
         loginMessage.style.color = "var(--primary)";
         
         await signInWithEmailAndPassword(auth, email, pass);
-        // El onAuthStateChanged detectará el éxito y hará el resto
+        // onAuthStateChanged se encargará del resto
     } catch (err) {
-        btn.disabled = false;
-        loginMessage.textContent = "Error: Credenciales no válidas.";
+        if (btn) btn.disabled = false;
+        loginMessage.textContent = "Error: Usuario o contraseña incorrectos.";
         loginMessage.style.color = "var(--red)";
+        console.error("Error de login:", err);
     }
 });
 
-// --- LOGOUT ---
-btnLogout?.addEventListener('click', async (e) => {
+btnLogout?.addEventListener('click', (e) => {
     e.preventDefault();
-    await signOut(auth);
+    handleLogout();
 });
 
 // --- NAVEGACIÓN ---
 document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', (e) => {
         const targetId = link.getAttribute('href')?.substring(1);
-        if (targetId && targetId !== '#') {
+        if (targetId && targetId !== '#' && targetId !== '') {
             e.preventDefault();
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             link.classList.add('active');
             document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-            document.getElementById(targetId).classList.add('active');
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) targetSection.classList.add('active');
         }
     });
 });
