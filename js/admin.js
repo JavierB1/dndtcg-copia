@@ -277,8 +277,8 @@ function stopCamera() {
 }
 
 async function startScanningProcess() {
-    // MENSAJE DE AYUDA PARA EL USUARIO
-    scannerStatusMessage.innerHTML = "<strong>ACERCA LA CÁMARA</strong><br><small>Enfoca solo el número de colección (Ej: 152/162) para que la IA pueda leerlo.</small>";
+    // MENSAJE ACTUALIZADO PARA DAR MEJORES INSTRUCCIONES
+    scannerStatusMessage.innerHTML = "<strong>NO LA ACERQUES DEMASIADO</strong><br><small>Mantenla a 15cm para que enfoque. El sistema hará zoom automático en el número.</small>";
     scannerStatusMessage.style.color = "#10b981";
     scanTimeout = setTimeout(processScannedFrame, 2000); // 2 segundos iniciales
 }
@@ -291,9 +291,33 @@ async function processScannedFrame() {
         scannerStatusMessage.style.color = "#f59e0b";
 
         const context = captureCanvas.getContext('2d');
-        captureCanvas.width = cameraStream.videoWidth;
-        captureCanvas.height = cameraStream.videoHeight;
-        context.drawImage(cameraStream, 0, 0, captureCanvas.width, captureCanvas.height);
+        
+        // --- ZOOM DIGITAL Y FILTRO ---
+        const videoWidth = cameraStream.videoWidth;
+        const videoHeight = cameraStream.videoHeight;
+
+        // Recortamos el 50% central de la imagen de la cámara
+        const cropWidth = videoWidth * 0.5;
+        const cropHeight = videoHeight * 0.5;
+        const startX = (videoWidth - cropWidth) / 2;
+        const startY = (videoHeight - cropHeight) / 2;
+
+        // Ampliamos el recorte x2 para ayudar a la IA a leerlo (Zoom Digital)
+        captureCanvas.width = cropWidth * 2;
+        captureCanvas.height = cropHeight * 2;
+
+        // Aplicamos un filtro de alto contraste y escala de grises para eliminar brillos holográficos
+        context.filter = 'contrast(1.5) grayscale(1)';
+
+        context.drawImage(
+            cameraStream,
+            startX, startY, cropWidth, cropHeight,        // Origen (Recorte)
+            0, 0, captureCanvas.width, captureCanvas.height // Destino (Ampliación)
+        );
+        
+        // Restauramos el filtro por precaución
+        context.filter = 'none';
+        // ------------------------------
 
         // USAMOS EL WORKER YA CREADO (Mucho más rápido)
         const result = await ocrWorker.recognize(captureCanvas);
@@ -321,14 +345,14 @@ async function processScannedFrame() {
                 scanTimeout = setTimeout(processScannedFrame, 2500);
             }
         } else {
-            scannerStatusMessage.innerHTML = "No detecto el código.<br><small>Acerca más el iPad al numerito de la esquina.</small>";
+            scannerStatusMessage.innerHTML = "Buscando código...<br><small>Centra el número (Ej: 152/162) bajo el láser.</small>";
             scannerStatusMessage.style.color = "#ef4444";
-            scanTimeout = setTimeout(processScannedFrame, 2000);
+            scanTimeout = setTimeout(processScannedFrame, 1500); // Reintento más rápido
         }
     } catch (error) {
         console.error("Error en lectura:", error);
         scannerStatusMessage.textContent = "Error de lectura. Reintentando...";
-        scanTimeout = setTimeout(processScannedFrame, 2000);
+        scanTimeout = setTimeout(processScannedFrame, 1500);
     }
 }
 
