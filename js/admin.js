@@ -1,9 +1,8 @@
-// ==========================================================================
+// Pega tu código JavaScript aquí// ==========================================================================
 // GLOBAL VARIABLES (non-DOM related)
 // ==========================================================================
 
 // Firebase and Firestore SDK imports
-// Importaciones de los SDK de Firebase y Firestore
 import { initializeApp }
 from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
@@ -11,7 +10,6 @@ from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
 import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, runTransaction, getDoc }
 from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
 
-// Your actual Firebase configuration for dndtcgadmin project
 // Configuración de Firebase - Directamente proporcionada
 const firebaseConfig = {
     apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
@@ -23,9 +21,6 @@ const firebaseConfig = {
     measurementId: "G-T8KRZX5S7R"
 };
 
-// Initialize Firebase services
-// Inicializa los servicios de Firebase.
-// Se verifica si la configuración de Firebase es válida antes de inicializar.
 let app;
 let db;
 let auth;
@@ -37,35 +32,26 @@ if (firebaseConfig && firebaseConfig.projectId) {
     console.error("Error: firebaseConfig no está disponible o no tiene un 'projectId'. No se pudo inicializar la app.");
 }
 
-// Application ID and User ID
-// ID de la aplicación y del usuario
 const appId = firebaseConfig.projectId;
 let userId = null;
 let currentAdminUser = null;
 
-// Arrays para almacenar los datos cargados desde Firestore
-// Arrays to store loaded data from Firestore
 let allCards = [];
 let allSealedProducts = [];
 let allCategories = [];
-let allOrders = []; // <-- Array para los pedidos
+let allOrders = []; 
 
-// Configuración de paginación
-// Pagination configuration
 const itemsPerPage = 10;
 let currentCardsPage = 1;
 let currentSealedProductsPage = 1;
 
-// Variable para el elemento a eliminar
-// Variable for the item to be deleted
 let currentDeleteTarget = null;
-
 
 // ==========================================================================
 // DOM ELEMENT REFERENCES
 // ==========================================================================
 let sidebarToggleBtn;
-let closeSidebarBtn; // <-- Referencia para el nuevo botón
+let closeSidebarBtn; 
 let sidebarMenu;
 let sidebarOverlay;
 let mainHeader;
@@ -74,7 +60,7 @@ let loginForm;
 let loginMessage;
 let usernameInput;
 let passwordInput;
-let togglePasswordVisibilityBtn; // Elemento para el botón de alternar visibilidad
+let togglePasswordVisibilityBtn; 
 
 let navDashboard;
 let navCards;
@@ -87,7 +73,7 @@ let dashboardSection;
 let cardsSection;
 let sealedProductsSection;
 let categoriesSection;
-let ordersSection; // <-- Referencia para la nueva sección
+let ordersSection; 
 
 let addCardBtn;
 let addSealedProductBtn;
@@ -130,7 +116,7 @@ let confirmDeleteBtn;
 let cardsTable;
 let sealedProductsTable;
 let categoriesTable;
-let ordersTable; // <-- Referencia para la nueva tabla
+let ordersTable; 
 
 let adminSearchInput;
 let adminCategoryFilter;
@@ -155,22 +141,26 @@ let messageModalTitle;
 let messageModalText;
 let okMessageModalBtn;
 
-// Referencias para el nuevo modal de detalles de pedido
 let orderDetailsModal;
 let closeOrderDetailsModalBtn;
 let orderDetailsContent;
 let orderStatusSelect;
 let updateOrderStatusBtn;
 
+// REFERENCIAS DEL ESCÁNER DE CÁMARA
+let scannerModal;
+let openScannerBtn;
+let closeScannerBtn;
+let cameraStream;
+let captureCanvas;
+let scannerStatusMessage;
+let mediaStream = null;
+let scanTimeout = null;
 
 // ==========================================================================
 // UTILITY FUNCTIONS
 // ==========================================================================
 
-/**
- * Muestra una sección del panel de administración y oculta las demás.
- * @param {HTMLElement} sectionToShow - El elemento DOM de la sección a mostrar.
- */
 function showSection(sectionToShow) {
     const sections = [dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection];
     sections.forEach(section => {
@@ -181,9 +171,6 @@ function showSection(sectionToShow) {
     }
 }
 
-/**
- * Oculta todas las secciones del panel de administración.
- */
 function hideAllSections() {
     const sections = [dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection];
     sections.forEach(section => {
@@ -191,10 +178,6 @@ function hideAllSections() {
     });
 }
 
-/**
- * Abre un modal.
- * @param {HTMLElement} modalElement - El elemento modal a abrir.
- */
 function openModal(modalElement) {
     if (modalElement) {
         modalElement.style.display = 'flex';
@@ -202,10 +185,6 @@ function openModal(modalElement) {
     }
 }
 
-/**
- * Cierra un modal.
- * @param {HTMLElement} modalElement - El elemento modal a cerrar.
- */
 function closeModal(modalElement) {
     if (modalElement) {
         modalElement.style.display = 'none';
@@ -213,10 +192,6 @@ function closeModal(modalElement) {
     }
 }
 
-/**
- * Muestra un mensaje de error en el modal de login.
- * @param {string} message - El mensaje a mostrar.
- */
 function showLoginError(message) {
     if (loginMessage) {
         loginMessage.textContent = message;
@@ -224,9 +199,6 @@ function showLoginError(message) {
     }
 }
 
-/**
- * Limpia el mensaje de error del modal de login.
- */
 function clearLoginError() {
     if (loginMessage) {
         loginMessage.textContent = '';
@@ -234,26 +206,109 @@ function clearLoginError() {
     }
 }
 
-/**
- * Muestra un modal de mensaje personalizado.
- * @param {string} title - El título del mensaje.
- * @param {string} text - El texto del mensaje.
- */
 function showMessageModal(title, text) {
     if (messageModalTitle) messageModalTitle.textContent = title;
     if (messageModalText) messageModalText.textContent = text;
     openModal(messageModal);
 }
 
+// ==========================================================================
+// FUNCIÓN DE CÁMARA Y ESCÁNER EN VIVO
+// ==========================================================================
+
+async function startCamera() {
+    try {
+        scannerStatusMessage.textContent = "Solicitando permisos de cámara...";
+        scannerStatusMessage.style.color = "#3b82f6";
+        
+        // Pide acceso a la cámara. En móviles, prioriza la cámara trasera (environment)
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+        });
+        
+        // Conecta el video de la cámara al elemento HTML
+        cameraStream.srcObject = mediaStream;
+        scannerStatusMessage.textContent = "Cámara activa. Escaneando carta...";
+        scannerStatusMessage.style.color = "#10b981";
+        
+        // Inicia el proceso de lectura (temporizador)
+        startScanningProcess();
+    } catch (err) {
+        console.error("Error al acceder a la cámara:", err);
+        scannerStatusMessage.textContent = "Error: Por favor permite el acceso a la cámara.";
+        scannerStatusMessage.style.color = "#ef4444";
+    }
+}
+
+function stopCamera() {
+    // Apaga la luz de la cámara
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+    }
+    // Detiene el temporizador si se cierra antes
+    if (scanTimeout) {
+        clearTimeout(scanTimeout);
+        scanTimeout = null;
+    }
+}
+
+function startScanningProcess() {
+    // Aquí es donde irá la lógica OCR (Reconocimiento de Texto) en el futuro
+    // Por ahora, simularemos que "logra leer" la carta después de 3.5 segundos de enfocar
+    scanTimeout = setTimeout(() => {
+        
+        // 1. TOMA LA FOTO INVISIBLE (Captura el frame exacto del video)
+        const context = captureCanvas.getContext('2d');
+        captureCanvas.width = cameraStream.videoWidth;
+        captureCanvas.height = cameraStream.videoHeight;
+        context.drawImage(cameraStream, 0, 0, captureCanvas.width, captureCanvas.height);
+        
+        // 2. Apaga la cámara y cierra el escáner
+        stopCamera();
+        closeModal(scannerModal);
+        
+        // 3. Abre el formulario con los datos encontrados (Ejemplo)
+        processScannedCardData();
+        
+    }, 3500); // 3.5 segundos escaneando en vivo
+}
+
+function processScannedCardData() {
+    openModal(cardModal);
+    cardModalTitle.textContent = 'Carta Detectada';
+    
+    // Estos son los datos que la futura API entregará
+    cardName.value = 'Charizard VMAX (Escaneado)';
+    cardPrice.value = '45.00';
+    cardImage.value = 'https://assets.pokemon.com/assets/cms2/img/cards/web/swsh3/swsh3_en_20.png';
+    
+    // Verificamos si la categoría existe, si no, la añadimos para que no de error
+    if(cardCategory.options.length === 0) {
+        const option = document.createElement('option');
+        option.value = 'Darkness Ablaze';
+        option.text = 'Darkness Ablaze';
+        cardCategory.appendChild(option);
+    } else {
+        let exists = Array.from(cardCategory.options).some(opt => opt.value === 'Darkness Ablaze');
+        if(!exists) {
+            const option = document.createElement('option');
+            option.value = 'Darkness Ablaze';
+            option.text = 'Darkness Ablaze';
+            cardCategory.appendChild(option);
+        }
+    }
+    cardCategory.value = 'Darkness Ablaze';
+    
+    // Efecto visual de que se llenó solo
+    cardName.style.backgroundColor = '#ecfdf5';
+    setTimeout(() => cardName.style.backgroundColor = '', 2000);
+}
+
 
 // ==========================================================================
 // FIREBASE AUTHENTICATION FUNCTIONS
 // ==========================================================================
-
-/**
- * Maneja el proceso de inicio de sesión del administrador.
- * @param {Event} event - El evento de envío del formulario.
- */
 async function handleLogin(event) {
     event.preventDefault();
     const email = usernameInput ? usernameInput.value : '';
@@ -263,9 +318,8 @@ async function handleLogin(event) {
     try {
         await signInWithEmailAndPassword(auth, email, password);
         console.log('Administrador ha iniciado sesión con Firebase Auth.');
-        closeModal(loginModal); // Cierra el modal solo si el login fue exitoso
-        showSection(dashboardSection); // Muestra la sección de dashboard
-        // Carga los datos después de un inicio de sesión exitoso
+        closeModal(loginModal);
+        showSection(dashboardSection);
         await loadAllData();
     } catch (error) {
         console.error('Error al iniciar sesión con Firebase:', error);
@@ -276,78 +330,46 @@ async function handleLogin(event) {
             errorMessage = 'Formato de correo electrónico no válido.';
         } else if (error.code === 'auth/network-request-failed') {
             errorMessage = 'Error de red. Verifica tu conexión a internet.';
-        } else {
-            errorMessage = `Error desconocido: ${error.message}. Por favor, revisa la consola para más detalles.`;
         }
         showLoginError(errorMessage);
     }
 }
 
-/**
- * Maneja el proceso de cierre de sesión del administrador.
- */
 async function handleLogout() {
     try {
         await signOut(auth);
         userId = null;
         currentAdminUser = null;
-        console.log('Sesión cerrada con Firebase Auth.');
-        hideAllSections(); // Oculta todas las secciones del administrador
-        openModal(loginModal); // Muestra el modal de login al cerrar sesión
+        hideAllSections();
+        openModal(loginModal);
     } catch (error) {
-        console.error('Error al cerrar sesión:', error);
         showMessageModal("Error al cerrar sesión", 'Error al cerrar sesión. Por favor, inténtalo de nuevo.');
     }
 }
 
-// Firebase Auth State Listener: Se ejecuta cuando el estado de autenticación cambia
-// Este listener ahora solo actualiza las variables de estado, no manipula la UI
 onAuthStateChanged(auth, (user) => {
     currentAdminUser = user;
     userId = user ? user.uid : null;
-    console.log('Cambio de estado de autenticación de Firebase. Usuario:', userId);
-
-    // No se manipula la UI aquí para evitar que se salte el login.
-    // La carga de datos y la visibilidad de la UI se gestiona en handleLogin y handleLogout
 });
 
-
 // ==========================================================================
-// DATA LOADING FUNCTIONS (All from Firestore now)
+// DATA LOADING FUNCTIONS
 // ==========================================================================
-
-/**
- * Carga todos los pedidos desde Firestore.
- */
 async function loadOrdersData() {
-    if (!db) {
-        console.error("No se pudo cargar pedidos: la base de datos no está inicializada.");
-        return;
-    }
+    if (!db) return;
     try {
         const ordersCol = collection(db, `artifacts/${appId}/public/data/orders`);
         const ordersSnapshot = await getDocs(ordersCol);
         allOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Ordenar pedidos por fecha, del más reciente al más antiguo
         allOrders.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         renderOrdersTable();
     } catch (error) {
         console.error('Error al cargar pedidos:', error);
-        showMessageModal("Error de Carga", 'Error al cargar los pedidos. Consulta la consola para más detalles.');
     }
 }
 
-
-/**
- * Carga todas las categorías desde Firestore.
- * Loads all categories from Firestore.
- */
 async function loadCategories() {
-    // Si la inicialización falló, no intentes cargar datos.
-    if (!db) {
-        console.error("No se pudo cargar categorías: la base de datos no está inicializada.");
-        return;
-    }
+    if (!db) return;
     try {
         const categoriesCol = collection(db, `artifacts/${appId}/public/data/categories`);
         const categorySnapshot = await getDocs(categoriesCol);
@@ -356,27 +378,15 @@ async function loadCategories() {
         renderCategoriesTable();
     } catch (error) {
         console.error('Error al cargar categorías:', error);
-        showMessageModal("Error de Carga", 'Error al cargar categorías. Consulta la consola para más detalles.');
     }
 }
 
-/**
- * Carga todos los datos de cartas desde Firestore.
- * Loads all card data from Firestore.
- */
 async function loadCardsData() {
-    // Si la inicialización falló, no intentes cargar datos.
-    if (!db) {
-        console.error("No se pudo cargar cartas: la base de datos no está inicializada.");
-        return;
-    }
+    if (!db) return;
     try {
         const cardsCol = collection(db, `artifacts/${appId}/public/data/cards`);
         const cardsSnapshot = await getDocs(cardsCol);
-        allCards = cardsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        allCards = cardsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         allCards = allCards.map(card => ({
             ...card,
             precio: parseFloat(card.precio) || 0,
@@ -386,126 +396,68 @@ async function loadCardsData() {
         updateDashboardStats();
     } catch (error) {
         console.error('Error al cargar datos de cartas:', error);
-        showMessageModal("Error de Carga", 'Error al cargar cartas. Consulta la consola para más detalles.');
     }
 }
 
-/**
- * Carga todos los datos de productos sellados desde Firestore.
- * Loads all sealed product data from Firestore.
- */
 async function loadSealedProductsData() {
-    // Si la inicialización falló, no intentes cargar datos.
-    if (!db) {
-        console.error("No se pudo cargar productos sellados: la base de datos no está inicializada.");
-        return;
-    }
+    if (!db) return;
     try {
         const sealedProductsCol = collection(db, `artifacts/${appId}/public/data/sealed_products`);
         const sealedProductsSnapshot = await getDocs(sealedProductsCol);
-        allSealedProducts = sealedProductsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        allSealedProducts = sealedProductsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         allSealedProducts = allSealedProducts.map(product => ({
             ...product,
             precio: parseFloat(product.precio) || 0,
             stock: parseInt(product.stock) || 0
         }));
-        console.log('Datos de productos sellados cargados:', allSealedProducts);
         renderSealedProductsTable();
         updateDashboardStats();
     } catch (error) {
         console.error('Error al cargar datos de productos sellados:', error);
-        showMessageModal("Error de Carga", 'Error al cargar productos sellados. Consulta la consola para más detalles.');
     }
 }
 
-/**
- * Carga todos los datos necesarios para el panel de administración.
- * Loads all necessary data for the admin panel.
- */
 async function loadAllData() {
     await loadCategories();
     await loadCardsData();
     await loadSealedProductsData();
-    await loadOrdersData(); // <-- Cargar también los pedidos
+    await loadOrdersData();
 }
 
-/**
- * Rellena los filtros de categoría y los menús desplegables en los formularios.
- * Populates category filters and select elements in forms.
- */
 function populateCategoryFiltersAndSelects() {
-    if (!adminCategoryFilter || !adminSealedCategoryFilter || !cardCategory || !sealedProductCategory) {
-        console.warn("Elementos DOM para filtros de categoría no disponibles. Verifica los IDs en el HTML.");
-        return;
-    }
-
+    if (!adminCategoryFilter || !adminSealedCategoryFilter || !cardCategory || !sealedProductCategory) return;
     const categoryNames = allCategories.map(cat => cat.name);
 
     adminCategoryFilter.innerHTML = '<option value="">Todas las categorías</option>';
-    categoryNames.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category;
-        option.textContent = category;
-        adminCategoryFilter.appendChild(option);
-    });
-
     adminSealedCategoryFilter.innerHTML = '<option value="">Todos los tipos</option>';
-    categoryNames.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category;
-        option.textContent = category;
-        adminSealedCategoryFilter.appendChild(option);
-    });
-
     cardCategory.innerHTML = '<option value="" disabled selected>Selecciona una categoría</option>';
     sealedProductCategory.innerHTML = '<option value="" disabled selected>Selecciona un tipo</option>';
 
     categoryNames.forEach(category => {
-        const cardOption = document.createElement('option');
-        cardOption.value = category;
-        cardOption.textContent = category;
-        cardCategory.appendChild(cardOption);
-
-        const sealedOption = document.createElement('option');
-        sealedOption.value = category;
-        sealedOption.textContent = category;
-        sealedProductCategory.appendChild(sealedOption);
+        adminCategoryFilter.appendChild(new Option(category, category));
+        adminSealedCategoryFilter.appendChild(new Option(category, category));
+        cardCategory.appendChild(new Option(category, category));
+        sealedProductCategory.appendChild(new Option(category, category));
     });
 }
 
 // ==========================================================================
 // TABLE RENDERING FUNCTIONS
 // ==========================================================================
-
-/**
- * Renderiza la tabla de pedidos.
- */
 function renderOrdersTable() {
-    if (!ordersTable) {
-        console.warn("Elemento DOM para la tabla de pedidos no disponible.");
-        return;
-    }
+    if (!ordersTable) return;
     const tbody = ordersTable.querySelector('tbody');
     if (!tbody) return;
-
-    tbody.innerHTML = ''; // Limpiar la tabla antes de renderizar
+    tbody.innerHTML = '';
 
     if (allOrders.length === 0) {
-        const row = tbody.insertRow();
-        const cell = row.insertCell();
-        cell.colSpan = 6; // Ocupa todas las columnas
-        cell.textContent = 'No hay pedidos para mostrar.';
-        cell.style.textAlign = 'center';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay pedidos para mostrar.</td></tr>';
         return;
     }
 
     allOrders.forEach(order => {
+        const orderDate = new Date(order.timestamp).toLocaleString('es-SV');
         const row = tbody.insertRow();
-        const orderDate = new Date(order.timestamp).toLocaleString('es-SV'); // Formato de fecha local
-
         row.innerHTML = `
             <td>${order.id}</td>
             <td>${orderDate}</td>
@@ -519,17 +471,8 @@ function renderOrdersTable() {
     });
 }
 
-
-/**
- * Renderiza la tabla de cartas con filtrado y paginación.
- * Renders the cards table with filtering and pagination.
- */
 function renderCardsTable() {
-    if (!cardsTable || !adminSearchInput || !adminCategoryFilter || !adminPrevPageBtn || !adminNextPageBtn || !adminPageInfo) {
-        console.warn("Elementos DOM para la tabla de cartas no disponibles. Verifica los IDs en el HTML.");
-        return;
-    }
-
+    if (!cardsTable) return;
     const searchQuery = adminSearchInput.value.toLowerCase();
     const categoryFilter = adminCategoryFilter.value;
 
@@ -565,27 +508,13 @@ function renderCardsTable() {
         });
     }
 
-    if (adminPageInfo) {
-        adminPageInfo.textContent = `Página ${currentCardsPage} de ${totalPages || 1}`;
-    }
-    if (adminPrevPageBtn) {
-        adminPrevPageBtn.disabled = currentCardsPage <= 1;
-    }
-    if (adminNextPageBtn) {
-        adminNextPageBtn.disabled = currentCardsPage >= totalPages;
-    }
+    if (adminPageInfo) adminPageInfo.textContent = `Página ${currentCardsPage} de ${totalPages || 1}`;
+    if (adminPrevPageBtn) adminPrevPageBtn.disabled = currentCardsPage <= 1;
+    if (adminNextPageBtn) adminNextPageBtn.disabled = currentCardsPage >= totalPages;
 }
 
-/**
- * Renderiza la tabla de productos sellados con filtrado y paginación.
- * Renders the sealed products table with filtering and pagination.
- */
 function renderSealedProductsTable() {
-    if (!sealedProductsTable || !adminSealedSearchInput || !adminSealedCategoryFilter || !adminSealedPrevPageBtn || !adminSealedNextPageBtn || !adminSealedPageInfo) {
-        console.warn("Elementos DOM para la tabla de productos sellados no disponibles. Verifica los IDs en el HTML.");
-        return;
-    }
-
+    if (!sealedProductsTable) return;
     const searchQuery = adminSealedSearchInput.value.toLowerCase();
     const categoryFilter = adminSealedCategoryFilter.value;
 
@@ -621,27 +550,13 @@ function renderSealedProductsTable() {
         });
     }
 
-    if (adminSealedPageInfo) {
-        adminSealedPageInfo.textContent = `Página ${currentSealedProductsPage} de ${totalPages || 1}`;
-    }
-    if (adminSealedPrevPageBtn) {
-        adminSealedPrevPageBtn.disabled = currentSealedProductsPage <= 1;
-    }
-    if (adminSealedNextPageBtn) {
-        adminSealedNextPageBtn.disabled = currentSealedProductsPage >= totalPages;
-    }
+    if (adminSealedPageInfo) adminSealedPageInfo.textContent = `Página ${currentSealedProductsPage} de ${totalPages || 1}`;
+    if (adminSealedPrevPageBtn) adminSealedPrevPageBtn.disabled = currentSealedProductsPage <= 1;
+    if (adminSealedNextPageBtn) adminSealedNextPageBtn.disabled = currentSealedProductsPage >= totalPages;
 }
 
-/**
- * Renderiza la tabla de categorías.
- * Renders the categories table.
- */
 function renderCategoriesTable() {
-    if (!categoriesTable) {
-        console.warn("Elemento DOM para la tabla de categorías no disponible. Verifica el ID en el HTML.");
-        return;
-    }
-
+    if (!categoriesTable) return;
     const tbody = categoriesTable.querySelector('tbody');
     if (tbody) {
         tbody.innerHTML = '';
@@ -658,10 +573,6 @@ function renderCategoriesTable() {
     }
 }
 
-/**
- * Actualiza las estadísticas en el dashboard.
- * Updates the dashboard stats.
- */
 function updateDashboardStats() {
     if (totalCardsCount) totalCardsCount.textContent = allCards.length;
     if (totalSealedProductsCount) totalSealedProductsCount.textContent = allSealedProducts.length;
@@ -670,39 +581,26 @@ function updateDashboardStats() {
 }
 
 // ==========================================================================
-// CRUD OPERATIONS (All using Firestore now)
+// CRUD OPERATIONS
 // ==========================================================================
-
-/**
- * Muestra los detalles de un pedido específico en un modal.
- * @param {string} orderId - El ID del pedido a mostrar.
- */
 function showOrderDetails(orderId) {
     const order = allOrders.find(o => o.id === orderId);
-    if (!order) {
-        showMessageModal("Error", "No se pudo encontrar el pedido.");
-        return;
-    }
+    if (!order) return;
 
     let itemsHtml = '';
     const cart = JSON.parse(order.cart);
     for (const itemId in cart) {
         const item = cart[itemId];
-        let productData = null;
-        if (item.type === 'card') {
-            productData = allCards.find(c => c.id === itemId);
-        } else {
-            productData = allSealedProducts.find(p => p.id === itemId);
-        }
+        let productData = item.type === 'card' ? allCards.find(c => c.id === itemId) : allSealedProducts.find(p => p.id === itemId);
 
         if (productData) {
             itemsHtml += `
                 <div class="order-item">
-                    <img src="${productData.imagen_url}" alt="${productData.nombre}" onerror="this.src='https://placehold.co/50x50/2d3748/a0aec0?text=No+Img'">
+                    <img src="${productData.imagen_url}" alt="${productData.nombre}" onerror="this.src='https://placehold.co/50x50/2d3748/a0aec0?text=No+Img'" style="width: 40px; height: 40px;">
                     <div class="order-item-info">
                         <strong>${productData.nombre}</strong><br>
-                        <span>Cantidad: ${item.quantity}</span> |
-                        <span>Precio Unitario: $${parseFloat(productData.precio).toFixed(2)}</span>
+                        <span>Cant: ${item.quantity}</span> |
+                        <span>Precio: $${parseFloat(productData.precio).toFixed(2)}</span>
                     </div>
                 </div>
             `;
@@ -722,100 +620,48 @@ function showOrderDetails(orderId) {
         </div>
         <div class="order-summary">
             <h4>Resumen</h4>
-            <p><strong>Total del Pedido:</strong> $${parseFloat(order.total).toFixed(2)}</p>
-            <p><strong>Estado Actual:</strong> ${order.status}</p>
+            <p><strong>Total:</strong> $${parseFloat(order.total).toFixed(2)}</p>
         </div>
     `;
 
-    // Selecciona el estado actual en el dropdown
     orderStatusSelect.value = order.status;
-    // Guarda el ID del pedido en el botón para usarlo al actualizar
     updateOrderStatusBtn.dataset.orderId = orderId;
-
     openModal(orderDetailsModal);
 }
 
-/**
- * Actualiza el estado de un pedido en Firestore y ajusta el inventario si es necesario.
- */
 async function handleUpdateOrderStatus() {
     const orderId = updateOrderStatusBtn.dataset.orderId;
     const newStatus = orderStatusSelect.value;
-
-    if (!orderId) {
-        showMessageModal("Error", "No se ha seleccionado ningún pedido.");
-        return;
-    }
-
     const orderToUpdate = allOrders.find(o => o.id === orderId);
-    if (!orderToUpdate) {
-        showMessageModal("Error", "Pedido no encontrado.");
-        return;
-    }
-
-    const oldStatus = orderToUpdate.status;
-
-    if (oldStatus === newStatus) {
-        closeModal(orderDetailsModal);
-        return;
-    }
+    if (!orderToUpdate || orderToUpdate.status === newStatus) return closeModal(orderDetailsModal);
 
     try {
         await runTransaction(db, async (transaction) => {
             const orderDocRef = doc(db, `artifacts/${appId}/public/data/orders`, orderId);
-
-            if (newStatus === 'cancelled' && oldStatus !== 'cancelled') {
+            if (newStatus === 'cancelled' && orderToUpdate.status !== 'cancelled') {
                 const cart = JSON.parse(orderToUpdate.cart);
-                const stockUpdatePromises = [];
-                const itemsToUpdate = [];
-
-                // Fase 1: Recopilar todas las lecturas
                 for (const itemId in cart) {
                     const cartItem = cart[itemId];
-                    const collectionName = cartItem.type === 'card' ? 'cards' : 'sealed_products';
-                    const itemRef = doc(db, `artifacts/${appId}/public/data/${collectionName}`, itemId);
-                    stockUpdatePromises.push(transaction.get(itemRef).then(itemDoc => ({ itemDoc, cartItem })));
-                }
-                
-                const results = await Promise.all(stockUpdatePromises);
-
-                // Fase 2: Preparar las escrituras
-                for (const { itemDoc, cartItem } of results) {
+                    const colName = cartItem.type === 'card' ? 'cards' : 'sealed_products';
+                    const itemRef = doc(db, `artifacts/${appId}/public/data/${colName}`, itemId);
+                    const itemDoc = await transaction.get(itemRef);
                     if (itemDoc.exists()) {
-                        const currentStock = itemDoc.data().stock;
-                        const newStock = currentStock + cartItem.quantity;
-                        itemsToUpdate.push({ ref: itemDoc.ref, newStock });
+                        transaction.update(itemRef, { stock: itemDoc.data().stock + cartItem.quantity });
                     }
                 }
-
-                // Fase 3: Ejecutar todas las escrituras
-                itemsToUpdate.forEach(update => {
-                    transaction.update(update.ref, { stock: update.newStock });
-                });
             }
-            
             transaction.update(orderDocRef, { status: newStatus });
         });
-
-        showMessageModal("Éxito", "El estado del pedido ha sido actualizado.");
+        showMessageModal("Éxito", "Estado del pedido actualizado.");
         closeModal(orderDetailsModal);
         await loadAllData();
-
     } catch (error) {
-        console.error("Error al actualizar el estado del pedido:", error);
-        showMessageModal("Error", "No se pudo actualizar el estado del pedido.");
+        showMessageModal("Error", "No se pudo actualizar el estado.");
     }
 }
 
-
-/**
- * Maneja el envío del formulario para añadir/editar una carta.
- * Handles the form submission for adding/editing a card.
- * @param {Event} event - El evento de envío del formulario.
- */
 async function handleSaveCard(event) {
     event.preventDefault();
-
     const id = cardId.value;
     const data = {
         nombre: cardName.value,
@@ -825,38 +671,22 @@ async function handleSaveCard(event) {
         categoria: cardCategory.value
     };
 
-    if (!data.categoria) {
-        showMessageModal("Error de Validación", "Por favor, selecciona una categoría para la carta.");
-        return;
-    }
-
     try {
         if (id) {
-            const cardDocRef = doc(db, `artifacts/${appId}/public/data/cards`, id);
-            await updateDoc(cardDocRef, data);
-            showMessageModal("Éxito", "Carta actualizada correctamente.");
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/cards`, id), data);
         } else {
-            const cardsCol = collection(db, `artifacts/${appId}/public/data/cards`);
-            await addDoc(cardsCol, data);
-            showMessageModal("Éxito", "Carta añadida correctamente.");
+            await addDoc(collection(db, `artifacts/${appId}/public/data/cards`), data);
         }
         cardForm.reset();
         closeModal(cardModal);
         await loadCardsData();
     } catch (error) {
-        console.error('Error al guardar carta:', error);
-        showMessageModal("Error de Operación", `Operación fallida: ${error.message}`);
+        console.error('Error:', error);
     }
 }
 
-/**
- * Maneja el envío del formulario para añadir/editar un producto sellado.
- * Handles the form submission for adding/editing a sealed product.
- * @param {Event} event - El evento de envío del formulario.
- */
 async function handleSaveSealedProduct(event) {
     event.preventDefault();
-
     const id = sealedProductId.value;
     const data = {
         nombre: sealedProductName.value,
@@ -866,107 +696,59 @@ async function handleSaveSealedProduct(event) {
         stock: parseInt(sealedProductStock.value)
     };
 
-    if (!data.categoria) {
-        showMessageModal("Error de Validación", "Por favor, selecciona un tipo para el producto sellado.");
-        return;
-    }
-
     try {
         if (id) {
-            const sealedProductDocRef = doc(db, `artifacts/${appId}/public/data/sealed_products`, id);
-            await updateDoc(sealedProductDocRef, data);
-            showMessageModal("Éxito", "Producto sellado actualizado correctamente.");
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/sealed_products`, id), data);
         } else {
-            const sealedProductsCol = collection(db, `artifacts/${appId}/public/data/sealed_products`);
-            await addDoc(sealedProductsCol, data);
-            showMessageModal("Éxito", "Producto sellado añadido correctamente.");
+            await addDoc(collection(db, `artifacts/${appId}/public/data/sealed_products`), data);
         }
         sealedProductForm.reset();
         closeModal(sealedProductModal);
         await loadSealedProductsData();
     } catch (error) {
-        console.error('Error al guardar producto sellado:', error);
-        showMessageModal("Error de Operación", `Operación fallida: ${error.message}`);
+        console.error('Error:', error);
     }
 }
 
-/**
- * Maneja el envío del formulario para añadir/editar una categoría.
- * Handles the form submission for adding/editing a category.
- * @param {Event} event - El evento de envío del formulario.
- */
 async function handleSaveCategory(event) {
     event.preventDefault();
-
     const id = categoryId.value;
-    const data = {
-        name: categoryName.value
-    };
-
     try {
         if (id) {
-            const categoryDocRef = doc(db, `artifacts/${appId}/public/data/categories`, id);
-            await updateDoc(categoryDocRef, data);
-            showMessageModal("Éxito", "Categoría actualizada correctamente.");
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/categories`, id), { name: categoryName.value });
         } else {
-            const categoriesCol = collection(db, `artifacts/${appId}/public/data/categories`);
-            await addDoc(categoriesCol, data);
-            showMessageModal("Éxito", "Categoría añadida correctamente.");
+            await addDoc(collection(db, `artifacts/${appId}/public/data/categories`), { name: categoryName.value });
         }
         categoryForm.reset();
         closeModal(categoryModal);
         await loadCategories();
-        await loadCardsData();
-        await loadSealedProductsData();
     } catch (error) {
-        console.error('Error al guardar categoría:', error);
-        showMessageModal("Error de Operación", `Operación fallida: ${error.message}`);
+        console.error('Error:', error);
     }
 }
 
-/**
- * Elimina un elemento (carta, producto sellado o categoría) después de la confirmación.
- * Deletes an item (card, sealed product, or category) after confirmation.
- */
 async function handleDeleteConfirmed() {
     const { type, id } = currentDeleteTarget;
     try {
-        if (type === 'card') {
-            const cardDocRef = doc(db, `artifacts/${appId}/public/data/cards`, id);
-            await deleteDoc(cardDocRef);
-            showMessageModal("Éxito", "Carta eliminada correctamente.");
-            await loadCardsData();
-        } else if (type === 'sealedProduct') {
-            const sealedProductDocRef = doc(db, `artifacts/${appId}/public/data/sealed_products`, id);
-            await deleteDoc(sealedProductDocRef);
-            showMessageModal("Éxito", "Producto sellado eliminado correctamente.");
-            await loadSealedProductsData();
-        } else if (type === 'category') {
-            const categoryDocRef = doc(db, `artifacts/${appId}/public/data/categories`, id);
-            await deleteDoc(categoryDocRef);
-            showMessageModal("Éxito", "Categoría eliminada correctamente.");
-            await loadCategories();
-            await loadCardsData();
-            await loadSealedProductsData();
-        }
+        const path = type === 'card' ? 'cards' : (type === 'sealedProduct' ? 'sealed_products' : 'categories');
+        await deleteDoc(doc(db, `artifacts/${appId}/public/data/${path}`, id));
         closeModal(confirmModal);
+        if(type === 'card') await loadCardsData();
+        if(type === 'sealedProduct') await loadSealedProductsData();
+        if(type === 'category') { await loadCategories(); await loadCardsData(); }
     } catch (error) {
-        console.error('Error al eliminar elemento:', error);
-        showMessageModal("Error de Operación", `Operación fallida: ${error.message}`);
+        console.error('Error:', error);
     }
 }
 
 // ==========================================================================
 // EVENT LISTENERS
 // ==========================================================================
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Asignación de elementos DOM
     sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
-    closeSidebarBtn = document.getElementById('closeSidebarBtn'); // <-- Asignación del nuevo botón
+    closeSidebarBtn = document.getElementById('closeSidebarBtn');
     sidebarMenu = document.getElementById('sidebar-menu');
     sidebarOverlay = document.getElementById('sidebar-overlay');
-    mainHeader = document.querySelector('.main-header');
     loginModal = document.getElementById('loginModal');
     loginForm = document.getElementById('loginForm');
     loginMessage = document.getElementById('loginMessage');
@@ -985,7 +767,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cardsSection = document.getElementById('cards-section');
     sealedProductsSection = document.getElementById('sealed-products-section');
     categoriesSection = document.getElementById('categories-section');
-    ordersSection = document.getElementById('orders-section'); // <-- Asignación de la nueva sección
+    ordersSection = document.getElementById('orders-section'); 
 
     addCardBtn = document.getElementById('addCardBtn');
     addSealedProductBtn = document.getElementById('addSealedProductBtn');
@@ -1000,7 +782,6 @@ document.addEventListener('DOMContentLoaded', () => {
     cardPrice = document.getElementById('cardPrice');
     cardStock = document.getElementById('cardStock');
     cardCategory = document.getElementById('cardCategory');
-    saveCardBtn = document.getElementById('saveCardBtn');
 
     sealedProductModal = document.getElementById('sealedProductModal');
     sealedProductModalTitle = document.getElementById('sealedProductModalTitle');
@@ -1011,14 +792,12 @@ document.addEventListener('DOMContentLoaded', () => {
     sealedProductCategory = document.getElementById('sealedProductCategory');
     sealedProductPrice = document.getElementById('sealedProductPrice');
     sealedProductStock = document.getElementById('sealedProductStock');
-    saveSealedProductBtn = document.getElementById('saveSealedProductBtn');
 
     categoryModal = document.getElementById('categoryModal');
     categoryModalTitle = document.getElementById('categoryModalTitle');
     categoryForm = document.getElementById('categoryForm');
     categoryId = document.getElementById('categoryId');
     categoryName = document.getElementById('categoryName');
-    saveCategoryBtn = document.getElementById('saveCategoryBtn');
 
     confirmModal = document.getElementById('confirmModal');
     confirmMessage = document.getElementById('confirmMessage');
@@ -1028,7 +807,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cardsTable = document.getElementById('cardsTable');
     sealedProductsTable = document.getElementById('sealedProductsTable');
     categoriesTable = document.getElementById('categoriesTable');
-    ordersTable = document.getElementById('ordersTable'); // <-- Asignación de la nueva tabla
+    ordersTable = document.getElementById('ordersTable'); 
 
     adminSearchInput = document.getElementById('adminSearchInput');
     adminCategoryFilter = document.getElementById('adminCategoryFilter');
@@ -1053,110 +832,43 @@ document.addEventListener('DOMContentLoaded', () => {
     messageModalText = document.getElementById('messageModalText');
     okMessageModalBtn = document.getElementById('okMessageModal');
 
-    // Asignación para el nuevo modal de detalles de pedido
     orderDetailsModal = document.getElementById('orderDetailsModal');
     closeOrderDetailsModalBtn = document.getElementById('closeOrderDetailsModal');
     orderDetailsContent = document.getElementById('orderDetailsContent');
     orderStatusSelect = document.getElementById('orderStatusSelect');
     updateOrderStatusBtn = document.getElementById('updateOrderStatusBtn');
 
-    // ------------------- Initial Load Control -------------------
-    // Inicia la aplicación con el modal de login abierto y sin secciones activas.
-    // Esto asegura que el usuario siempre vea la pantalla de login primero.
+    // Referencias del escáner añadidas al inicio de los eventos
+    scannerModal = document.getElementById('scannerModal');
+    openScannerBtn = document.getElementById('openScannerBtn');
+    closeScannerBtn = document.getElementById('closeScannerBtn');
+    cameraStream = document.getElementById('cameraStream');
+    captureCanvas = document.getElementById('captureCanvas');
+    scannerStatusMessage = document.getElementById('scannerStatusMessage');
+
     openModal(loginModal);
     hideAllSections();
 
-    // ------------------- Navigation -------------------
-    if (sidebarToggleBtn) {
-        sidebarToggleBtn.addEventListener('click', () => {
-            if (sidebarMenu) sidebarMenu.classList.add('active');
-            if (sidebarOverlay) sidebarOverlay.classList.add('active');
-        });
-    }
+    // Eventos de Navegación
+    if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', () => { sidebarMenu.classList.add('active'); sidebarOverlay.classList.add('active'); });
+    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', () => { sidebarMenu.classList.remove('active'); sidebarOverlay.classList.remove('active'); });
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', () => { sidebarMenu.classList.remove('active'); sidebarOverlay.classList.remove('active'); });
 
-    // NUEVO: Event listener para el botón de cerrar el sidebar
-    if (closeSidebarBtn) {
-        closeSidebarBtn.addEventListener('click', () => {
+    const navs = [{btn: navDashboard, sec: dashboardSection}, {btn: navCards, sec: cardsSection}, {btn: navSealedProducts, sec: sealedProductsSection}, {btn: navCategories, sec: categoriesSection}, {btn: navOrders, sec: ordersSection}];
+    navs.forEach(nav => {
+        if(nav.btn) nav.btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection(nav.sec);
+            navs.forEach(n => { if(n.btn) n.btn.classList.remove('active'); });
+            nav.btn.classList.add('active');
             if (sidebarMenu) sidebarMenu.classList.remove('active');
             if (sidebarOverlay) sidebarOverlay.classList.remove('active');
         });
-    }
-
-    if (sidebarOverlay) {
-        sidebarOverlay.addEventListener('click', () => {
-            if (sidebarMenu) sidebarMenu.classList.remove('active');
-            if (sidebarOverlay) sidebarOverlay.classList.remove('active');
-        });
-    }
-
-    if (navDashboard) navDashboard.addEventListener('click', (e) => {
-        e.preventDefault();
-        showSection(dashboardSection);
-        navDashboard.classList.add('active');
-        navCards.classList.remove('active');
-        navSealedProducts.classList.remove('active');
-        navCategories.classList.remove('active');
-        navOrders.classList.remove('active');
-        if (sidebarMenu) sidebarMenu.classList.remove('active');
-        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
     });
 
-    if (navCards) navCards.addEventListener('click', (e) => {
-        e.preventDefault();
-        showSection(cardsSection);
-        navCards.classList.add('active');
-        navDashboard.classList.remove('active');
-        navSealedProducts.classList.remove('active');
-        navCategories.classList.remove('active');
-        navOrders.classList.remove('active');
-        if (sidebarMenu) sidebarMenu.classList.remove('active');
-        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
-    });
+    if (navLogout) navLogout.addEventListener('click', handleLogout);
 
-    if (navSealedProducts) navSealedProducts.addEventListener('click', (e) => {
-        e.preventDefault();
-        showSection(sealedProductsSection);
-        navSealedProducts.classList.add('active');
-        navDashboard.classList.remove('active');
-        navCards.classList.remove('active');
-        navCategories.classList.remove('active');
-        navOrders.classList.remove('active');
-        if (sidebarMenu) sidebarMenu.classList.remove('active');
-        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
-    });
-
-    if (navCategories) navCategories.addEventListener('click', (e) => {
-        e.preventDefault();
-        showSection(categoriesSection);
-        navCategories.classList.add('active');
-        navDashboard.classList.remove('active');
-        navCards.classList.remove('active');
-        navSealedProducts.classList.remove('active');
-        navOrders.classList.remove('active');
-        if (sidebarMenu) sidebarMenu.classList.remove('active');
-        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
-    });
-    
-    // Event listener para la nueva sección de pedidos
-    if (navOrders) navOrders.addEventListener('click', (e) => {
-        e.preventDefault();
-        showSection(ordersSection);
-        navOrders.classList.add('active');
-        navDashboard.classList.remove('active');
-        navCards.classList.remove('active');
-        navSealedProducts.classList.remove('active');
-        navCategories.classList.remove('active');
-        if (sidebarMenu) sidebarMenu.classList.remove('active');
-        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
-    });
-
-
-    if (navLogout) navLogout.addEventListener('click', (e) => {
-        e.preventDefault();
-        handleLogout();
-    });
-
-    // ------------------- Modals -------------------
+    // Eventos de Modales
     document.querySelectorAll('.close-button').forEach(btn => {
         btn.addEventListener('click', () => {
             closeModal(cardModal);
@@ -1165,207 +877,110 @@ document.addEventListener('DOMContentLoaded', () => {
             closeModal(confirmModal);
             closeModal(loginModal);
             closeModal(messageModal);
-            closeModal(orderDetailsModal); // <-- Cerrar también el modal de detalles
+            closeModal(orderDetailsModal);
+            // IMPORTANTE: Detener la cámara si se cierra el modal desde la X
+            if (scannerModal && scannerModal.style.display === 'flex') {
+                stopCamera();
+                closeModal(scannerModal);
+            }
         });
     });
-
-    if (window) {
-        window.onclick = function(event) {
-            if (event.target == cardModal) closeModal(cardModal);
-            if (event.target == sealedProductModal) closeModal(sealedProductModal);
-            if (event.target == categoryModal) closeModal(categoryModal);
-            if (event.target == confirmModal) closeModal(confirmModal);
-            if (event.target == orderDetailsModal) closeModal(orderDetailsModal);
-            // El modal de login no se debe cerrar al hacer clic fuera
-            if (event.target == messageModal) closeModal(messageModal);
-        };
-    }
 
     if (closeMessageModalBtn) closeMessageModalBtn.addEventListener('click', () => closeModal(messageModal));
     if (okMessageModalBtn) okMessageModalBtn.addEventListener('click', () => closeModal(messageModal));
 
-    // ------------------- Card Management -------------------
-    if (addCardBtn) addCardBtn.addEventListener('click', () => {
-        cardModalTitle.textContent = "Añadir Nueva Carta";
-        cardId.value = '';
-        cardForm.reset();
-        if (cardCategory) cardCategory.value = '';
-        openModal(cardModal);
-    });
+    // EVENTOS DEL ESCÁNER
+    if (openScannerBtn) {
+        openScannerBtn.addEventListener('click', () => {
+            openModal(scannerModal);
+            startCamera();
+        });
+    }
 
+    // Formularios CRUD
+    if (addCardBtn) addCardBtn.addEventListener('click', () => { cardForm.reset(); cardId.value = ''; openModal(cardModal); });
+    if (cardForm) cardForm.addEventListener('submit', handleSaveCard);
+    
+    if (addSealedProductBtn) addSealedProductBtn.addEventListener('click', () => { sealedProductForm.reset(); sealedProductId.value = ''; openModal(sealedProductModal); });
+    if (sealedProductForm) sealedProductForm.addEventListener('submit', handleSaveSealedProduct);
+
+    if (addCategoryBtn) addCategoryBtn.addEventListener('click', () => { categoryForm.reset(); categoryId.value = ''; openModal(categoryModal); });
+    if (categoryForm) categoryForm.addEventListener('submit', handleSaveCategory);
+
+    // Tablas CRUD (Edit/Delete)
     if (cardsTable) cardsTable.addEventListener('click', (e) => {
         if (e.target.classList.contains('edit-card-btn')) {
-            const id = e.target.dataset.id;
-            const cardToEdit = allCards.find(c => c.id === id);
-            if (cardToEdit) {
-                cardModalTitle.textContent = "Editar Carta";
-                cardId.value = cardToEdit.id;
-                cardName.value = cardToEdit.nombre;
-                cardImage.value = cardToEdit.imagen_url || '';
-                cardPrice.value = cardToEdit.precio;
-                cardStock.value = cardToEdit.stock;
-                cardCategory.value = cardToEdit.categoria;
+            const card = allCards.find(c => c.id === e.target.dataset.id);
+            if (card) {
+                cardId.value = card.id; cardName.value = card.nombre; cardImage.value = card.imagen_url || '';
+                cardPrice.value = card.precio; cardStock.value = card.stock; cardCategory.value = card.categoria;
                 openModal(cardModal);
             }
         }
         if (e.target.classList.contains('delete-card-btn')) {
-            const id = e.target.dataset.id;
-            currentDeleteTarget = { type: 'card', id: id };
-            if (confirmMessage) confirmMessage.textContent = `¿Estás seguro de que quieres eliminar la carta con ID ${id}?`;
+            currentDeleteTarget = { type: 'card', id: e.target.dataset.id };
             openModal(confirmModal);
         }
-    });
-
-    if (cardForm) cardForm.addEventListener('submit', handleSaveCard);
-
-    if (adminSearchInput) adminSearchInput.addEventListener('input', () => {
-        currentCardsPage = 1;
-        renderCardsTable();
-    });
-    if (adminCategoryFilter) adminCategoryFilter.addEventListener('change', () => {
-        currentCardsPage = 1;
-        renderCardsTable();
-    });
-    if (adminPrevPageBtn) adminPrevPageBtn.addEventListener('click', () => {
-        if (currentCardsPage > 1) {
-            currentCardsPage--;
-            renderCardsTable();
-        }
-    });
-    if (adminNextPageBtn) adminNextPageBtn.addEventListener('click', () => {
-        currentCardsPage++;
-        renderCardsTable();
-    });
-
-    // ------------------- Sealed Product Management -------------------
-    if (addSealedProductBtn) addSealedProductBtn.addEventListener('click', () => {
-        sealedProductModalTitle.textContent = "Añadir Nuevo Producto Sellado";
-        sealedProductId.value = '';
-        sealedProductForm.reset();
-        if (sealedProductCategory) sealedProductCategory.value = '';
-        openModal(sealedProductModal);
     });
 
     if (sealedProductsTable) sealedProductsTable.addEventListener('click', (e) => {
         if (e.target.classList.contains('edit-sealed-product-button')) {
-            const id = e.target.dataset.id;
-            const productToEdit = allSealedProducts.find(p => p.id === id);
-            if (productToEdit) {
-                sealedProductModalTitle.textContent = "Editar Producto Sellado";
-                sealedProductId.value = productToEdit.id;
-                sealedProductName.value = productToEdit.nombre;
-                sealedProductImage.value = productToEdit.imagen_url || '';
-                sealedProductCategory.value = productToEdit.categoria;
-                sealedProductPrice.value = productToEdit.precio;
-                sealedProductStock.value = productToEdit.stock;
+            const prod = allSealedProducts.find(p => p.id === e.target.dataset.id);
+            if (prod) {
+                sealedProductId.value = prod.id; sealedProductName.value = prod.nombre; sealedProductImage.value = prod.imagen_url || '';
+                sealedProductCategory.value = prod.categoria; sealedProductPrice.value = prod.precio; sealedProductStock.value = prod.stock;
                 openModal(sealedProductModal);
             }
         }
         if (e.target.classList.contains('delete-sealed-product-button')) {
-            const id = e.target.dataset.id;
-            currentDeleteTarget = { type: 'sealedProduct', id: id };
-            if (confirmMessage) confirmMessage.textContent = `¿Estás seguro de que quieres eliminar el producto sellado con ID ${id}?`;
+            currentDeleteTarget = { type: 'sealedProduct', id: e.target.dataset.id };
             openModal(confirmModal);
         }
-    });
-
-    if (sealedProductForm) sealedProductForm.addEventListener('submit', handleSaveSealedProduct);
-
-    if (adminSealedSearchInput) adminSealedSearchInput.addEventListener('input', () => {
-        currentSealedProductsPage = 1;
-        renderSealedProductsTable();
-    });
-    if (adminSealedCategoryFilter) adminSealedCategoryFilter.addEventListener('change', () => {
-        currentSealedProductsPage = 1;
-        renderSealedProductsTable();
-    });
-    if (adminSealedPrevPageBtn) adminSealedPrevPageBtn.addEventListener('click', () => {
-        if (currentSealedProductsPage > 1) {
-            currentSealedProductsPage--;
-            renderSealedProductsTable();
-        }
-    });
-    if (adminSealedNextPageBtn) adminSealedNextPageBtn.addEventListener('click', () => {
-        currentSealedProductsPage++;
-        renderSealedProductsTable();
-    });
-
-    // ------------------- Category Management -------------------
-    if (addCategoryBtn) addCategoryBtn.addEventListener('click', () => {
-        categoryModalTitle.textContent = "Añadir Nueva Categoría";
-        categoryId.value = '';
-        categoryForm.reset();
-        openModal(categoryModal);
     });
 
     if (categoriesTable) categoriesTable.addEventListener('click', (e) => {
         if (e.target.classList.contains('edit-category-button')) {
-            const id = e.target.dataset.id;
-            const categoryToEdit = allCategories.find(c => c.id === id);
-            if (categoryToEdit) {
-                categoryModalTitle.textContent = "Editar Categoría";
-                categoryId.value = categoryToEdit.id;
-                categoryName.value = categoryToEdit.name;
-                openModal(categoryModal);
-            }
+            const cat = allCategories.find(c => c.id === e.target.dataset.id);
+            if (cat) { categoryId.value = cat.id; categoryName.value = cat.name; openModal(categoryModal); }
         }
         if (e.target.classList.contains('delete-category-button')) {
-            const id = e.target.dataset.id;
-            currentDeleteTarget = { type: 'category', id: id };
-            if (confirmMessage) confirmMessage.textContent = `¿Estás seguro de que quieres eliminar la categoría? Esto no eliminará las cartas asociadas.`;
+            currentDeleteTarget = { type: 'category', id: e.target.dataset.id };
             openModal(confirmModal);
         }
     });
 
-    if (categoryForm) categoryForm.addEventListener('submit', handleSaveCategory);
+    if (ordersTable) ordersTable.addEventListener('click', (e) => {
+        if (e.target.classList.contains('view-order-details-btn')) showOrderDetails(e.target.dataset.id);
+    });
 
-    // ------------------- Order Management -------------------
-    if (ordersTable) {
-        ordersTable.addEventListener('click', (e) => {
-            if (e.target.classList.contains('view-order-details-btn')) {
-                const orderId = e.target.dataset.id;
-                showOrderDetails(orderId);
-            }
-        });
-    }
-    
-    // Event listener para el botón de actualizar estado del pedido
-    if (updateOrderStatusBtn) {
-        updateOrderStatusBtn.addEventListener('click', handleUpdateOrderStatus);
-    }
+    if (updateOrderStatusBtn) updateOrderStatusBtn.addEventListener('click', handleUpdateOrderStatus);
 
-
-    // ------------------- Confirmation Modal -------------------
     if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', () => closeModal(confirmModal));
     if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', handleDeleteConfirmed);
 
-    // ------------------- Refresh Button -------------------
-    const refreshAdminPageBtn = document.getElementById('refreshAdminPageBtn');
-    if (refreshAdminPageBtn) {
-        refreshAdminPageBtn.addEventListener('click', async () => {
-            showMessageModal("Recargando Datos", "Por favor, espera mientras actualizamos los datos...");
-            await loadAllData();
-            closeModal(messageModal);
-            showMessageModal("Datos Recargados", "Todos los datos han sido actualizados.");
-        });
-    }
+    // Filtros y Paginación
+    if (adminSearchInput) adminSearchInput.addEventListener('input', () => { currentCardsPage = 1; renderCardsTable(); });
+    if (adminCategoryFilter) adminCategoryFilter.addEventListener('change', () => { currentCardsPage = 1; renderCardsTable(); });
+    if (adminPrevPageBtn) adminPrevPageBtn.addEventListener('click', () => { if (currentCardsPage > 1) { currentCardsPage--; renderCardsTable(); } });
+    if (adminNextPageBtn) adminNextPageBtn.addEventListener('click', () => { currentCardsPage++; renderCardsTable(); });
 
-    // ------------------- Login form handler -------------------
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleLogin);
-    }
+    if (adminSealedSearchInput) adminSealedSearchInput.addEventListener('input', () => { currentSealedProductsPage = 1; renderSealedProductsTable(); });
+    if (adminSealedCategoryFilter) adminSealedCategoryFilter.addEventListener('change', () => { currentSealedProductsPage = 1; renderSealedProductsTable(); });
+    if (adminSealedPrevPageBtn) adminSealedPrevPageBtn.addEventListener('click', () => { if (currentSealedProductsPage > 1) { currentSealedProductsPage--; renderSealedProductsTable(); } });
+    if (adminSealedNextPageBtn) adminSealedNextPageBtn.addEventListener('click', () => { currentSealedProductsPage++; renderSealedProductsTable(); });
+
+    document.getElementById('refreshAdminPageBtn')?.addEventListener('click', async () => {
+        await loadAllData();
+        showMessageModal("Datos Recargados", "Todos los datos han sido actualizados.");
+    });
+
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
     
-    // ------------------- Toggle password visibility -------------------
     if (togglePasswordVisibilityBtn && passwordInput) {
         togglePasswordVisibilityBtn.addEventListener('click', function() {
-            // Alternar el tipo de input entre 'password' y 'text'
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-
-            // Alternar la clase del icono para cambiar entre ojo abierto y cerrado
-            const icon = this.querySelector('i');
-            icon.classList.toggle('fa-eye');
-            icon.classList.toggle('fa-eye-slash');
+            passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+            this.querySelector('i').classList.toggle('fa-eye');
+            this.querySelector('i').classList.toggle('fa-eye-slash');
         });
     }
 });
