@@ -132,6 +132,15 @@ body {
     background-color: #38a169;
 }
 
+/* Botón específico para el Escáner */
+#scanCardBtn {
+    background-color: #3182ce;
+}
+
+#scanCardBtn:hover {
+    background-color: #2b6cb0;
+}
+
 /* Estilos comunes para todos los botones de acción */
 .refresh-button,
 .pagination-btn,
@@ -303,7 +312,7 @@ table td:last-child {
     padding-right: 20px;
 }
 
-/* NUEVO: Estilo para la primera columna (ID) para truncar texto largo */
+/* ID de carta */
 table td:first-child {
     max-width: 150px;
     white-space: nowrap;
@@ -313,6 +322,16 @@ table td:first-child {
     font-size: 0.9em;
 }
 
+/* Estilo para el código de carta 000/000 */
+.card-code-cell {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    color: #2d3748;
+    background: #edf2f7;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+}
 
 table tbody tr:hover {
     background-color: #f7fafc;
@@ -444,7 +463,44 @@ table img {
 }
 
 /* ==========================================================================
-   Estilos para los Menús Desplegables (SELECT) - ¡Nuevos estilos aquí!
+   NUEVO: Estilos del Escáner de IA
+   ========================================================================== */
+#scannerContainer {
+    position: relative;
+    border: 4px solid #fff;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    background: #000;
+}
+
+.scanner-overlay {
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5);
+}
+
+/* Animación de línea láser de escaneo */
+@keyframes scanline {
+    0% { top: 15%; opacity: 0; }
+    50% { opacity: 1; }
+    100% { top: 85%; opacity: 0; }
+}
+
+#scannerContainer::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 15%;
+    width: 70%;
+    height: 2px;
+    background: #4299e1;
+    box-shadow: 0 0 10px #4299e1, 0 0 20px #4299e1;
+    animation: scanline 2s infinite ease-in-out;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   Menús Desplegables (SELECT)
    ========================================================================== */
 .admin-modal-content select,
 .admin-select-filter {
@@ -457,9 +513,9 @@ table img {
     font-size: 1em;
     background-color: #fff;
     cursor: pointer;
-    -webkit-appearance: none; /* Elimina la apariencia nativa en WebKit */
-    -moz-appearance: none; /* Elimina la apariencia nativa en Mozilla */
-    appearance: none; /* Elimina la apariencia nativa */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
     background-image: url('data:image/svg+xml;utf8,<svg fill="%234a5568" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
     background-repeat: no-repeat;
     background-position: right 10px center;
@@ -500,24 +556,22 @@ table img {
     position: relative;
 }
 
-/* Añade padding a la derecha al input de contraseña para que no se solape con el botón */
 .password-container input[type="password"],
 .password-container input[type="text"] {
     padding-right: 45px !important;
 }
 
-/* CORRECCIÓN: Se cambió el nombre de la clase de .toggle-password-btn a .password-toggle-btn para que coincida con el HTML */
 .password-toggle-btn {
     position: absolute;
-    right: 1px; /* Posiciona el botón dentro del borde del input */
+    right: 1px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
     border: none;
     cursor: pointer;
     color: #4a5568;
-    height: 100%; /* El botón ocupa toda la altura del contenedor */
-    width: 40px; /* Ancho del área clickeable */
+    height: 100%;
+    width: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -530,10 +584,10 @@ table img {
 }
 
 /* ==========================================================================
-   NUEVO: Estilos para el Modal de Detalles del Pedido
+   Detalles del Pedido
    ========================================================================== */
 #orderDetailsModal .admin-modal-content {
-    max-width: 700px; /* Un poco más ancho para los detalles */
+    max-width: 700px;
 }
 
 #orderDetailsContent {
@@ -558,7 +612,7 @@ table img {
 .order-items-list {
     max-height: 200px;
     overflow-y: auto;
-    padding-right: 10px; /* Espacio para la barra de scroll */
+    padding-right: 10px;
 }
 
 .order-item {
@@ -592,7 +646,7 @@ table img {
    Responsive Design
    ========================================================================== */
 .sidebar-toggle-btn {
-    display: none; /* Oculto por defecto en desktop */
+    display: none;
     background: none;
     border: none;
     color: #4a5568;
@@ -611,9 +665,8 @@ table img {
     z-index: 999;
 }
 
-/* NUEVO: Estilos para el botón de cerrar el sidebar */
 .close-sidebar-btn {
-    display: none; /* Oculto por defecto */
+    display: none;
     position: absolute;
     top: 10px;
     right: 15px;
@@ -644,7 +697,7 @@ table img {
         transform: translateX(-100%);
         z-index: 1000;
         width: 250px;
-        padding-top: 20px; /* Reducido para dar espacio al botón de cerrar */
+        padding-top: 20px;
     }
 
     .sidebar.active {
@@ -656,7 +709,7 @@ table img {
     }
     
     .close-sidebar-btn {
-        display: block; /* Mostrar el botón de cerrar en móvil */
+        display: block;
     }
 
     .sidebar-overlay.active {
