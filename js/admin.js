@@ -1,4 +1,4 @@
-// Pega tu código JavaScript aquí// ==========================================================================
+// ==========================================================================
 // GLOBAL VARIABLES (non-DOM related)
 // ==========================================================================
 
@@ -84,6 +84,7 @@ let cardModalTitle;
 let cardForm;
 let cardId;
 let cardName;
+let cardCode; // NUEVO DOM PARA EL CÓDIGO
 let cardImage;
 let cardPrice;
 let cardStock;
@@ -254,8 +255,7 @@ function stopCamera() {
 }
 
 function startScanningProcess() {
-    // Aquí es donde irá la lógica OCR (Reconocimiento de Texto) en el futuro
-    // Por ahora, simularemos que "logra leer" la carta después de 3.5 segundos de enfocar
+    // Aquí es donde irá la lógica OCR para la API de Pokémon TCG
     scanTimeout = setTimeout(() => {
         
         // 1. TOMA LA FOTO INVISIBLE (Captura el frame exacto del video)
@@ -268,7 +268,7 @@ function startScanningProcess() {
         stopCamera();
         closeModal(scannerModal);
         
-        // 3. Abre el formulario con los datos encontrados (Ejemplo)
+        // 3. Abre el formulario con los datos encontrados
         processScannedCardData();
         
     }, 3500); // 3.5 segundos escaneando en vivo
@@ -280,6 +280,7 @@ function processScannedCardData() {
     
     // Estos son los datos que la futura API entregará
     cardName.value = 'Charizard VMAX (Escaneado)';
+    cardCode.value = '020/189'; // EL CÓDIGO ESCANEADO DE POKÉMON TCG
     cardPrice.value = '45.00';
     cardImage.value = 'https://assets.pokemon.com/assets/cms2/img/cards/web/swsh3/swsh3_en_20.png';
     
@@ -300,9 +301,13 @@ function processScannedCardData() {
     }
     cardCategory.value = 'Darkness Ablaze';
     
-    // Efecto visual de que se llenó solo
+    // Efecto visual de que se llenaron solos
     cardName.style.backgroundColor = '#ecfdf5';
-    setTimeout(() => cardName.style.backgroundColor = '', 2000);
+    cardCode.style.backgroundColor = '#ecfdf5';
+    setTimeout(() => {
+        cardName.style.backgroundColor = '';
+        cardCode.style.backgroundColor = '';
+    }, 2000);
 }
 
 
@@ -390,7 +395,8 @@ async function loadCardsData() {
         allCards = allCards.map(card => ({
             ...card,
             precio: parseFloat(card.precio) || 0,
-            stock: parseInt(card.stock) || 0
+            stock: parseInt(card.stock) || 0,
+            codigo: card.codigo || '' // Aseguramos que el código exista en el objeto
         }));
         renderCardsTable();
         updateDashboardStats();
@@ -428,9 +434,9 @@ function populateCategoryFiltersAndSelects() {
     if (!adminCategoryFilter || !adminSealedCategoryFilter || !cardCategory || !sealedProductCategory) return;
     const categoryNames = allCategories.map(cat => cat.name);
 
-    adminCategoryFilter.innerHTML = '<option value="">Todas las categorías</option>';
+    adminCategoryFilter.innerHTML = '<option value="">Todas las expansiones</option>';
     adminSealedCategoryFilter.innerHTML = '<option value="">Todos los tipos</option>';
-    cardCategory.innerHTML = '<option value="" disabled selected>Selecciona una categoría</option>';
+    cardCategory.innerHTML = '<option value="" disabled selected>Selecciona una expansión</option>';
     sealedProductCategory.innerHTML = '<option value="" disabled selected>Selecciona un tipo</option>';
 
     categoryNames.forEach(category => {
@@ -477,7 +483,11 @@ function renderCardsTable() {
     const categoryFilter = adminCategoryFilter.value;
 
     const filteredCards = allCards.filter(card => {
-        const matchesSearch = card.nombre?.toLowerCase().includes(searchQuery) || card.id?.toLowerCase().includes(searchQuery);
+        // Busca en nombre, ID O en el código de la carta
+        const matchesSearch = card.nombre?.toLowerCase().includes(searchQuery) || 
+                              card.id?.toLowerCase().includes(searchQuery) ||
+                              card.codigo?.toLowerCase().includes(searchQuery);
+                              
         const matchesCategory = categoryFilter === "" || card.categoria === categoryFilter;
         return matchesSearch && matchesCategory;
     });
@@ -493,16 +503,20 @@ function renderCardsTable() {
         tbody.innerHTML = '';
         cardsOnPage.forEach(card => {
             const row = tbody.insertRow();
+            // CÓDIGO AÑADIDO A LA VISTA DE LA TABLA CON ESTILO DE ETIQUETA
+            const badgeCode = card.codigo ? `<span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; font-family: monospace; color: #475569; border: 1px solid #cbd5e1;">${card.codigo}</span>` : '<span style="color:#a0aec0; font-size: 0.85rem;">N/A</span>';
+            
             row.innerHTML = `
                 <td>${card.id}</td>
                 <td><img src="${card.imagen_url}" alt="${card.nombre}" onerror="this.src='https://placehold.co/50x50/2d3748/a0aec0?text=No+Img'"></td>
-                <td>${card.nombre}</td>
+                <td><strong>${card.nombre}</strong></td>
+                <td>${badgeCode}</td>
                 <td>$${card.precio.toFixed(2)}</td>
                 <td>${card.stock}</td>
                 <td>${card.categoria}</td>
                 <td class="action-buttons">
-                    <button class="edit-button edit-card-btn" data-id="${card.id}">Editar</button>
-                    <button class="delete-button delete-card-btn" data-id="${card.id}">Eliminar</button>
+                    <button class="action-btn edit edit-card-btn" data-id="${card.id}"><i class="fas fa-edit" data-id="${card.id}"></i></button>
+                    <button class="action-btn delete delete-card-btn" data-id="${card.id}"><i class="fas fa-trash" data-id="${card.id}"></i></button>
                 </td>
             `;
         });
@@ -538,13 +552,13 @@ function renderSealedProductsTable() {
             row.innerHTML = `
                 <td>${product.id}</td>
                 <td><img src="${product.imagen_url}" alt="${product.nombre}" onerror="this.src='https://placehold.co/50x50/2d3748/a0aec0?text=No+Img'"></td>
-                <td>${product.nombre}</td>
+                <td><strong>${product.nombre}</strong></td>
                 <td>${product.categoria}</td>
                 <td>$${product.precio.toFixed(2)}</td>
                 <td>${product.stock}</td>
                 <td class="action-buttons">
-                    <button class="edit-sealed-product-button" data-id="${product.id}">Editar</button>
-                    <button class="delete-sealed-product-button" data-id="${product.id}">Eliminar</button>
+                    <button class="action-btn edit edit-sealed-product-button" data-id="${product.id}"><i class="fas fa-edit" data-id="${product.id}"></i></button>
+                    <button class="action-btn delete delete-sealed-product-button" data-id="${product.id}"><i class="fas fa-trash" data-id="${product.id}"></i></button>
                 </td>
             `;
         });
@@ -563,10 +577,10 @@ function renderCategoriesTable() {
         allCategories.forEach(category => {
             const row = tbody.insertRow();
             row.innerHTML = `
-                <td>${category.name}</td>
+                <td><strong>${category.name}</strong></td>
                 <td class="action-buttons">
-                    <button class="edit-category-button" data-id="${category.id}">Editar</button>
-                    <button class="delete-category-button" data-id="${category.id}">Eliminar</button>
+                    <button class="action-btn edit edit-category-button" data-id="${category.id}"><i class="fas fa-edit" data-id="${category.id}"></i></button>
+                    <button class="action-btn delete delete-category-button" data-id="${category.id}"><i class="fas fa-trash" data-id="${category.id}"></i></button>
                 </td>
             `;
         });
@@ -596,19 +610,20 @@ function showOrderDetails(orderId) {
         if (productData) {
             itemsHtml += `
                 <div class="order-item">
-                    <img src="${productData.imagen_url}" alt="${productData.nombre}" onerror="this.src='https://placehold.co/50x50/2d3748/a0aec0?text=No+Img'" style="width: 40px; height: 40px;">
-                    <div class="order-item-info">
-                        <strong>${productData.nombre}</strong><br>
+                    <img src="${productData.imagen_url}" alt="${productData.nombre}" onerror="this.src='https://placehold.co/50x50/2d3748/a0aec0?text=No+Img'" style="width: 40px; height: 40px; border-radius: 4px;">
+                    <div class="order-item-info" style="display:inline-block; margin-left: 10px; vertical-align: top;">
+                        <strong>${productData.nombre} ${productData.codigo ? `(${productData.codigo})` : ''}</strong><br>
                         <span>Cant: ${item.quantity}</span> |
                         <span>Precio: $${parseFloat(productData.precio).toFixed(2)}</span>
                     </div>
                 </div>
+                <hr style="border:0; border-top:1px solid #e2e8f0; margin: 10px 0;">
             `;
         }
     }
 
     orderDetailsContent.innerHTML = `
-        <div class="customer-details">
+        <div class="customer-details" style="background:#f8fafc; padding: 15px; border-radius:8px; margin-bottom:15px;">
             <h4>Datos del Cliente</h4>
             <p><strong>Nombre:</strong> ${order.customerName}</p>
             <p><strong>Teléfono:</strong> ${order.customerPhone}</p>
@@ -616,11 +631,10 @@ function showOrderDetails(orderId) {
         </div>
         <div class="order-items">
             <h4>Productos</h4>
-            <div class="order-items-list">${itemsHtml}</div>
+            <div class="order-items-list" style="max-height: 250px; overflow-y: auto; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;">${itemsHtml}</div>
         </div>
-        <div class="order-summary">
-            <h4>Resumen</h4>
-            <p><strong>Total:</strong> $${parseFloat(order.total).toFixed(2)}</p>
+        <div class="order-summary" style="margin-top: 15px; text-align: right; font-size: 1.2rem;">
+            <p><strong>Total:</strong> <span style="color:#10b981;">$${parseFloat(order.total).toFixed(2)}</span></p>
         </div>
     `;
 
@@ -663,8 +677,11 @@ async function handleUpdateOrderStatus() {
 async function handleSaveCard(event) {
     event.preventDefault();
     const id = cardId.value;
+    
+    // GUARDA EL NUEVO CÓDIGO
     const data = {
         nombre: cardName.value,
+        codigo: cardCode.value, // DATO NUEVO
         imagen_url: cardImage.value || '',
         precio: parseFloat(cardPrice.value).toFixed(2),
         stock: parseInt(cardStock.value),
@@ -778,6 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cardForm = document.getElementById('cardForm');
     cardId = document.getElementById('cardId');
     cardName = document.getElementById('cardName');
+    cardCode = document.getElementById('cardCode'); // NUEVO
     cardImage = document.getElementById('cardImage');
     cardPrice = document.getElementById('cardPrice');
     cardStock = document.getElementById('cardStock');
@@ -909,42 +927,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tablas CRUD (Edit/Delete)
     if (cardsTable) cardsTable.addEventListener('click', (e) => {
-        if (e.target.classList.contains('edit-card-btn')) {
-            const card = allCards.find(c => c.id === e.target.dataset.id);
+        // Hacemos que funcione tanto si hacen clic en el botón como en el icono del botón
+        const btn = e.target.closest('button');
+        if(!btn) return;
+
+        if (btn.classList.contains('edit-card-btn')) {
+            const card = allCards.find(c => c.id === btn.dataset.id);
             if (card) {
-                cardId.value = card.id; cardName.value = card.nombre; cardImage.value = card.imagen_url || '';
-                cardPrice.value = card.precio; cardStock.value = card.stock; cardCategory.value = card.categoria;
+                cardId.value = card.id; 
+                cardName.value = card.nombre; 
+                cardCode.value = card.codigo || ''; // CARGA EL CÓDIGO AL EDITAR
+                cardImage.value = card.imagen_url || '';
+                cardPrice.value = card.precio; 
+                cardStock.value = card.stock; 
+                cardCategory.value = card.categoria;
                 openModal(cardModal);
             }
         }
-        if (e.target.classList.contains('delete-card-btn')) {
-            currentDeleteTarget = { type: 'card', id: e.target.dataset.id };
+        if (btn.classList.contains('delete-card-btn')) {
+            currentDeleteTarget = { type: 'card', id: btn.dataset.id };
             openModal(confirmModal);
         }
     });
 
     if (sealedProductsTable) sealedProductsTable.addEventListener('click', (e) => {
-        if (e.target.classList.contains('edit-sealed-product-button')) {
-            const prod = allSealedProducts.find(p => p.id === e.target.dataset.id);
+        const btn = e.target.closest('button');
+        if(!btn) return;
+
+        if (btn.classList.contains('edit-sealed-product-button')) {
+            const prod = allSealedProducts.find(p => p.id === btn.dataset.id);
             if (prod) {
                 sealedProductId.value = prod.id; sealedProductName.value = prod.nombre; sealedProductImage.value = prod.imagen_url || '';
                 sealedProductCategory.value = prod.categoria; sealedProductPrice.value = prod.precio; sealedProductStock.value = prod.stock;
                 openModal(sealedProductModal);
             }
         }
-        if (e.target.classList.contains('delete-sealed-product-button')) {
-            currentDeleteTarget = { type: 'sealedProduct', id: e.target.dataset.id };
+        if (btn.classList.contains('delete-sealed-product-button')) {
+            currentDeleteTarget = { type: 'sealedProduct', id: btn.dataset.id };
             openModal(confirmModal);
         }
     });
 
     if (categoriesTable) categoriesTable.addEventListener('click', (e) => {
-        if (e.target.classList.contains('edit-category-button')) {
-            const cat = allCategories.find(c => c.id === e.target.dataset.id);
+        const btn = e.target.closest('button');
+        if(!btn) return;
+
+        if (btn.classList.contains('edit-category-button')) {
+            const cat = allCategories.find(c => c.id === btn.dataset.id);
             if (cat) { categoryId.value = cat.id; categoryName.value = cat.name; openModal(categoryModal); }
         }
-        if (e.target.classList.contains('delete-category-button')) {
-            currentDeleteTarget = { type: 'category', id: e.target.dataset.id };
+        if (btn.classList.contains('delete-category-button')) {
+            currentDeleteTarget = { type: 'category', id: btn.dataset.id };
             openModal(confirmModal);
         }
     });
