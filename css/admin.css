@@ -1,163 +1,230 @@
-/* VARIABLES GLOBALES */
+/* VARIABLES */
 :root {
-    --primary-color: #6366f1;
-    --primary-hover: #4f46e5;
-    --dark-bg: #0f172a;
-    --card-bg: #1e293b;
-    --sidebar-bg: #111827;
-    --text-white: #f8fafc;
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --bg-body: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-sidebar: #111827;
+    --text: #f8fafc;
     --text-dim: #94a3b8;
-    --danger: #ef4444;
-    --success: #22c55e;
+    --red: #ef4444;
+    --green: #22c55e;
 }
 
 * { box-sizing: border-box; }
 
 body {
     margin: 0;
-    font-family: 'Inter', sans-serif;
-    background-color: var(--dark-bg);
-    color: var(--text-white);
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--bg-body);
+    color: var(--text);
+    height: 100vh;
 }
 
 /* ==========================================================================
-   SISTEMA DE LOGIN (OVERLAY) - ESTO ARREGLA TU PROBLEMA
+   PANTALLA DE LOGIN (FULL SCREEN)
    ========================================================================== */
-.admin-login-overlay {
+.admin-login-full-screen {
     position: fixed;
     top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(15, 23, 42, 0.98); /* Fondo casi sólido para no ver el dash vacío */
-    display: flex; /* Se cambia a none por JS */
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-body); /* Fondo sólido */
+    display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 10000; /* Siempre arriba de todo */
-    backdrop-filter: blur(10px);
+    z-index: 99999;
 }
 
-.login-box {
-    background: var(--card-bg);
-    padding: 2.5rem;
-    border-radius: 1rem;
+/* Ocultar login cuando estamos autenticados */
+.auth-ready .admin-login-full-screen {
+    display: none;
+}
+
+.login-content {
     width: 100%;
-    max-width: 420px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    padding: 20px;
+}
+
+.login-branding {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.login-branding i {
+    font-size: 4rem;
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.login-branding h1 { margin: 0; font-size: 2rem; letter-spacing: -1px; }
+.login-branding p { color: var(--text-dim); margin-top: 5px; }
+
+.login-form-clean .form-input-wrapper {
+    margin-bottom: 1.5rem;
+}
+
+.login-form-clean label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.login-form-clean input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg-surface);
     border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    transition: border-color 0.3s;
 }
 
-.login-logo { text-align: center; margin-bottom: 2rem; }
-.login-logo i { font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem; }
-.login-logo h2 { margin: 0; font-size: 1.5rem; }
-
-.form-group { margin-bottom: 1.2rem; }
-.form-group label { display: block; margin-bottom: 0.5rem; color: var(--text-dim); font-size: 0.9rem; }
-.form-group input {
-    width: 100%; padding: 0.8rem;
-    border-radius: 0.5rem; border: 1px solid #334155;
-    background: #0f172a; color: white;
+.login-form-clean input:focus {
+    outline: none;
+    border-color: var(--primary);
 }
 
-.login-submit-btn {
-    width: 100%; padding: 0.8rem;
-    background: var(--primary-color); color: white;
-    border: none; border-radius: 0.5rem;
-    font-weight: 600; cursor: pointer; transition: 0.3s;
+.login-action-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.3s;
 }
-.login-submit-btn:hover { background: var(--primary-hover); }
 
-.login-error-msg {
-    color: var(--danger); font-size: 0.85rem;
-    text-align: center; margin-top: 1rem; display: none;
+.login-action-btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.login-feedback {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: var(--red);
+    min-height: 1.2rem;
 }
 
 /* ==========================================================================
-   ESTRUCTURA DEL PANEL
+   PANEL DE ADMINISTRACIÓN (CONTENIDO)
    ========================================================================== */
 .admin-container {
+    display: none; /* OCULTO POR DEFECTO */
+    height: 100vh;
+}
+
+/* Mostrar panel solo cuando la auth esté lista */
+.auth-ready .admin-container {
     display: flex;
-    min-height: 100vh;
 }
 
 .sidebar {
     width: 260px;
-    background: var(--sidebar-bg);
+    background: var(--bg-sidebar);
     border-right: 1px solid rgba(255,255,255,0.05);
     display: flex;
     flex-direction: column;
 }
 
 .sidebar-header {
-    padding: 1.5rem;
+    padding: 2rem 1.5rem;
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-weight: bold;
-    font-size: 1.2rem;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    gap: 12px;
+    font-weight: 700;
+    font-size: 1.25rem;
 }
 
-.sidebar-header img { width: 40px; height: 40px; }
+.sidebar-header img { width: 35px; }
 
-.sidebar-nav { flex: 1; padding: 1rem; }
+.sidebar-nav { padding: 1rem; flex: 1; }
+
 .nav-link {
-    display: flex; align-items: center; gap: 12px;
-    padding: 0.8rem 1rem; color: var(--text-dim);
-    text-decoration: none; border-radius: 0.5rem;
-    margin-bottom: 0.5rem; transition: 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: var(--text-dim);
+    text-decoration: none;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: all 0.3s;
 }
 
 .nav-link:hover, .nav-link.active {
     background: rgba(99, 102, 241, 0.1);
-    color: var(--primary-color);
+    color: var(--primary);
 }
 
-.logout-btn { margin-top: auto; color: var(--danger); }
+.logout-link {
+    margin-top: auto;
+    color: var(--red);
+}
 
-/* CONTENIDO */
-.main-content { flex: 1; padding: 2rem; overflow-y: auto; }
+.main-content {
+    flex: 1;
+    padding: 2.5rem;
+    overflow-y: auto;
+}
+
 .admin-section { display: none; }
 .admin-section.active { display: block; }
 
 .content-header {
-    display: flex; justify-content: space-between;
-    align-items: center; margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-/* CARDS DE ESTADÍSTICAS */
-.stats-container {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.5rem;
 }
 
 .stat-card {
-    background: var(--card-bg); padding: 1.5rem;
-    border-radius: 1rem; display: flex; align-items: center; gap: 20px;
+    background: var(--bg-surface);
+    padding: 1.5rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
     border: 1px solid rgba(255,255,255,0.05);
 }
 
 .stat-icon {
-    width: 50px; height: 50px; border-radius: 12px;
-    background: rgba(99, 102, 241, 0.15);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--primary-color); font-size: 1.5rem;
+    width: 56px;
+    height: 56px;
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
 }
 
-.stat-details h3 { margin: 0; font-size: 1.8rem; }
-.stat-details p { margin: 0; color: var(--text-dim); font-size: 0.9rem; }
+.stat-info h3 { margin: 0; font-size: 1.75rem; }
+.stat-info p { margin: 0; color: var(--text-dim); font-size: 0.9rem; }
 
-/* TABLAS */
-.table-wrapper {
-    background: var(--card-bg); border-radius: 1rem;
-    overflow: hidden; border: 1px solid rgba(255,255,255,0.05);
-}
-
-table { width: 100%; border-collapse: collapse; text-align: left; }
-th { background: rgba(0,0,0,0.2); padding: 1rem; font-size: 0.85rem; color: var(--text-dim); }
-td { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
-
-/* BOTONES */
-.action-btn-primary {
-    background: var(--primary-color); color: white;
-    border: none; padding: 0.6rem 1.2rem;
-    border-radius: 0.5rem; font-weight: 600; cursor: pointer;
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
 }
