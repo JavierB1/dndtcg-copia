@@ -46,7 +46,6 @@ let currentCardsPage = 1;
 let currentSealedProductsPage = 1;
 
 let currentDeleteTarget = null;
-let ocrWorker = null; 
 
 // ==========================================================================
 // DOM ELEMENT REFERENCES
@@ -66,9 +65,9 @@ let totalCardsCount, totalSealedProductsCount, outOfStockCount, uniqueCategories
 let messageModal, closeMessageModalBtn, messageModalTitle, messageModalText, okMessageModalBtn;
 let orderDetailsModal, closeOrderDetailsModalBtn, orderDetailsContent, orderStatusSelect, updateOrderStatusBtn;
 
-// REFERENCIAS DEL ESCÁNER DE CÁMARA
-let scannerModal, openScannerBtn, closeScannerBtn, cameraStream, captureCanvas, scannerStatusMessage;
-let mediaStream = null, scanTimeout = null;
+// REFERENCIAS DEL BUSCADOR RÁPIDO (REEMPLAZA AL ESCÁNER)
+let quickSearchModal, openQuickSearchBtn, closeQuickSearchBtn, searchStatusMessage;
+let searchCardNumberInput, searchSetIdInput, submitSearchBtn;
 
 // ==========================================================================
 // UTILITY FUNCTIONS
@@ -115,150 +114,80 @@ function showMessageModal(title, text) {
 }
 
 // ==========================================================================
-// FUNCIÓN DE ESCÁNER MEJORADO (NOMBRE + CÓDIGO + TOTAL)
+// FUNCIÓN DE BÚSQUEDA RÁPIDA POR API
 // ==========================================================================
 
-async function initTesseractAPI() {
-    if (!window.Tesseract) {
-        await new Promise((resolve) => {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-            script.onload = resolve;
-            document.head.appendChild(script);
-        });
-    }
-    if (!ocrWorker) {
-        ocrWorker = await Tesseract.createWorker('eng');
-    }
-}
+async function handleQuickSearch() {
+    const number = searchCardNumberInput.value.trim();
+    const setId = searchSetIdInput.value.trim().toLowerCase();
 
-async function startCamera() {
-    try {
-        scannerStatusMessage.textContent = "Iniciando cámara...";
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { 
-                facingMode: 'environment',
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
-            }
-        });
-        cameraStream.srcObject = mediaStream;
-        await initTesseractAPI();
-        startScanningProcess();
-    } catch (err) {
-        scannerStatusMessage.textContent = "Error: Acceso a cámara denegado.";
-        scannerStatusMessage.style.color = "#ef4444";
+    if (!number) {
+        searchStatusMessage.textContent = "Por favor ingresa el número de la carta.";
+        searchStatusMessage.style.color = "#ef4444";
+        return;
     }
-}
 
-function stopCamera() {
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-        mediaStream = null;
-    }
-    if (scanTimeout) clearTimeout(scanTimeout);
-}
-
-async function startScanningProcess() {
-    scannerStatusMessage.innerHTML = "<strong>ENFOCA LA CARTA</strong><br><small>Alinea el nombre arriba y el código abajo en el centro.</small>";
-    scannerStatusMessage.style.color = "#10b981";
-    scanTimeout = setTimeout(processScannedFrame, 2000); 
-}
-
-async function processScannedFrame() {
-    if (!mediaStream || !ocrWorker) return;
+    searchStatusMessage.textContent = "Buscando en la base de datos oficial...";
+    searchStatusMessage.style.color = "#3b82f6";
+    submitSearchBtn.disabled = true;
 
     try {
-        scannerStatusMessage.innerHTML = "Identificando carta...";
-        scannerStatusMessage.style.color = "#f59e0b";
+        // Construimos la query. Si hay setId, la búsqueda es exacta.
+        let query = `number:${number}`;
+        if (setId) {
+            query += ` (set.id:${setId}* OR set.symbol:${setId}*)`;
+        }
 
-        const context = captureCanvas.getContext('2d');
-        const vW = cameraStream.videoWidth;
-        const vH = cameraStream.videoHeight;
+        const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=${query}`);
+        const data = await response.json();
 
-        // Capturamos un área central más amplia para leer nombre (arriba) y número (abajo)
-        const cropW = vW * 0.7;
-        const cropH = vH * 0.8;
-        const startX = (vW - cropW) / 2;
-        const startY = (vH - cropH) / 2;
-
-        captureCanvas.width = cropW * 1.5;
-        captureCanvas.height = cropH * 1.5;
-
-        context.filter = 'contrast(1.4) grayscale(0.8)';
-        context.drawImage(cameraStream, startX, startY, cropW, cropH, 0, 0, captureCanvas.width, captureCanvas.height);
-        context.filter = 'none';
-
-        const result = await ocrWorker.recognize(captureCanvas);
-        const text = result.data.text;
-        
-        console.log("IA leyó lo siguiente:\n", text);
-
-        // BUSCAMOS PATRONES
-        const numberMatch = text.match(/([a-zA-Z0-9]{1,4})\s*\/\s*(\d{1,3})/);
-        // El nombre suele estar al principio de las líneas y en mayúsculas/títulos
-        const words = text.split(/\n|\s/).filter(w => w.length > 3 && /^[A-Z]/.test(w));
-        const possibleName = words.length > 0 ? words[0] : "";
-
-        if (numberMatch) {
-            let cardNumber = numberMatch[1].replace(/^0+/, ''); 
-            let setTotal = numberMatch[2]; 
-
-            scannerStatusMessage.innerHTML = `Detectado: <strong>${numberMatch[0]}</strong><br><small>Buscando coincidencias...</small>`;
-            scannerStatusMessage.style.color = "#3b82f6";
-
-            const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:${cardNumber}`);
-            const data = await response.json();
-
-            if (data.data && data.data.length > 0) {
-                // PRIORIDAD 1: Coincidencia de nombre + número
-                let bestMatch = data.data.find(c => 
-                    c.name.toLowerCase().includes(possibleName.toLowerCase()) || 
-                    possibleName.toLowerCase().includes(c.name.toLowerCase())
-                );
-
-                // PRIORIDAD 2: Coincidencia de total impreso
-                if (!bestMatch) {
-                    bestMatch = data.data.find(c => c.set.printedTotal == setTotal);
-                }
-
-                // PRIORIDAD 3: La primera opción de la API
-                if (!bestMatch) bestMatch = data.data[0];
-
-                fillFormWithAPIData(bestMatch, numberMatch[0]);
-            } else {
-                scannerStatusMessage.innerHTML = "Código no hallado. Reintentando...";
-                scanTimeout = setTimeout(processScannedFrame, 1500);
+        if (data.data && data.data.length > 0) {
+            // Si hay varios resultados, intentamos ser más precisos o tomamos el primero
+            let bestMatch = data.data[0];
+            
+            // Si el usuario puso expansión, intentamos filtrar por el ID exacto del set
+            if (setId) {
+                const filtered = data.data.find(c => c.set.id.toLowerCase().includes(setId));
+                if (filtered) bestMatch = filtered;
             }
+
+            fillFormWithAPIData(bestMatch, `${number}/${bestMatch.set.printedTotal}`);
+            closeModal(quickSearchModal);
+            searchCardNumberInput.value = "";
+            searchSetIdInput.value = "";
+            searchStatusMessage.textContent = "";
         } else {
-            scannerStatusMessage.innerHTML = "No veo el código...<br><small>Ajusta la distancia (aprox 15cm).</small>";
-            scanTimeout = setTimeout(processScannedFrame, 1500); 
+            searchStatusMessage.textContent = "No se encontró ninguna carta con esos datos.";
+            searchStatusMessage.style.color = "#ef4444";
         }
     } catch (error) {
-        console.error(error);
-        scanTimeout = setTimeout(processScannedFrame, 1500);
+        console.error("Error en búsqueda:", error);
+        searchStatusMessage.textContent = "Error de conexión con la API.";
+    } finally {
+        submitSearchBtn.disabled = false;
     }
 }
 
-function fillFormWithAPIData(card, originalCode) {
-    stopCamera();
-    closeModal(scannerModal);
+function fillFormWithAPIData(card, displayCode) {
     openModal(cardModal);
-    cardModalTitle.textContent = '¡Carta Identificada!';
+    cardModalTitle.textContent = '¡Carta Encontrada!';
 
     cardName.value = card.name;
-    cardCode.value = originalCode || card.number;
+    cardCode.value = displayCode || card.number;
     cardExpansion.value = card.set.name;
     cardImage.value = card.images.large || card.images.small || '';
 
+    // Precio de mercado (TCGPlayer)
     let price = 0;
     if (card.tcgplayer?.prices) {
         const p = card.tcgplayer.prices;
-        price = p[Object.keys(p)[0]].market || 0;
+        const firstKey = Object.keys(p)[0];
+        price = p[firstKey].market || p[firstKey].mid || 0;
     }
     cardPrice.value = parseFloat(price).toFixed(2);
     cardCategory.value = 'Pokémon TCG';
 
+    // Animación visual de éxito
     [cardName, cardCode, cardExpansion, cardImage].forEach(f => {
         f.style.backgroundColor = '#ecfdf5';
         setTimeout(() => f.style.backgroundColor = '', 2000);
@@ -266,7 +195,7 @@ function fillFormWithAPIData(card, originalCode) {
 }
 
 // ==========================================================================
-// FIREBASE AUTH & DATA (Igual que antes)
+// FIREBASE AUTH & DATA
 // ==========================================================================
 
 async function handleLogin(event) {
@@ -412,7 +341,14 @@ async function handleSaveCard(e) {
 document.addEventListener('DOMContentLoaded', () => {
     // Inyección de estilos para iPad/Móvil
     const style = document.createElement('style');
-    style.innerHTML = `@media(max-width:768px){.sidebar{position:fixed;left:-260px;z-index:100;transition:0.3s}.sidebar.show{left:0}.main-content{margin-left:0}.admin-modal-content{width:95%}}`;
+    style.innerHTML = `
+        @media(max-width:768px){.sidebar{position:fixed;left:-260px;z-index:100;transition:0.3s}.sidebar.show{left:0}.main-content{margin-left:0}.admin-modal-content{width:95%}}
+        .search-form-group { margin-bottom: 15px; }
+        .search-form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; color: #4a5568; }
+        .search-input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; }
+        .btn-search { width: 100%; padding: 12px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-search:disabled { background: #cbd5e0; cursor: not-allowed; }
+    `;
     document.head.appendChild(style);
 
     // Asignaciones
@@ -454,11 +390,34 @@ document.addEventListener('DOMContentLoaded', () => {
     adminCategoryFilter = document.getElementById('adminCategoryFilter');
     totalCardsCount = document.getElementById('totalCardsCount');
     uniqueCategoriesCount = document.getElementById('uniqueCategoriesCount');
-    scannerModal = document.getElementById('scannerModal');
-    openScannerBtn = document.getElementById('openScannerBtn');
-    cameraStream = document.getElementById('cameraStream');
-    captureCanvas = document.getElementById('captureCanvas');
-    scannerStatusMessage = document.getElementById('scannerStatusMessage');
+
+    // NUEVAS ASIGNACIONES PARA EL BUSCADOR RÁPIDO
+    quickSearchModal = document.getElementById('scannerModal'); // Reutilizamos el ID del modal antiguo
+    openQuickSearchBtn = document.getElementById('openScannerBtn'); // Reutilizamos el botón
+    searchStatusMessage = document.getElementById('scannerStatusMessage');
+    
+    // Aquí transformamos el contenido del modal de escáner en un formulario de búsqueda
+    const modalContent = quickSearchModal.querySelector('.admin-modal-content');
+    modalContent.innerHTML = `
+        <span class="close-button">&times;</span>
+        <h2 style="margin-bottom: 20px;"><i class="fas fa-search"></i> Buscador por Código</h2>
+        <div class="search-form-group">
+            <label>Número de Carta (ej: 152)</label>
+            <input type="text" id="searchCardNumber" class="search-input" placeholder="Escribe el número...">
+        </div>
+        <div class="search-form-group">
+            <label>Código de Expansión (3-4 letras, ej: sv1, pgo, swsh01)</label>
+            <input type="text" id="searchSetId" class="search-input" placeholder="Opcional pero recomendado...">
+        </div>
+        <button id="submitSearch" class="btn-search">Buscar Carta</button>
+        <p id="scannerStatusMessage" style="margin-top: 15px; text-align: center; font-size: 0.9rem;"></p>
+    `;
+
+    // Re-asignamos las referencias internas tras el cambio de HTML
+    searchCardNumberInput = document.getElementById('searchCardNumber');
+    searchSetIdInput = document.getElementById('searchSetId');
+    submitSearchBtn = document.getElementById('submitSearch');
+    searchStatusMessage = document.getElementById('scannerStatusMessage');
 
     openModal(loginModal);
 
@@ -472,13 +431,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if(window.innerWidth <= 768){ sidebarMenu.classList.remove('show'); sidebarOverlay.style.display = 'none'; }
     }));
 
-    openScannerBtn?.addEventListener('click', () => { openModal(scannerModal); startCamera(); });
+    // Eventos Buscador
+    openQuickSearchBtn?.addEventListener('click', () => { openModal(quickSearchModal); });
+    submitSearchBtn?.addEventListener('click', handleQuickSearch);
+    
     loginForm?.addEventListener('submit', handleLogin);
     navLogout?.addEventListener('click', handleLogout);
     cardForm?.addEventListener('submit', handleSaveCard);
     addCardBtn?.addEventListener('click', () => { cardForm.reset(); cardId.value = ''; openModal(cardModal); });
 
+    quickSearchModal.addEventListener('click', (e) => {
+        if(e.target.classList.contains('close-button')){ closeModal(quickSearchModal); }
+    });
+
     document.querySelectorAll('.close-button').forEach(b => b.addEventListener('click', () => {
-        closeModal(cardModal); closeModal(scannerModal); stopCamera();
+        closeModal(cardModal); 
     }));
 });
