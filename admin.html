@@ -11,7 +11,6 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background-color: #f1f5f9; color: #334155; overflow-x: hidden; }
 
-        /* Estilo crítico para evitar el flash */
         .admin-container { display: none; min-height: 100vh; }
         
         #loginModal { 
@@ -40,15 +39,24 @@
         td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
         
         /* Dashboard */
-        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, min-minmax(200px, 1fr)); gap: 20px; }
+        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         .stat-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .stat-card h3 { font-size: 0.8rem; color: #64748b; text-transform: uppercase; margin-bottom: 10px; }
-        .stat-card p { font-size: 2rem; font-weight: 700; color: #1e293b; }
+        .stat-card p { font-size: 2.2rem; font-weight: 700; color: #1e293b; }
 
         /* Modales */
         .admin-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .admin-modal-content { background: white; padding: 30px; border-radius: 24px; position: relative; width: 90%; max-width: 500px; }
         .admin-modal-content.wide { max-width: 850px; }
+
+        /* Confirmación de Eliminación Personalizada */
+        .confirm-modal-content { text-align: center; padding: 40px 30px; }
+        .confirm-icon { width: 70px; height: 70px; background: #fee2e2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 20px; }
+        .confirm-title { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 10px; }
+        .confirm-text { color: #64748b; margin-bottom: 30px; line-height: 1.5; }
+        .confirm-actions { display: flex; gap: 15px; }
+        .btn-cancel { flex: 1; padding: 14px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: white; font-weight: 600; cursor: pointer; color: #64748b; }
+        .btn-confirm-delete { flex: 1; padding: 14px; border-radius: 12px; border: none; background: #ef4444; color: white; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
 
         /* Layout con Vista Previa */
         .modal-body-layout { display: flex; gap: 30px; margin-top: 20px; }
@@ -62,14 +70,15 @@
 
         /* Formularios */
         .form-row { display: flex; gap: 15px; }
-        .form-group { flex: 1; display: flex; flex-direction: column; margin-bottom: 15px; }
+        .form-group { flex: 1; display: flex; flex-direction: column; margin-bottom: 15px; text-align: left; }
         .form-group label { font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 5px; text-transform: uppercase; }
         .form-group input, .form-group select { padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 0.9rem; outline: none; }
         
-        /* Botones */
-        .add-button { background: #3b82f6; color: white; width: 45px; height: 45px; border-radius: 12px; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .add-button { background: #3b82f6; color: white; width: 45px; height: 45px; border-radius: 12px; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .add-button:hover { background: #2563eb; transform: scale(1.05); }
         .confirm-button { background: #3b82f6; color: white; border: none; padding: 12px 25px; border-radius: 12px; font-weight: 700; cursor: pointer; }
-        .action-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #64748b; padding: 5px; }
+        .action-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #64748b; padding: 5px; transition: 0.2s; }
+        .action-btn:hover { color: #3b82f6; }
         .close-button { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #94a3b8; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -129,7 +138,7 @@
                 <button id="refreshAdminPageBtn" class="action-btn" style="background: white; width: 40px; height: 40px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><i class="fas fa-sync-alt"></i></button>
             </header>
 
-            <!-- SECCIÓN DASHBOARD -->
+            <!-- SECCIONES -->
             <section id="dashboard-section" class="admin-section active">
                 <div class="dashboard-stats">
                     <div class="stat-card"><h3>Total Cartas</h3><p id="totalCardsCount">0</p></div>
@@ -139,7 +148,6 @@
                 </div>
             </section>
 
-            <!-- SECCIÓN CARTAS -->
             <section id="cards-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                     <h3 style="font-weight: 700;">Cartas Pokémon</h3>
@@ -156,7 +164,6 @@
                 </div>
             </section>
 
-            <!-- SECCIÓN SELLADOS -->
             <section id="sealed-products-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                     <h3 style="font-weight: 700;">Productos Sellados</h3>
@@ -170,7 +177,6 @@
                 </div>
             </section>
 
-            <!-- SECCIÓN CATEGORÍAS -->
             <section id="categories-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                     <h3 style="font-weight: 700;">Gestión de Categorías</h3>
@@ -184,7 +190,6 @@
                 </div>
             </section>
 
-            <!-- SECCIÓN PEDIDOS -->
             <section id="orders-section" class="admin-section">
                 <h3 style="margin-bottom: 25px; font-weight: 700;">Pedidos Recientes</h3>
                 <div class="table-responsive">
@@ -197,7 +202,22 @@
         </main>
     </div>
 
-    <!-- MODALES -->
+    <!-- MODAL CONFIRMAR ELIMINACIÓN (NUEVO) -->
+    <div id="confirmDeleteModal" class="admin-modal">
+        <div class="admin-modal-content confirm-modal-content">
+            <div class="confirm-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="confirm-title">¿Estás seguro?</h3>
+            <p class="confirm-text">Esta acción eliminará permanentemente el elemento de tu inventario. No podrás deshacer este cambio.</p>
+            <div class="confirm-actions">
+                <button class="btn-cancel" id="btnCancelDelete">Cancelar</button>
+                <button class="btn-confirm-delete" id="btnConfirmDelete">Eliminar ahora</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OTROS MODALES -->
     <div id="cardModal" class="admin-modal">
         <div class="admin-modal-content wide">
             <span class="close-button">&times;</span>
