@@ -49,7 +49,7 @@ let pendingDelete = { id: null, type: null };
 
 // Elementos UI
 let loginView, adminView, sidebarMenu;
-let cardForm, cardModal, sealedProductForm, sealedProductModal, categoryForm, categoryModal, quickSearchModal, confirmDeleteModal;
+let cardForm, cardModal, sealedProductForm, sealedProductModal, categoryForm, categoryModal, quickSearchModal, confirmDeleteModal, alertModal;
 let searchStatusMessage, tcgSearchInput, searchSetIdInput, submitSearchBtn;
 let cardImagePreview, imagePreviewContainer;
 
@@ -69,6 +69,15 @@ function closeModal(m) {
         m.style.display='none'; 
         document.body.style.overflow=''; 
     } 
+}
+
+// Función para mostrar alertas personalizadas (sustituye a alert())
+function showAlert(title, message) {
+    const titleEl = document.getElementById('alertTitle');
+    const textEl = document.getElementById('alertText');
+    if (titleEl) titleEl.textContent = title;
+    if (textEl) textEl.textContent = message;
+    openModal(alertModal);
 }
 
 function refreshPreviewImage(url) {
@@ -178,7 +187,7 @@ async function handleSaveCard(e) {
     const id = document.getElementById('cardId').value;
     const nombre = document.getElementById('cardName').value.trim();
     if (allCards.find(c => c.nombre.toLowerCase() === nombre.toLowerCase() && c.id !== id)) { 
-        alert("¡Error! Ya existe una carta con este nombre."); 
+        showAlert("Elemento Duplicado", "¡Error! Ya existe una carta con el nombre: " + nombre); 
         return; 
     }
     const data = { 
@@ -203,7 +212,7 @@ async function handleSaveSealed(e) {
     const id = document.getElementById('sealedProductId').value;
     const nombre = document.getElementById('sealedProductName').value.trim();
     if (allSealed.find(p => p.nombre.toLowerCase() === nombre.toLowerCase() && p.id !== id)) { 
-        alert("¡Error! Nombre de producto duplicado."); 
+        showAlert("Elemento Duplicado", "¡Error! Ya existe un producto sellado con el nombre: " + nombre); 
         return; 
     }
     const data = { 
@@ -226,7 +235,7 @@ async function handleSaveCategory(e) {
     const id = document.getElementById('categoryId').value;
     const nombre = document.getElementById('categoryName').value.trim();
     if (allCategories.find(c => c.name.toLowerCase() === nombre.toLowerCase() && c.id !== id)) { 
-        alert("¡Error! Esta categoría ya existe."); 
+        showAlert("Categoría Duplicada", "¡Error! Esta categoría ya existe en el sistema."); 
         return; 
     }
     const data = { name: nombre };
@@ -361,6 +370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     categoryModal = document.getElementById('categoryModal');
     quickSearchModal = document.getElementById('scannerModal'); 
     confirmDeleteModal = document.getElementById('confirmDeleteModal');
+    alertModal = document.getElementById('alertModal');
     cardImagePreview = document.getElementById('cardImagePreview'); 
     imagePreviewContainer = document.getElementById('imagePreviewContainer');
 
@@ -391,14 +401,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Listener de Auth
     onAuthStateChanged(auth, (user) => {
-        // CORRECCIÓN CRÍTICA: Solo permitimos acceso si el usuario NO es anónimo 
-        // y si el proceso de limpieza (forceLogout) ha concluido.
         if (user && !user.isAnonymous && isForcedLogoutDone) { 
             loginView.style.setProperty('display', 'none', 'important'); 
             adminView.style.setProperty('display', 'flex', 'important'); 
             loadAllData(); 
         } else { 
-            // Si no hay usuario o es anónimo (login automático del entorno), mostramos el login manual.
             adminView.style.setProperty('display', 'none', 'important'); 
             loginView.style.setProperty('display', 'flex', 'important'); 
         }
@@ -443,7 +450,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
     document.getElementById('refreshAdminPageBtn')?.addEventListener('click', () => location.reload());
 
-    // Modal de Confirmación
+    // Eventos del Modal de Confirmación
     document.getElementById('btnCancelDelete')?.addEventListener('click', () => closeModal(confirmDeleteModal));
     document.getElementById('btnConfirmDelete')?.addEventListener('click', async () => {
         if (!pendingDelete.id) return;
@@ -452,8 +459,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, pendingDelete.id));
             closeModal(confirmDeleteModal);
             await loadAllData();
-        } catch (err) { alert("Error al eliminar el documento."); }
+        } catch (err) { console.error(err); }
     });
+
+    // Evento del Modal de Alerta
+    document.getElementById('btnAlertAccept')?.addEventListener('click', () => closeModal(alertModal));
 
     // Delegación de clics en tablas (Editar / Borrar)
     document.body.addEventListener('click', async (e) => {
@@ -514,8 +524,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             await signInWithCustomToken(auth, __initial_auth_token);
         } else {
-            // Se mantiene el inicio anónimo para estabilidad del entorno, 
-            // pero el filtro en onAuthStateChanged impedirá el acceso al panel.
             await signInAnonymously(auth);
         }
     };
