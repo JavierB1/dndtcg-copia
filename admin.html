@@ -6,14 +6,30 @@
     <title>D&D TCG - Admin Panel</title>
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Bloqueo preventivo para evitar parpadeos al recargar */
+        body.auth-loading #adminPanelContainer,
+        body.auth-loading #loginModal {
+            display: none !important;
+        }
+        
+        /* Solo mostramos el login si explícitamente no hay sesión */
+        body.auth-guest #loginModal {
+            display: flex !important;
+        }
+
+        /* Solo mostramos el panel si la sesión está confirmada */
+        body.auth-ready #adminPanelContainer {
+            display: flex !important;
+        }
+    </style>
 </head>
 <body class="auth-loading">
 
-    <!-- PANTALLA DE LOGIN (CON ICONO EN LUGAR DE PNG) -->
-    <div id="loginModal" class="admin-login-full-screen">
+    <!-- PANTALLA DE LOGIN -->
+    <div id="loginModal" class="admin-login-full-screen" style="display: none;">
         <div class="login-content">
             <div class="login-branding">
-                <!-- Cambiado: Usamos un icono de escudo en lugar de logo.png -->
                 <i class="fas fa-dice-d20" style="font-size: 4rem; color: #6366f1; margin-bottom: 1rem;"></i>
                 <h1>D&D TCG Admin</h1>
                 <p>Introduzca sus credenciales para acceder</p>
@@ -34,10 +50,9 @@
     </div>
 
     <!-- CONTENEDOR DEL PANEL -->
-    <div id="adminPanelContainer" class="admin-container">
+    <div id="adminPanelContainer" class="admin-container" style="display: none;">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <!-- Cambiado: Icono representativo en lugar de logo.png -->
                 <i class="fas fa-dragon" style="color: #6366f1; font-size: 1.5rem;"></i>
                 <span>D&D TCG</span>
             </div>
@@ -83,7 +98,7 @@
                 </div>
             </section>
 
-            <!-- Otras secciones permanecen igual pero sin referencias a imágenes rotas -->
+            <!-- SECCIÓN CARTAS -->
             <section id="cards-section" class="admin-section">
                 <div class="content-header">
                     <h2>Gestión de Cartas</h2>
@@ -105,7 +120,65 @@
                 </div>
             </section>
             
-            <!-- (Las demás secciones siguen la misma lógica) -->
+            <!-- SECCIÓN PRODUCTOS -->
+            <section id="sealed-products-section" class="admin-section">
+                <div class="content-header">
+                    <h2>Productos Sellados</h2>
+                </div>
+                <div class="table-container">
+                    <table id="sealedProductsTable">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Precio</th>
+                                <th>Stock</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECCIÓN CATEGORÍAS -->
+            <section id="categories-section" class="admin-section">
+                <div class="content-header">
+                    <h2>Categorías</h2>
+                </div>
+                <div class="table-container">
+                    <table id="categoriesTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECCIÓN PEDIDOS -->
+            <section id="orders-section" class="admin-section">
+                <div class="content-header">
+                    <h2>Pedidos</h2>
+                </div>
+                <div class="table-container">
+                    <table id="ordersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Cliente</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
         </main>
     </div>
 
