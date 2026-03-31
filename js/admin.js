@@ -8,7 +8,9 @@ import {
 import { 
     getFirestore, 
     collection, 
-    getDocs 
+    getDocs,
+    addDoc,
+    serverTimestamp 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 // Configuración de Firebase
@@ -35,6 +37,10 @@ const elements = {
     loginMessage: document.getElementById('loginMessage'),
     navLinks: document.querySelectorAll('.nav-link'),
     sections: document.querySelectorAll('.admin-section'),
+    // Botones de Agregar
+    btnAddCard: document.getElementById('btnAddCard'),
+    btnAddSealed: document.getElementById('btnAddSealed'),
+    btnAddCategory: document.getElementById('btnAddCategory'),
     // Estadísticas
     statCards: document.getElementById('stat-total-cards'),
     statOrders: document.getElementById('stat-total-orders'),
@@ -48,37 +54,20 @@ const elements = {
 
 // --- GESTIÓN DE SESIÓN ---
 
-// Estado inicial: Limpieza absoluta
 document.body.className = 'auth-loading';
 
 onAuthStateChanged(auth, async (user) => {
-    // Forzamos un reseteo visual antes de decidir qué mostrar
-    if (elements.loginModal) elements.loginModal.style.display = 'none';
-    if (elements.adminPanelContainer) elements.adminPanelContainer.style.display = 'none';
-
     if (user) {
-        console.log("Sesión iniciada:", user.email);
-        // Cambiamos clases del body para que el CSS actúe
         document.body.classList.remove('auth-guest', 'auth-loading');
         document.body.classList.add('auth-ready');
-        
-        // Forzamos visibilidad por JS por si el CSS falla
-        if (elements.adminPanelContainer) elements.adminPanelContainer.style.display = 'flex';
-        if (elements.loginModal) elements.loginModal.style.display = 'none';
-        
         await loadData();
     } else {
-        console.log("No hay sesión activa");
         document.body.classList.remove('auth-ready', 'auth-loading');
         document.body.classList.add('auth-guest');
-        
-        // Forzamos visibilidad por JS
-        if (elements.loginModal) elements.loginModal.style.display = 'flex';
-        if (elements.adminPanelContainer) elements.adminPanelContainer.style.display = 'none';
     }
 });
 
-// Login
+// Login Logic
 if (elements.loginForm) {
     elements.loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -87,35 +76,23 @@ if (elements.loginForm) {
         const btn = document.getElementById('btnLoginSubmit');
 
         try {
-            if (btn) {
-                btn.disabled = true;
-                btn.innerText = "Cargando...";
-            }
+            if (btn) { btn.disabled = true; btn.innerText = "Validando..."; }
             await signInWithEmailAndPassword(auth, email, pass);
         } catch (err) {
-            console.error("Error de login:", err);
             if (elements.loginMessage) {
-                elements.loginMessage.textContent = "Error: Credenciales incorrectas.";
-                elements.loginMessage.style.color = "#ef4444";
+                elements.loginMessage.textContent = "Acceso denegado. Revisa tus datos.";
             }
-            if (btn) {
-                btn.disabled = false;
-                btn.innerText = "Entrar al Panel";
-            }
+            if (btn) { btn.disabled = false; btn.innerText = "Iniciar Sesión"; }
         }
     });
 }
 
-// Logout
+// Logout Logic
 if (elements.btnLogout) {
     elements.btnLogout.addEventListener('click', async (e) => {
         e.preventDefault();
-        try {
-            await signOut(auth);
-            window.location.reload();
-        } catch (err) {
-            console.error("Error al cerrar sesión", err);
-        }
+        await signOut(auth);
+        window.location.reload();
     });
 }
 
@@ -145,33 +122,31 @@ async function loadData() {
         }
 
         renderAllTables(cards, sealed, orders, categories);
-
     } catch (err) {
-        console.error("Error en loadData:", err);
+        console.error("Error cargando datos:", err);
     }
 }
 
 function renderAllTables(cards, sealed, orders, categories) {
     if (elements.cardsTableBody) {
-        elements.cardsTableBody.innerHTML = cards.length ? cards.map(c => `
+        elements.cardsTableBody.innerHTML = cards.map(c => `
             <tr>
-                <td><img src="${c.imagen_url || ''}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;" onerror="this.src='https://via.placeholder.com/40'"></td>
-                <td>${c.nombre || 'Sin nombre'}</td>
+                <td><img src="${c.imagen_url || 'https://via.placeholder.com/40'}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;"></td>
+                <td>${c.nombre || 'N/A'}</td>
                 <td>$${Number(c.precio || 0).toFixed(2)}</td>
                 <td>${c.stock || 0}</td>
-                <td>${c.categoria || '-'}</td>
                 <td>
                     <button class="row-action-btn"><i class="fas fa-edit"></i></button>
                     <button class="row-action-btn delete"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
-        `).join('') : '<tr><td colspan="6" style="text-align:center; padding:20px; color:#94a3b8;">No hay cartas registradas</td></tr>';
+        `).join('');
     }
 
     if (elements.sealedTableBody) {
-        elements.sealedTableBody.innerHTML = sealed.length ? sealed.map(p => `
+        elements.sealedTableBody.innerHTML = sealed.map(p => `
             <tr>
-                <td>${p.nombre || 'Sin nombre'}</td>
+                <td>${p.nombre || 'N/A'}</td>
                 <td>$${Number(p.precio || 0).toFixed(2)}</td>
                 <td>${p.stock || 0}</td>
                 <td>
@@ -179,35 +154,124 @@ function renderAllTables(cards, sealed, orders, categories) {
                     <button class="row-action-btn delete"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
-        `).join('') : '<tr><td colspan="4" style="text-align:center; padding:20px; color:#94a3b8;">No hay productos sellados</td></tr>';
+        `).join('');
     }
 
     if (elements.categoriesTableBody) {
-        elements.categoriesTableBody.innerHTML = categories.length ? categories.map(cat => `
+        elements.categoriesTableBody.innerHTML = categories.map(cat => `
             <tr>
-                <td style="font-family:monospace; font-size:0.8rem; color:#6366f1;">${cat.id}</td>
+                <td style="font-family:monospace; color:#6366f1;">${cat.id}</td>
                 <td>${cat.nombre || 'Sin nombre'}</td>
-                <td>
-                    <button class="row-action-btn delete"><i class="fas fa-trash"></i></button>
-                </td>
+                <td><button class="row-action-btn delete"><i class="fas fa-trash"></i></button></td>
             </tr>
-        `).join('') : '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">No hay categorías</td></tr>';
+        `).join('');
     }
 
     if (elements.ordersTableBody) {
-        elements.ordersTableBody.innerHTML = orders.length ? orders.map(o => `
+        elements.ordersTableBody.innerHTML = orders.map(o => `
             <tr>
-                <td style="font-family:monospace; font-size:0.8rem;">${o.id.substring(0,8)}...</td>
-                <td>${o.cliente_nombre || 'Usuario'}</td>
+                <td>#${o.id.substring(0,6)}</td>
+                <td>${o.cliente_nombre || 'Anon'}</td>
                 <td>$${Number(o.total || 0).toFixed(2)}</td>
-                <td><span style="background:rgba(99,102,241,0.2); color:#818cf8; padding:2px 8px; border-radius:4px; font-size:0.8rem; font-weight:bold;">${o.estado || 'pendiente'}</span></td>
-                <td>
-                    <button class="row-action-btn"><i class="fas fa-eye"></i></button>
-                </td>
+                <td><span class="status-tag">${o.estado || 'Pendiente'}</span></td>
+                <td><button class="row-action-btn"><i class="fas fa-eye"></i></button></td>
             </tr>
-        `).join('') : '<tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">No hay pedidos</td></tr>';
+        `).join('');
     }
 }
+
+// --- LÓGICA DE AGREGAR (MODALES DINÁMICOS) ---
+
+const showAddModal = (type) => {
+    let title = "";
+    let fields = [];
+    let collectionName = "";
+
+    switch(type) {
+        case 'card':
+            title = "Nueva Carta";
+            collectionName = "cards";
+            fields = [
+                { id: 'nombre', label: 'Nombre de la Carta', type: 'text' },
+                { id: 'precio', label: 'Precio ($)', type: 'number' },
+                { id: 'stock', label: 'Cantidad en Stock', type: 'number' },
+                { id: 'imagen_url', label: 'URL de la Imagen', type: 'text' }
+            ];
+            break;
+        case 'sealed':
+            title = "Nuevo Producto Sellado";
+            collectionName = "sealed_products";
+            fields = [
+                { id: 'nombre', label: 'Nombre del Producto', type: 'text' },
+                { id: 'precio', label: 'Precio ($)', type: 'number' },
+                { id: 'stock', label: 'Cantidad en Stock', type: 'number' }
+            ];
+            break;
+        case 'category':
+            title = "Nueva Categoría";
+            collectionName = "categories";
+            fields = [
+                { id: 'nombre', label: 'Nombre de la Categoría', type: 'text' }
+            ];
+            break;
+    }
+
+    // Crear el HTML del modal al vuelo
+    const modalOverlay = document.createElement('div');
+    modalOverlay.style = "position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;";
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = "login-content"; // Reutilizamos estilos del login
+    modalContent.style = "background:#1e293b; padding:2rem; border-radius:1rem; border:1px solid rgba(255,255,255,0.1); width:100%; max-width:450px;";
+    
+    let fieldsHtml = fields.map(f => `
+        <div class="form-input-wrapper">
+            <label>${f.label.toUpperCase()}</label>
+            <input type="${f.type}" id="modal-${f.id}" step="0.01" required>
+        </div>
+    `).join('');
+
+    modalContent.innerHTML = `
+        <h2 style="font-size:1.5rem; font-weight:800; margin-bottom:1.5rem; color:white;">${title}</h2>
+        <form id="dynamicAddForm">
+            ${fieldsHtml}
+            <div style="display:flex; gap:10px; margin-top:2rem;">
+                <button type="button" id="btnCancelModal" style="flex:1; background:#334155; color:white; padding:10px; border-radius:0.5rem;">Cancelar</button>
+                <button type="submit" style="flex:1; background:#6366f1; color:white; padding:10px; border-radius:0.5rem; font-weight:700;">Guardar</button>
+            </div>
+        </form>
+    `;
+
+    modalOverlay.appendChild(modalContent);
+    document.body.appendChild(modalOverlay);
+
+    // Eventos del Modal
+    document.getElementById('btnCancelModal').onclick = () => modalOverlay.remove();
+    
+    document.getElementById('dynamicAddForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const data = { createdAt: serverTimestamp() };
+        fields.forEach(f => {
+            const val = document.getElementById(`modal-${f.id}`).value;
+            data[f.id] = f.type === 'number' ? Number(val) : val;
+        });
+
+        try {
+            const docRef = collection(db, 'artifacts', appId, 'public', 'data', collectionName);
+            await addDoc(docRef, data);
+            modalOverlay.remove();
+            await loadData(); // Recargar tablas
+        } catch (err) {
+            console.error("Error guardando:", err);
+            alert("No se pudo guardar el registro.");
+        }
+    };
+};
+
+// Asignar clics a los botones "+"
+if (elements.btnAddCard) elements.btnAddCard.onclick = () => showAddModal('card');
+if (elements.btnAddSealed) elements.btnAddSealed.onclick = () => showAddModal('sealed');
+if (elements.btnAddCategory) elements.btnAddCategory.onclick = () => showAddModal('category');
 
 // --- NAVEGACIÓN ---
 
@@ -215,7 +279,6 @@ elements.navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
         const href = link.getAttribute('href');
         if (!href || href === '#') return;
-        
         e.preventDefault();
         const targetId = href.replace('#', '');
 
