@@ -36,6 +36,7 @@ let sidebarMenu, sidebarOverlay, loginModal, cardModal, quickSearchModal, sealed
 let cardForm, sealedProductForm, categoryForm;
 let dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection;
 let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBtn;
+let navLinks = {};
 
 // ==========================================================================
 // UTILITY FUNCTIONS
@@ -44,20 +45,35 @@ let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBt
 function openModal(m) { if(m){ m.style.display='flex'; document.body.style.overflow='hidden'; } }
 function closeModal(m) { if(m){ m.style.display='none'; document.body.style.overflow=''; } }
 
-function showSection(sectionToShow) {
+function showSection(sectionToShow, navId) {
+    // Ocultar todas las secciones
     const sections = [dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection];
     sections.forEach(s => s?.classList.remove('active'));
+    
+    // Mostrar la elegida
     sectionToShow?.classList.add('active');
+
+    // Actualizar clase active en el menú lateral
+    Object.values(navLinks).forEach(link => link?.classList.remove('active'));
+    if (navLinks[navId]) navLinks[navId].classList.add('active');
+
+    // Cerrar sidebar en móviles
+    if(window.innerWidth < 768) {
+        sidebarMenu?.classList.remove('show');
+        sidebarOverlay ? sidebarOverlay.style.display='none' : null;
+    }
 }
 
 function showMessage(title, text) {
-    document.getElementById('messageModalTitle').textContent = title;
-    document.getElementById('messageModalText').textContent = text;
+    const titleEl = document.getElementById('messageModalTitle');
+    const textEl = document.getElementById('messageModalText');
+    if (titleEl) titleEl.textContent = title;
+    if (textEl) textEl.textContent = text;
     openModal(messageModal);
 }
 
 // ==========================================================================
-// LÓGICA DE BÚSQUEDA TCGPLAYER (NÚMERO Y EXPANSIÓN)
+// LÓGICA DE BÚSQUEDA TCGPLAYER
 // ==========================================================================
 
 async function handleQuickSearch() {
@@ -161,10 +177,15 @@ async function loadAllData() {
 }
 
 function updateDashboardStats() {
-    document.getElementById('totalCardsCount').textContent = allCards.length;
-    document.getElementById('totalSealedProductsCount').textContent = allSealedProducts.length;
-    document.getElementById('uniqueCategoriesCount').textContent = allCategories.length;
-    document.getElementById('outOfStockCount').textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
+    const cardsEl = document.getElementById('totalCardsCount');
+    const sealedEl = document.getElementById('totalSealedProductsCount');
+    const catEl = document.getElementById('uniqueCategoriesCount');
+    const stockEl = document.getElementById('outOfStockCount');
+
+    if(cardsEl) cardsEl.textContent = allCards.length;
+    if(sealedEl) sealedEl.textContent = allSealedProducts.length;
+    if(catEl) catEl.textContent = allCategories.length;
+    if(stockEl) stockEl.textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
 }
 
 function updateCategorySelects() {
@@ -178,6 +199,7 @@ function updateCategorySelects() {
 
 function renderCardsTable() {
     const tbody = document.querySelector('#cardsTable tbody');
+    if(!tbody) return;
     tbody.innerHTML = '';
     const start = (currentCardsPage - 1) * itemsPerPage;
     const paginated = allCards.slice(start, start + itemsPerPage);
@@ -199,13 +221,19 @@ function renderCardsTable() {
             </td>
         `;
     });
-    document.getElementById('adminPageInfo').textContent = `Página ${currentCardsPage}`;
+    const info = document.getElementById('adminPageInfo');
+    if(info) info.textContent = `Página ${currentCardsPage}`;
 }
 
 function renderSealedProductsTable() {
     const tbody = document.querySelector('#sealedProductsTable tbody');
+    if(!tbody) return;
     tbody.innerHTML = '';
-    allSealedProducts.forEach(p => {
+    
+    const start = (currentSealedPage - 1) * itemsPerPage;
+    const paginated = allSealedProducts.slice(start, start + itemsPerPage);
+
+    paginated.forEach(p => {
         const row = tbody.insertRow();
         row.innerHTML = `
             <td>${p.id.substring(0,6)}...</td>
@@ -220,10 +248,13 @@ function renderSealedProductsTable() {
             </td>
         `;
     });
+    const info = document.getElementById('adminSealedPageInfo');
+    if(info) info.textContent = `Página ${currentSealedPage}`;
 }
 
 function renderCategoriesTable() {
     const tbody = document.querySelector('#categoriesTable tbody');
+    if(!tbody) return;
     tbody.innerHTML = '';
     allCategories.forEach(c => {
         const row = tbody.insertRow();
@@ -239,6 +270,7 @@ function renderCategoriesTable() {
 
 function renderOrdersTable() {
     const tbody = document.querySelector('#ordersTable tbody');
+    if(!tbody) return;
     tbody.innerHTML = '';
     allOrders.forEach(o => {
         const row = tbody.insertRow();
@@ -347,13 +379,42 @@ document.addEventListener('DOMContentLoaded', () => {
     sealedProductForm = document.getElementById('sealedProductForm');
     categoryForm = document.getElementById('categoryForm');
 
+    // Enlaces de navegación
+    navLinks = {
+        'dashboard': document.getElementById('nav-dashboard'),
+        'cards': document.getElementById('nav-cards'),
+        'sealed': document.getElementById('nav-sealed-products'),
+        'categories': document.getElementById('nav-categories'),
+        'orders': document.getElementById('nav-orders')
+    };
+
     // Navegación Sidebar
-    document.getElementById('nav-dashboard')?.addEventListener('click', () => showSection(dashboardSection));
-    document.getElementById('nav-cards')?.addEventListener('click', () => showSection(cardsSection));
-    document.getElementById('nav-sealed-products')?.addEventListener('click', () => showSection(sealedProductsSection));
-    document.getElementById('nav-categories')?.addEventListener('click', () => showSection(categoriesSection));
-    document.getElementById('nav-orders')?.addEventListener('click', () => showSection(ordersSection));
-    document.getElementById('nav-logout')?.addEventListener('click', () => signOut(auth).then(() => location.reload()));
+    navLinks['dashboard']?.addEventListener('click', (e) => { e.preventDefault(); showSection(dashboardSection, 'dashboard'); });
+    navLinks['cards']?.addEventListener('click', (e) => { e.preventDefault(); showSection(cardsSection, 'cards'); });
+    navLinks['sealed']?.addEventListener('click', (e) => { e.preventDefault(); showSection(sealedProductsSection, 'sealed'); });
+    navLinks['categories']?.addEventListener('click', (e) => { e.preventDefault(); showSection(categoriesSection, 'categories'); });
+    navLinks['orders']?.addEventListener('click', (e) => { e.preventDefault(); showSection(ordersSection, 'orders'); });
+    
+    document.getElementById('nav-logout')?.addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        signOut(auth).then(() => location.reload()); 
+    });
+
+    // Control del Sidebar (Hamburguesa)
+    document.getElementById('sidebarToggleBtn')?.addEventListener('click', () => {
+        sidebarMenu?.classList.add('show');
+        if(sidebarOverlay) sidebarOverlay.style.display = 'block';
+    });
+    
+    document.getElementById('closeSidebarBtn')?.addEventListener('click', () => {
+        sidebarMenu?.classList.remove('show');
+        if(sidebarOverlay) sidebarOverlay.style.display = 'none';
+    });
+
+    sidebarOverlay?.addEventListener('click', () => {
+        sidebarMenu?.classList.remove('show');
+        sidebarOverlay.style.display = 'none';
+    });
 
     // Botones Añadir
     document.getElementById('addCardBtn')?.addEventListener('click', () => { cardForm.reset(); document.getElementById('cardId').value = ''; openModal(cardModal); });
@@ -362,11 +423,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
 
     // Eventos de Guardado
-    cardForm.addEventListener('submit', handleSaveCard);
-    sealedProductForm.addEventListener('submit', handleSaveSealed);
-    categoryForm.addEventListener('submit', handleSaveCategory);
-    document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
-    document.getElementById('cancelDeleteBtn').addEventListener('click', () => closeModal(confirmModal));
+    cardForm?.addEventListener('submit', handleSaveCard);
+    sealedProductForm?.addEventListener('submit', handleSaveSealed);
+    categoryForm?.addEventListener('submit', handleSaveCategory);
+    document.getElementById('confirmDeleteBtn')?.addEventListener('click', confirmDelete);
+    document.getElementById('cancelDeleteBtn')?.addEventListener('click', () => closeModal(confirmModal));
 
     // Delegación de eventos para Tablas (Editar/Eliminar)
     document.body.addEventListener('click', (e) => {
@@ -376,31 +437,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = btn.dataset.id;
         if (btn.classList.contains('edit')) {
             const c = allCards.find(x => x.id === id);
-            document.getElementById('cardId').value = c.id;
-            document.getElementById('cardName').value = c.nombre;
-            document.getElementById('cardCode').value = c.codigo;
-            document.getElementById('cardExpansion').value = c.expansion;
-            document.getElementById('cardImage').value = c.imagen_url;
-            document.getElementById('cardPrice').value = c.precio;
-            document.getElementById('cardStock').value = c.stock;
-            document.getElementById('cardCategory').value = c.categoria;
-            openModal(cardModal);
+            if(c) {
+                document.getElementById('cardId').value = c.id;
+                document.getElementById('cardName').value = c.nombre;
+                document.getElementById('cardCode').value = c.codigo;
+                document.getElementById('cardExpansion').value = c.expansion;
+                document.getElementById('cardImage').value = c.imagen_url;
+                document.getElementById('cardPrice').value = c.precio;
+                document.getElementById('cardStock').value = c.stock;
+                document.getElementById('cardCategory').value = c.categoria;
+                openModal(cardModal);
+            }
         }
         if (btn.classList.contains('edit-sealed')) {
             const p = allSealedProducts.find(x => x.id === id);
-            document.getElementById('sealedProductId').value = p.id;
-            document.getElementById('sealedProductName').value = p.nombre;
-            document.getElementById('sealedProductCategory').value = p.categoria;
-            document.getElementById('sealedProductPrice').value = p.precio;
-            document.getElementById('sealedProductStock').value = p.stock;
-            document.getElementById('sealedProductImage').value = p.imagen_url;
-            openModal(sealedProductModal);
+            if(p) {
+                document.getElementById('sealedProductId').value = p.id;
+                document.getElementById('sealedProductName').value = p.nombre;
+                document.getElementById('sealedProductCategory').value = p.categoria;
+                document.getElementById('sealedProductPrice').value = p.precio;
+                document.getElementById('sealedProductStock').value = p.stock;
+                document.getElementById('sealedProductImage').value = p.imagen_url;
+                openModal(sealedProductModal);
+            }
         }
         if (btn.classList.contains('edit-cat')) {
             const c = allCategories.find(x => x.id === id);
-            document.getElementById('categoryId').value = c.id;
-            document.getElementById('categoryName').value = c.name;
-            openModal(categoryModal);
+            if(c) {
+                document.getElementById('categoryId').value = c.id;
+                document.getElementById('categoryName').value = c.name;
+                openModal(categoryModal);
+            }
         }
         if (btn.classList.contains('delete')) {
             currentDeleteTarget = { id: btn.dataset.id, type: btn.dataset.type };
@@ -408,21 +475,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (btn.classList.contains('view-order-btn')) {
             const order = allOrders.find(o => o.id === id);
-            document.getElementById('orderDetailsContent').innerHTML = `
-                <p><strong>Cliente:</strong> ${order.customerName}</p>
-                <p><strong>Total:</strong> $${order.total}</p>
-                <p><strong>Productos:</strong> ${order.cart}</p>
-            `;
-            openModal(orderDetailsModal);
+            if(order) {
+                document.getElementById('orderDetailsContent').innerHTML = `
+                    <p><strong>Cliente:</strong> ${order.customerName}</p>
+                    <p><strong>Total:</strong> $${order.total}</p>
+                    <p><strong>Productos:</strong> ${order.cart}</p>
+                `;
+                openModal(orderDetailsModal);
+            }
         }
     });
 
-    // Paginación de Cartas
-    document.getElementById('adminPrevPageBtn').addEventListener('click', () => { if(currentCardsPage > 1) { currentCardsPage--; renderCardsTable(); } });
-    document.getElementById('adminNextPageBtn').addEventListener('click', () => { if(currentCardsPage * itemsPerPage < allCards.length) { currentCardsPage++; renderCardsTable(); } });
+    // Paginación
+    document.getElementById('adminPrevPageBtn')?.addEventListener('click', () => { if(currentCardsPage > 1) { currentCardsPage--; renderCardsTable(); } });
+    document.getElementById('adminNextPageBtn')?.addEventListener('click', () => { if(currentCardsPage * itemsPerPage < allCards.length) { currentCardsPage++; renderCardsTable(); } });
+    
+    document.getElementById('adminSealedPrevPageBtn')?.addEventListener('click', () => { if(currentSealedPage > 1) { currentSealedPage--; renderSealedProductsTable(); } });
+    document.getElementById('adminSealedNextPageBtn')?.addEventListener('click', () => { if(currentSealedPage * itemsPerPage < allSealedProducts.length) { currentSealedPage++; renderSealedProductsTable(); } });
 
-    // Configurar Modal de Búsqueda (ya inyectado antes, solo asignamos eventos)
-    const modalContent = quickSearchModal.querySelector('.admin-modal-content');
+    // Configurar Modal de Búsqueda
+    const modalContent = quickSearchModal?.querySelector('.admin-modal-content');
     if (modalContent) {
         modalContent.innerHTML = `
             <span class="close-button">&times;</span>
@@ -442,7 +514,7 @@ document.addEventListener('DOMContentLoaded', () => {
         searchSetIdInput = document.getElementById('searchSetId');
         submitSearchBtn = document.getElementById('submitSearch');
         searchStatusMessage = document.getElementById('searchStatus');
-        submitSearchBtn.addEventListener('click', handleQuickSearch);
+        submitSearchBtn?.addEventListener('click', handleQuickSearch);
     }
 
     // Cierre de Modales (Botón X)
@@ -451,10 +523,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
 
     // Login
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('username').value.trim();
-        const pass = document.getElementById('password').value;
+        const email = document.getElementById('username')?.value.trim();
+        const pass = document.getElementById('password')?.value;
         try {
             await signInWithEmailAndPassword(auth, email, pass);
             closeModal(loginModal);
@@ -463,7 +535,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     onAuthStateChanged(auth, (user) => {
-        if (user) { closeModal(loginModal); loadAllData(); }
-        else { openModal(loginModal); }
+        if (user) { 
+            closeModal(loginModal); 
+            loadAllData(); 
+        } else { 
+            openModal(loginModal); 
+        }
     });
 });
