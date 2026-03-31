@@ -554,4 +554,85 @@ form select:focus {
     }
 }
 
+/* Estilos base existentes */
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+body { background-color: #f1f5f9; color: #334155; }
 
+/* ... otros estilos previos ... */
+
+.admin-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(15, 23, 42, 0.85);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Modal más ancho solicitado */
+.admin-modal-content {
+    background-color: #ffffff;
+    width: 100%;
+    max-width: 700px; /* Incrementado para el diseño de filas */
+    padding: 35px;
+    border-radius: 16px;
+    position: relative;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.close-button {
+    position: absolute;
+    top: 20px; right: 25px; 
+    font-size: 1.5rem; 
+    cursor: pointer;
+    color: #64748b;
+}
+
+/* Estructura de filas del formulario */
+.form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+.form-group input, 
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 0; /* Controlado por el form-group interno */
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+/* Responsivo para móviles */
+@media (max-width: 600px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+}
