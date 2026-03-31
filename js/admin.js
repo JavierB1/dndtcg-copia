@@ -20,7 +20,6 @@ const appId = firebaseConfig.projectId;
 const loginForm = document.getElementById('loginForm');
 const loginMessage = document.getElementById('loginMessage');
 const btnLogout = document.getElementById('btnLogout');
-const adminPanelContainer = document.getElementById('adminPanelContainer');
 
 let allData = { cards: [], products: [], categories: [], orders: [] };
 
@@ -29,12 +28,10 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         console.log("Sesión activa detectada:", user.email);
         try {
-            // Intentamos cargar los datos. Si falla por permisos, cerramos sesión.
             await loadDashboardData();
             document.body.classList.add('auth-ready');
         } catch (err) {
             console.error("Error crítico de acceso:", err);
-            // Si hay error de permisos al inicio, forzamos el logout para limpiar el estado
             handleLogout();
         }
     } else {
@@ -46,7 +43,6 @@ onAuthStateChanged(auth, async (user) => {
 
 // --- CARGA DE DATOS DESDE FIRESTORE ---
 async function loadDashboardData() {
-    // Definimos las rutas siguiendo la estructura obligatoria de la documentación
     const publicPath = (coll) => collection(db, 'artifacts', appId, 'public', 'data', coll);
 
     try {
@@ -64,7 +60,6 @@ async function loadDashboardData() {
 
         renderAll();
     } catch (err) {
-        // Propagamos el error para que onAuthStateChanged lo maneje
         throw err;
     }
 }
@@ -95,9 +90,20 @@ function updateStats() {
 function renderCardsTable() {
     const tbody = document.querySelector('#cardsTable tbody');
     if (!tbody) return;
+
+    // Placeholder SVG local para evitar errores 404 de dominios externos
+    const placeholder = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E`;
+
     tbody.innerHTML = allData.cards.map(c => `
         <tr>
-            <td><img src="${c.imagen_url || ''}" width="40" alt="${c.nombre}" onerror="this.src='https://via.placeholder.com/40'"></td>
+            <td>
+                <div class="img-wrapper" style="width: 40px; height: 40px; overflow: hidden; border-radius: 4px; background: #334155;">
+                    <img src="${c.imagen_url || placeholder}" 
+                         width="40" 
+                         style="object-fit: cover; display: block;"
+                         onerror="this.onerror=null;this.src='${placeholder}';">
+                </div>
+            </td>
             <td>${c.nombre || 'Sin nombre'}</td>
             <td>$${parseFloat(c.precio || 0).toFixed(2)}</td>
             <td>${c.stock || 0}</td>
@@ -183,12 +189,10 @@ loginForm?.addEventListener('submit', async (e) => {
         loginMessage.style.color = "var(--primary)";
         
         await signInWithEmailAndPassword(auth, email, pass);
-        // onAuthStateChanged se encargará del resto
     } catch (err) {
         if (btn) btn.disabled = false;
         loginMessage.textContent = "Error: Usuario o contraseña incorrectos.";
         loginMessage.style.color = "var(--red)";
-        console.error("Error de login:", err);
     }
 });
 
