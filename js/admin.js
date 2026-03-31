@@ -21,7 +21,7 @@ const appId = firebaseConfig.projectId;
 
 // Estado Global
 let allCards = [], allSealedProducts = [], allCategories = [], allOrders = [];
-let currentCardsPage = 1, currentSealedProductsPage = 1;
+let currentCardsPage = 1;
 const itemsPerPage = 10;
 
 // ==========================================================================
@@ -43,7 +43,7 @@ const elements = {
 };
 
 // ==========================================================================
-// FUNCIONES DE CARGA (PROTEGIDAS POR AUTH)
+// FUNCIONES DE CARGA
 // ==========================================================================
 
 async function loadAllData() {
@@ -57,9 +57,9 @@ async function loadAllData() {
             loadOrdersData()
         ]);
         updateDashboardStats();
-        console.log("Sincronización completa.");
+        console.log("Datos cargados exitosamente.");
     } catch (error) {
-        console.error("Error al cargar datos:", error.message);
+        console.error("Error al sincronizar datos:", error);
     }
 }
 
@@ -104,28 +104,40 @@ async function loadOrdersData() {
 }
 
 // ==========================================================================
-// MANEJO DE AUTENTICACIÓN
+// GESTIÓN DE INTERFAZ Y AUTH
 // ==========================================================================
+
+function showSection(sectionId) {
+    // Ocultar todas las secciones usando la lógica del CSS (.active)
+    const sections = document.querySelectorAll('.admin-section');
+    sections.forEach(s => {
+        s.classList.remove('active');
+        s.style.display = 'none'; // Refuerzo para asegurar que desaparezca
+    });
+
+    const target = document.getElementById(sectionId);
+    if (target) {
+        target.classList.add('active');
+        target.style.display = 'block';
+    }
+}
 
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        console.log("Sesión activa:", user.email);
-        // Ocultar modal y mostrar dashboard
-        if (elements.loginModal) {
-            elements.loginModal.style.display = 'none';
-        }
-        hideAllSections();
-        if (elements.dashboardSection) {
-            elements.dashboardSection.classList.add('active');
-            elements.dashboardSection.style.display = 'block';
-        }
+        console.log("Usuario autenticado:", user.email);
+        if (elements.loginModal) elements.loginModal.style.setProperty('display', 'none', 'important');
+        
+        // Mostrar Dashboard por defecto al entrar
+        showSection('dashboard-section');
         loadAllData();
     } else {
-        console.log("No hay sesión. Mostrando login...");
-        hideAllSections();
+        console.log("Estado: Sin sesión.");
+        // Ocultamos todo el contenido para que no se vea el dashboard vacío
+        const sections = document.querySelectorAll('.admin-section');
+        sections.forEach(s => s.style.display = 'none');
+        
         if (elements.loginModal) {
-            // Forzamos el display flex para que el modal sea visible
-            elements.loginModal.style.display = 'flex';
+            elements.loginModal.style.setProperty('display', 'flex', 'important');
         }
     }
 });
@@ -138,183 +150,128 @@ async function handleLogin(e) {
 
     try {
         if(msg) {
-            msg.textContent = "Iniciando sesión...";
-            msg.style.color = "#6366f1";
+            msg.textContent = "Validando...";
             msg.style.display = "block";
         }
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-        if(msg) {
-            msg.textContent = "Error: Credenciales no válidas.";
-            msg.style.color = "#ef4444";
-        }
-        console.error("Error de login:", error.code);
+        if(msg) msg.textContent = "Acceso denegado: Revise sus datos.";
+        console.error("Error login:", error.code);
     }
 }
 
 async function handleLogout() {
-    try {
-        await signOut(auth);
-        window.location.reload();
-    } catch (error) {
-        console.error("Error al cerrar sesión:", error);
-    }
-}
-
-function hideAllSections() {
-    const sections = document.querySelectorAll('.admin-section');
-    sections.forEach(s => {
-        s.classList.remove('active');
-        s.style.display = 'none';
-    });
+    await signOut(auth);
+    window.location.reload();
 }
 
 // ==========================================================================
-// RENDERIZADO DE TABLAS Y DASHBOARD
+// RENDERIZADO
 // ==========================================================================
 
 function updateDashboardStats() {
-    const stats = {
-        totalCards: document.getElementById('stat-total-cards'),
-        totalStock: document.getElementById('stat-total-stock'),
-        totalOrders: document.getElementById('stat-total-orders')
-    };
+    const c = document.getElementById('stat-total-cards');
+    const s = document.getElementById('stat-total-stock');
+    const o = document.getElementById('stat-total-orders');
 
-    if (stats.totalCards) stats.totalCards.textContent = allCards.length;
-    if (stats.totalStock) {
-        const stock = allCards.reduce((acc, card) => acc + (card.stock || 0), 0);
-        stats.totalStock.textContent = stock;
-    }
-    if (stats.totalOrders) stats.totalOrders.textContent = allOrders.length;
+    if (c) c.textContent = allCards.length;
+    if (s) s.textContent = allCards.reduce((acc, card) => acc + (card.stock || 0), 0);
+    if (o) o.textContent = allOrders.length;
 }
 
 function renderCardsTable() {
-    const tableBody = document.querySelector('#cardsTable tbody');
-    if (!tableBody) return;
-    tableBody.innerHTML = '';
+    const tbody = document.querySelector('#cardsTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
 
-    const query = elements.adminSearchInput ? elements.adminSearchInput.value.toLowerCase() : "";
-    const cat = elements.adminCategoryFilter ? elements.adminCategoryFilter.value : "";
+    const query = elements.adminSearchInput?.value.toLowerCase() || "";
+    const cat = elements.adminCategoryFilter?.value || "";
 
-    const filtered = allCards.filter(card => {
-        const matchesSearch = card.nombre.toLowerCase().includes(query);
-        const matchesCategory = cat === "" || card.categoria === cat;
-        return matchesSearch && matchesCategory;
-    });
+    const filtered = allCards.filter(card => 
+        card.nombre.toLowerCase().includes(query) && (cat === "" || card.categoria === cat)
+    );
 
-    const start = (currentCardsPage - 1) * itemsPerPage;
-    const paginated = filtered.slice(start, start + itemsPerPage);
-
-    paginated.forEach(card => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
+    filtered.slice((currentCardsPage - 1) * itemsPerPage, currentCardsPage * itemsPerPage).forEach(card => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
             <td>${card.id.substring(0, 6)}</td>
-            <td><img src="${card.imagen_url || 'https://via.placeholder.com/40'}" onerror="this.src='https://via.placeholder.com/40'"></td>
+            <td><img src="${card.imagen_url || ''}" onerror="this.src='https://via.placeholder.com/40'"></td>
             <td>${card.nombre}</td>
             <td>$${card.precio.toFixed(2)}</td>
             <td>${card.stock}</td>
             <td>${card.categoria}</td>
             <td class="action-buttons">
-                <button class="edit-button" onclick="window.editCard('${card.id}')">Editar</button>
+                <button class="edit-button">Editar</button>
             </td>
         `;
-        tableBody.appendChild(row);
+        tbody.appendChild(tr);
     });
-
-    if (elements.adminPageInfo) {
-        const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
-        elements.adminPageInfo.textContent = `Página ${currentCardsPage} de ${totalPages}`;
-    }
 }
 
 function renderCategoriesTable() {
-    const tableBody = document.querySelector('#categoriesTable tbody');
-    if (!tableBody) return;
-    tableBody.innerHTML = '';
-    allCategories.forEach(cat => {
-        const row = `<tr>
+    const tbody = document.querySelector('#categoriesTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = allCategories.map(cat => `
+        <tr>
             <td>${cat.id.substring(0,6)}</td>
             <td>${cat.name}</td>
-            <td class="action-buttons">
-                <button class="delete-category-button">Eliminar</button>
-            </td>
-        </tr>`;
-        tableBody.innerHTML += row;
-    });
+            <td><button class="delete-category-button">Eliminar</button></td>
+        </tr>
+    `).join('');
 }
 
 function renderSealedProductsTable() {
-    const tableBody = document.querySelector('#sealedProductsTable tbody');
-    if (!tableBody) return;
-    tableBody.innerHTML = '';
-    allSealedProducts.forEach(prod => {
-        const row = `<tr>
+    const tbody = document.querySelector('#sealedProductsTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = allSealedProducts.map(prod => `
+        <tr>
             <td>${prod.id.substring(0,6)}</td>
             <td>${prod.nombre}</td>
             <td>$${prod.precio.toFixed(2)}</td>
             <td>${prod.stock}</td>
-            <td class="action-buttons">
-                <button class="edit-button">Editar</button>
-            </td>
-        </tr>`;
-        tableBody.innerHTML += row;
-    });
+            <td><button class="edit-button">Editar</button></td>
+        </tr>
+    `).join('');
 }
 
 function renderOrdersTable() {
-    const tableBody = document.querySelector('#ordersTable tbody');
-    if (!tableBody) return;
-    tableBody.innerHTML = '';
-    allOrders.forEach(order => {
-        const date = order.timestamp ? new Date(order.timestamp).toLocaleDateString() : '---';
-        const row = `<tr>
+    const tbody = document.querySelector('#ordersTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = allOrders.map(order => `
+        <tr>
             <td>${order.id.substring(0,8)}</td>
-            <td>${order.customer?.nombre || 'N/A'}</td>
+            <td>${order.customer?.nombre || 'Anónimo'}</td>
             <td>$${(order.total || 0).toFixed(2)}</td>
-            <td>${date}</td>
             <td><span class="status-badge">${order.status || 'Pendiente'}</span></td>
-        </tr>`;
-        tableBody.innerHTML += row;
-    });
+        </tr>
+    `).join('');
 }
 
 function populateCategoryFilters() {
     if (!elements.adminCategoryFilter) return;
-    const currentVal = elements.adminCategoryFilter.value;
-    elements.adminCategoryFilter.innerHTML = '<option value="">Todas las categorías</option>';
-    allCategories.forEach(cat => {
-        const opt = document.createElement('option');
-        opt.value = cat.name;
-        opt.textContent = cat.name;
-        elements.adminCategoryFilter.appendChild(opt);
-    });
-    elements.adminCategoryFilter.value = currentVal;
+    elements.adminCategoryFilter.innerHTML = '<option value="">Todas las categorías</option>' + 
+        allCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
 }
 
 // ==========================================================================
-// INICIALIZACIÓN
+// INIT
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Aseguramos que al cargar, si no hay respuesta de Firebase aún, el modal intente estar presente
-    if (elements.loginModal) {
-        elements.loginModal.style.display = 'flex';
-    }
-
     if (elements.loginForm) elements.loginForm.onsubmit = handleLogin;
     if (elements.btnLogout) elements.btnLogout.onclick = handleLogout;
-    
-    if (elements.adminSearchInput) {
-        elements.adminSearchInput.addEventListener('input', () => {
-            currentCardsPage = 1;
-            renderCardsTable();
-        });
-    }
 
-    if (elements.adminCategoryFilter) {
-        elements.adminCategoryFilter.addEventListener('change', () => {
-            currentCardsPage = 1;
-            renderCardsTable();
+    // Listener para los enlaces de la barra lateral (Navegación)
+    document.querySelectorAll('.sidebar-nav a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            const sectionId = link.getAttribute('href')?.replace('#', '');
+            if (sectionId && sectionId !== 'logout') {
+                e.preventDefault();
+                showSection(sectionId);
+                // Marcar como activo visualmente en la sidebar
+                document.querySelectorAll('.sidebar-nav a').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            }
         });
-    }
+    });
 });
