@@ -1,13 +1,9 @@
 // ==========================================================================
-// GLOBAL VARIABLES (non-DOM related)
+// GLOBAL VARIABLES & FIREBASE SETUP
 // ==========================================================================
-
-import { initializeApp }
-from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
-from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
-import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, runTransaction, getDoc }
-from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
+import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, runTransaction, getDoc } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
@@ -27,41 +23,39 @@ if (firebaseConfig && firebaseConfig.projectId) {
 }
 
 const appId = firebaseConfig.projectId;
-let userId = null;
-let currentAdminUser = null;
-let stream = null; // Para el flujo de la cámara
+let stream = null; 
 
 let allCards = [];
 let allSealedProducts = [];
 let allCategories = [];
 let allOrders = [];
 
-const itemsPerPage = 10;
-let currentCardsPage = 1;
-let currentSealedProductsPage = 1;
-let currentDeleteTarget = null;
-
 // ==========================================================================
 // DOM ELEMENT REFERENCES
 // ==========================================================================
-let sidebarToggleBtn, closeSidebarBtn, sidebarMenu, sidebarOverlay, loginModal, loginForm, usernameInput, passwordInput;
-let navDashboard, navCards, navSealedProducts, navCategories, navOrders, navLogout, navScanner;
-let dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection, scannerSection;
-let cardModal, cardForm, cardId, cardName, cardImage, cardPrice, cardStock, cardCategory;
-let videoPreview, startScanBtn, processingIndicator;
+let loginModal, loginForm, usernameInput, passwordInput;
+let navDashboard, navCards, navScanner, navLogout;
+let dashboardSection, cardsSection, scannerSection;
+let cardModal, cardForm, cardId, cardName, cardImage, cardPrice, cardStock, cardCategory, cardSetCode;
+let videoPreview, startScanBtn, processingIndicator, addCardBtn, navScannerQuick;
 
 // ==========================================================================
 // UTILITY FUNCTIONS
 // ==========================================================================
 
 function showSection(sectionToShow) {
-    const sections = [dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection, scannerSection];
+    const sections = [dashboardSection, cardsSection, scannerSection];
     sections.forEach(section => {
         if (section) section.classList.remove('active');
     });
     if (sectionToShow) {
         sectionToShow.classList.add('active');
+        sectionToShow.style.display = 'block';
     }
+    // Ocultar las otras manualmente si no usas clases CSS para el display
+    sections.forEach(section => {
+        if (section && section !== sectionToShow) section.style.display = 'none';
+    });
 }
 
 function openModal(modalElement) {
@@ -79,11 +73,14 @@ function closeModal(modalElement) {
 }
 
 function showMessageModal(title, text) {
+    // Asumiendo que existe el modal de mensajes en el HTML
     const titleEl = document.getElementById('messageModalTitle');
     const textEl = document.getElementById('messageModalText');
     if (titleEl) titleEl.textContent = title;
     if (textEl) textEl.textContent = text;
-    openModal(document.getElementById('messageModal'));
+    const modal = document.getElementById('messageModal');
+    if (modal) openModal(modal);
+    else alert(`${title}: ${text}`);
 }
 
 // ==========================================================================
@@ -116,30 +113,33 @@ function handleScan() {
     processingIndicator.style.display = 'block';
     startScanBtn.disabled = true;
 
-    // Simulación de OCR / Reconocimiento
+    // Simulación de OCR / Reconocimiento Inteligente
     setTimeout(() => {
         processingIndicator.style.display = 'none';
         startScanBtn.disabled = false;
 
-        // Simulamos que encontró una carta que ya existe en nuestro array de Firestore
-        // O una nueva basada en una base de datos externa
         const foundCard = {
-            nombre: "Carta Escaneada Ejemplo",
-            precio: 15.00,
-            imagen_url: "https://placehold.co/400x600/2d3748/white?text=Carta+Escaneada",
-            categoria: allCategories.length > 0 ? allCategories[0].name : "",
+            nombre: "Mewtwo VSTAR",
+            set: "GG44/GG70",
+            precio: 85.50,
+            imagen_url: "https://images.pokemontcg.io/swsh12tg/TG22_hires.png",
+            categoria: allCategories.length > 0 ? allCategories[0].name : "Pokémon",
             stock: 1
         };
 
-        // Abrir el modal de cartas y rellenar datos
-        document.getElementById('cardModalTitle').textContent = "Nueva Carta (Escaneada)";
+        stopCamera();
+
+        // Rellenar el formulario con los datos detectados
+        document.getElementById('cardModalTitle').textContent = "Carta Identificada";
         cardId.value = '';
         cardName.value = foundCard.nombre;
+        cardSetCode.value = foundCard.set; // Campo de código de set
         cardImage.value = foundCard.imagen_url;
         cardPrice.value = foundCard.precio;
         cardStock.value = foundCard.stock;
         cardCategory.value = foundCard.categoria;
         
+        showSection(cardsSection);
         openModal(cardModal);
     }, 2000);
 }
@@ -161,8 +161,10 @@ async function handleLogin(event) {
     } catch (error) {
         console.error('Error Login:', error);
         const msg = document.getElementById('loginMessage');
-        msg.textContent = "Credenciales incorrectas.";
-        msg.style.display = 'block';
+        if (msg) {
+            msg.textContent = "Credenciales incorrectas.";
+            msg.style.display = 'block';
+        }
     }
 }
 
@@ -173,46 +175,25 @@ async function handleLogin(event) {
 async function loadAllData() {
     await loadCategories();
     await loadCardsData();
-    await loadSealedProductsData();
-    await loadOrdersData();
+    // await loadSealedProductsData(); // Opcional según tu flujo
 }
 
 async function loadCategories() {
     try {
-        const col = collection(db, `artifacts/${appId}/public/data/categories`);
-        const snap = await getDocs(col);
+        const colRef = collection(db, `artifacts/${appId}/public/data/categories`);
+        const snap = await getDocs(colRef);
         allCategories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         populateFilters();
-        renderCategoriesTable();
     } catch (e) { console.error(e); }
 }
 
 async function loadCardsData() {
     try {
-        const col = collection(db, `artifacts/${appId}/public/data/cards`);
-        const snap = await getDocs(col);
+        const colRef = collection(db, `artifacts/${appId}/public/data/cards`);
+        const snap = await getDocs(colRef);
         allCards = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderCardsTable();
         updateStats();
-    } catch (e) { console.error(e); }
-}
-
-async function loadSealedProductsData() {
-    try {
-        const col = collection(db, `artifacts/${appId}/public/data/sealed_products`);
-        const snap = await getDocs(col);
-        allSealedProducts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderSealedProductsTable();
-        updateStats();
-    } catch (e) { console.error(e); }
-}
-
-async function loadOrdersData() {
-    try {
-        const col = collection(db, `artifacts/${appId}/public/data/orders`);
-        const snap = await getDocs(col);
-        allOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderOrdersTable();
     } catch (e) { console.error(e); }
 }
 
@@ -222,14 +203,10 @@ async function loadOrdersData() {
 
 function populateFilters() {
     const cats = allCategories.map(c => c.name);
-    [document.getElementById('adminCategoryFilter'), document.getElementById('adminSealedCategoryFilter')].forEach(f => {
-        if (!f) return;
-        f.innerHTML = '<option value="">Todas</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
-    });
-    [cardCategory, document.getElementById('sealedProductCategory')].forEach(s => {
-        if (!s) return;
-        s.innerHTML = '<option value="" disabled selected>Seleccionar</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
-    });
+    if (cardCategory) {
+        cardCategory.innerHTML = '<option value="" disabled selected>Seleccionar</option>' + 
+            cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
 }
 
 function renderCardsTable() {
@@ -237,21 +214,24 @@ function renderCardsTable() {
     if (!tbody) return;
     tbody.innerHTML = allCards.map(card => `
         <tr>
-            <td>${card.id}</td>
-            <td><img src="${card.imagen_url}" width="40"></td>
+            <td>${card.id.substring(0,5)}...</td>
+            <td><img src="${card.imagen_url}" width="40" style="border-radius:4px;"></td>
             <td>${card.nombre}</td>
+            <td>${card.set_code || '---'}</td>
             <td>$${parseFloat(card.precio).toFixed(2)}</td>
             <td>${card.stock}</td>
-            <td>${card.categoria}</td>
             <td class="action-buttons">
-                <button class="edit-button" onclick="window.editCard('${card.id}')">Editar</button>
+                <button class="edit-button" onclick="window.editCard('${card.id}')">
+                    <i class="fas fa-edit"></i>
+                </button>
             </td>
         </tr>
     `).join('');
 }
 
 function updateStats() {
-    if (document.getElementById('totalCardsCount')) document.getElementById('totalCardsCount').textContent = allCards.length;
+    const countEl = document.getElementById('totalCardsCount');
+    if (countEl) countEl.textContent = allCards.length;
 }
 
 // ==========================================================================
@@ -272,6 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
     navDashboard = document.getElementById('nav-dashboard');
     navCards = document.getElementById('nav-cards');
     navScanner = document.getElementById('nav-scanner');
+    navScannerQuick = document.getElementById('nav-scanner-quick');
 
     videoPreview = document.getElementById('video-preview');
     startScanBtn = document.getElementById('startScanBtn');
@@ -281,18 +262,39 @@ document.addEventListener('DOMContentLoaded', () => {
     cardForm = document.getElementById('cardForm');
     cardId = document.getElementById('cardId');
     cardName = document.getElementById('cardName');
+    cardSetCode = document.getElementById('cardSetCode'); // Referencia al nuevo campo
     cardImage = document.getElementById('cardImage');
     cardPrice = document.getElementById('cardPrice');
     cardStock = document.getElementById('cardStock');
     cardCategory = document.getElementById('cardCategory');
+    addCardBtn = document.getElementById('addCardBtn');
 
     // Eventos de Navegación
     if (navDashboard) navDashboard.addEventListener('click', () => { showSection(dashboardSection); stopCamera(); });
     if (navCards) navCards.addEventListener('click', () => { showSection(cardsSection); stopCamera(); });
     if (navScanner) navScanner.addEventListener('click', () => { showSection(scannerSection); startCamera(); });
+    if (navScannerQuick) navScannerQuick.addEventListener('click', () => { showSection(scannerSection); startCamera(); });
+
+    // Evento Añadir Manual (Botón Verde +)
+    if (addCardBtn) {
+        addCardBtn.addEventListener('click', () => {
+            document.getElementById('cardModalTitle').textContent = "Añadir Nueva Carta";
+            cardId.value = '';
+            cardForm.reset();
+            openModal(cardModal);
+        });
+    }
 
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
     if (startScanBtn) startScanBtn.addEventListener('click', handleScan);
+
+    // Cerrar Modal
+    document.querySelectorAll('.close-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            closeModal(cardModal);
+            closeModal(loginModal);
+        });
+    });
 
     // Logout
     document.getElementById('nav-logout')?.addEventListener('click', async () => {
@@ -300,19 +302,32 @@ document.addEventListener('DOMContentLoaded', () => {
         location.reload();
     });
 
-    openModal(loginModal);
+    // Verificar estado de sesión inicial
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            closeModal(loginModal);
+            showSection(dashboardSection);
+            loadAllData();
+        } else {
+            openModal(loginModal);
+        }
+    });
 });
 
-// Global helpers
+// Helpers Globales
 window.editCard = (id) => {
     const card = allCards.find(c => c.id === id);
     if (card) {
         cardId.value = card.id;
         cardName.value = card.nombre;
+        cardSetCode.value = card.set_code || '';
         cardImage.value = card.imagen_url;
         cardPrice.value = card.precio;
         cardStock.value = card.stock;
         cardCategory.value = card.categoria;
+        document.getElementById('cardModalTitle').textContent = "Editar Carta";
         openModal(cardModal);
     }
 };
+
+window.closeModal = closeModal;
