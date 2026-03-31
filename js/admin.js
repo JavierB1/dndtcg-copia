@@ -23,7 +23,6 @@ const appId = firebaseConfig.projectId;
 let allCards = [], allSealedProducts = [], allCategories = [], allOrders = [];
 let currentCardsPage = 1, currentSealedProductsPage = 1;
 const itemsPerPage = 10;
-let currentDeleteTarget = null;
 
 // ==========================================================================
 // REFERENCIAS AL DOM
@@ -111,14 +110,22 @@ async function loadOrdersData() {
 onAuthStateChanged(auth, (user) => {
     if (user) {
         console.log("Sesión activa:", user.email);
-        if (elements.loginModal) elements.loginModal.style.setProperty('display', 'none', 'important');
-        if (elements.dashboardSection) elements.dashboardSection.classList.add('active');
+        // Ocultar modal y mostrar dashboard
+        if (elements.loginModal) {
+            elements.loginModal.style.display = 'none';
+        }
+        hideAllSections();
+        if (elements.dashboardSection) {
+            elements.dashboardSection.classList.add('active');
+            elements.dashboardSection.style.display = 'block';
+        }
         loadAllData();
     } else {
         console.log("No hay sesión. Mostrando login...");
         hideAllSections();
         if (elements.loginModal) {
-            elements.loginModal.style.setProperty('display', 'flex', 'important');
+            // Forzamos el display flex para que el modal sea visible
+            elements.loginModal.style.display = 'flex';
         }
     }
 });
@@ -156,7 +163,10 @@ async function handleLogout() {
 
 function hideAllSections() {
     const sections = document.querySelectorAll('.admin-section');
-    sections.forEach(s => s.classList.remove('active'));
+    sections.forEach(s => {
+        s.classList.remove('active');
+        s.style.display = 'none';
+    });
 }
 
 // ==========================================================================
@@ -286,6 +296,11 @@ function populateCategoryFilters() {
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Aseguramos que al cargar, si no hay respuesta de Firebase aún, el modal intente estar presente
+    if (elements.loginModal) {
+        elements.loginModal.style.display = 'flex';
+    }
+
     if (elements.loginForm) elements.loginForm.onsubmit = handleLogin;
     if (elements.btnLogout) elements.btnLogout.onclick = handleLogout;
     
