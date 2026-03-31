@@ -164,8 +164,17 @@ function fillCardForm(card) {
 async function handleSaveCard(e) {
     e.preventDefault();
     const id = document.getElementById('cardId').value;
+    const nombre = document.getElementById('cardName').value.trim();
+    
+    // Validación de nombre duplicado
+    const duplicado = allCards.find(c => c.nombre.toLowerCase() === nombre.toLowerCase() && c.id !== id);
+    if (duplicado) {
+        alert("¡Error! Ya existe una carta con este nombre.");
+        return;
+    }
+
     const data = {
-        nombre: document.getElementById('cardName').value,
+        nombre: nombre,
         codigo: document.getElementById('cardCode').value,
         expansion: document.getElementById('cardExpansion').value,
         imagen_url: document.getElementById('cardImage').value,
@@ -184,8 +193,17 @@ async function handleSaveCard(e) {
 async function handleSaveSealed(e) {
     e.preventDefault();
     const id = document.getElementById('sealedProductId').value;
+    const nombre = document.getElementById('sealedProductName').value.trim();
+
+    // Validación de nombre duplicado
+    const duplicado = allSealed.find(p => p.nombre.toLowerCase() === nombre.toLowerCase() && p.id !== id);
+    if (duplicado) {
+        alert("¡Error! Ya existe un producto sellado con este nombre.");
+        return;
+    }
+
     const data = {
-        nombre: document.getElementById('sealedProductName').value,
+        nombre: nombre,
         categoria: document.getElementById('sealedProductCategory').value,
         precio: parseFloat(document.getElementById('sealedProductPrice').value),
         stock: parseInt(document.getElementById('sealedProductStock').value),
@@ -202,7 +220,16 @@ async function handleSaveSealed(e) {
 async function handleSaveCategory(e) {
     e.preventDefault();
     const id = document.getElementById('categoryId').value;
-    const data = { name: document.getElementById('categoryName').value };
+    const nombre = document.getElementById('categoryName').value.trim();
+
+    // Validación de nombre duplicado
+    const duplicado = allCategories.find(c => c.name.toLowerCase() === nombre.toLowerCase() && c.id !== id);
+    if (duplicado) {
+        alert("¡Error! Ya existe una categoría con este nombre.");
+        return;
+    }
+
+    const data = { name: nombre };
     try {
         if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id), data);
         else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), data);
