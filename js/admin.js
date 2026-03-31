@@ -1,5 +1,27 @@
 // ==========================================================================
-// CONFIGURACIÓN Y SERVICIOS DE FIREBASE
+// 1. INYECCIÓN INMEDIATA DE ESTILOS (EVITA EL PARPADEO / FLASH)
+// ==========================================================================
+// Inyectamos esto al principio del archivo para que el navegador oculte todo 
+// antes de que el usuario vea el HTML original.
+const styleInit = document.createElement('style');
+styleInit.innerHTML = `
+    .admin-container { display: none !important; }
+    #loginModal { 
+        display: flex !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+        background: #f0f2f5; z-index: 99999; align-items: center; justify-content: center;
+        visibility: hidden; /* Se activará cuando el JS esté listo */
+    }
+    .login-card {
+        background: white; padding: 40px; border-radius: 24px; width: 90%; max-width: 420px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.08); text-align: center;
+    }
+    .svg-header { margin-bottom: 24px; display: flex; justify-content: center; gap: 20px; }
+    .icon-svg { width: 56px; height: 56px; fill: #3182ce; filter: drop-shadow(0 4px 6px rgba(49, 130, 206, 0.2)); }
+`;
+document.head.appendChild(styleInit);
+
+// ==========================================================================
+// 2. CONFIGURACIÓN Y SERVICIOS DE FIREBASE
 // ==========================================================================
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
@@ -37,44 +59,38 @@ const auth = getAuth(app);
 const appId = firebaseConfig.projectId;
 
 // ==========================================================================
-// FORZAR CIERRE DE SESIÓN AL CARGAR (ELIMINA EL AUTOLOGIN DEFINITIVAMENTE)
+// 3. LOGOUT FORZADO Y VARIABLES GLOBALES
 // ==========================================================================
-// Al ejecutar signOut inmediatamente, Firebase limpia cualquier token persistente.
-signOut(auth).catch(() => {});
+// Forzamos el cierre de sesión inmediatamente al cargar para evitar autologin
+let isForcedLogoutDone = false;
+signOut(auth).then(() => {
+    isForcedLogoutDone = true;
+});
 
-let allCards = [], allSealedProducts = [], allCategories = [], allOrders = [];
-let currentDeleteTarget = null;
+let allCards = [], allCategories = [];
 const itemsPerPage = 10;
 let currentCardsPage = 1;
 
-// ==========================================================================
-// REFERENCIAS DOM
-// ==========================================================================
 let loginView, adminView, sidebarMenu, sidebarOverlay;
-let cardForm, cardModal, quickSearchModal, confirmModal, messageModal;
+let cardForm, cardModal, quickSearchModal;
 let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBtn;
-let navLinks = {};
 
 // ==========================================================================
-// FUNCIONES DE NAVEGACIÓN Y UI
+// 4. FUNCIONES DE UI
 // ==========================================================================
 
 function openModal(m) { if(m){ m.style.display='flex'; document.body.style.overflow='hidden'; } }
 function closeModal(m) { if(m){ m.style.display='none'; document.body.style.overflow=''; } }
 
 function showSection(sectionId) {
-    // Ocultar todas las secciones
     document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-    // Mostrar la seleccionada
     const target = document.getElementById(sectionId);
     if(target) target.classList.add('active');
 
-    // Actualizar menú lateral
     document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
     const activeLink = document.querySelector(`[data-section="${sectionId}"]`) || document.getElementById('nav-' + sectionId.replace('-section', ''));
     if(activeLink) activeLink.classList.add('active');
 
-    // Cerrar menú en móviles e iPads
     if(window.innerWidth < 1024) {
         sidebarMenu?.classList.remove('show');
         if(sidebarOverlay) sidebarOverlay.style.display='none';
@@ -82,7 +98,7 @@ function showSection(sectionId) {
 }
 
 // ==========================================================================
-// BUSCADOR TCGPLAYER (LIMPIEZA Y BÚSQUEDA)
+// 5. BÚSQUEDA TCGPLAYER
 // ==========================================================================
 
 async function handleQuickSearch() {
@@ -115,8 +131,6 @@ async function handleQuickSearch() {
             if (!card) card = data.data[0];
 
             fillCardForm(card);
-            
-            // Limpiar inputs al tener éxito
             clearSearchInputs();
             closeModal(quickSearchModal);
         } else {
@@ -155,7 +169,7 @@ function fillCardForm(card) {
 }
 
 // ==========================================================================
-// CARGA DE DATOS DESDE FIRESTORE
+// 6. CARGA DE DATOS
 // ==========================================================================
 
 async function loadAllData() {
@@ -172,7 +186,6 @@ async function loadAllData() {
             catSelect.innerHTML = '<option value="" disabled selected>Selecciona Juego</option>';
             allCategories.forEach(c => catSelect.appendChild(new Option(c.name, c.name)));
         }
-
         updateStats();
     } catch (e) { console.error(e); }
 }
@@ -203,46 +216,22 @@ function updateStats() {
 }
 
 // ==========================================================================
-// INICIALIZACIÓN Y EVENTOS
+// 7. INICIALIZACIÓN
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Referencias principales
     loginView = document.getElementById('loginModal');
     adminView = document.querySelector('.admin-container');
     
-    // Inyectar Estilos de Pantalla Completa y SVG Decorativo
-    const style = document.createElement('style');
-    style.innerHTML = `
-        /* LOGIN PANTALLA COMPLETA */
-        #loginModal { 
-            display: flex !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            background: linear-gradient(135deg, #f6f8fb 0%, #e9edf3 100%); 
-            z-index: 99999; align-items: center; justify-content: center;
-        }
-        .login-card {
-            background: white; padding: 40px; border-radius: 24px; width: 90%; max-width: 420px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.08); text-align: center;
-        }
-        .admin-container { display: none; } /* Oculto hasta login exitoso */
-
-        /* SVG DECORATIVO */
-        .svg-header { margin-bottom: 24px; display: flex; justify-content: center; gap: 20px; }
-        .icon-svg { width: 56px; height: 56px; fill: #3182ce; filter: drop-shadow(0 4px 6px rgba(49, 130, 206, 0.2)); }
-    `;
-    document.head.appendChild(style);
-
-    // Ajustar el contenido de la pantalla de login
+    // Preparar el HTML del login con los SVGs
     loginView.innerHTML = `
         <div class="login-card">
             <div class="svg-header">
-                <!-- SVG: Pokébola Minimalista -->
                 <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="10" stroke="#3182ce" stroke-width="2" fill="none"/>
                     <line x1="2" y1="12" x2="22" y2="12" stroke="#3182ce" stroke-width="2"/>
                     <circle cx="12" cy="12" r="3" stroke="#3182ce" stroke-width="2" fill="white"/>
                 </svg>
-                <!-- SVG: Perfume Minimalista -->
                 <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M7 21h10a2 2 0 002-2V9H5v10a2 2 0 002 2zM9 5h6v4H9V5z" stroke="#3182ce" stroke-width="2" fill="none"/>
                     <path d="M12 12v4" stroke="#3182ce" stroke-width="2" stroke-linecap="round"/>
@@ -260,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-left: 4px;">Contraseña</label>
                     <input type="password" id="password" placeholder="••••••••" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
                 </div>
-                <button type="submit" id="loginBtnSubmit" style="width: 100%; padding: 16px; background: #3182ce; color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s;">
+                <button type="submit" id="loginBtnSubmit" style="width: 100%; padding: 16px; background: #3182ce; color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer;">
                     Iniciar Sesión
                 </button>
             </form>
@@ -268,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     `;
 
-    // Manejar Login
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const user = document.getElementById('username').value.trim();
@@ -279,30 +267,30 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             btn.disabled = true;
             btn.textContent = "Verificando...";
-            // Persistencia de sesión (solo mientras la pestaña esté abierta)
             await setPersistence(auth, browserSessionPersistence);
             await signInWithEmailAndPassword(auth, user, pass);
         } catch (err) {
             btn.disabled = false;
             btn.textContent = "Iniciar Sesión";
-            msg.textContent = "Credenciales inválidas. Por favor intenta de nuevo.";
+            msg.textContent = "Credenciales inválidas.";
             msg.style.display = "block";
         }
     });
 
-    // Observador de Autenticación
     onAuthStateChanged(auth, (user) => {
-        if (user) {
-            loginView.style.display = 'none';
-            adminView.style.display = 'flex';
+        // Solo mostramos el panel si el usuario existe Y ya terminó el cierre de sesión forzado
+        if (user && isForcedLogoutDone) {
+            loginView.style.setProperty('display', 'none', 'important');
+            adminView.style.setProperty('display', 'flex', 'important');
             loadAllData();
         } else {
-            loginView.style.display = 'flex';
-            adminView.style.display = 'none';
+            adminView.style.setProperty('display', 'none', 'important');
+            loginView.style.setProperty('display', 'flex', 'important');
+            loginView.style.visibility = 'visible';
         }
     });
 
-    // Navegación Sidebar
+    // Sidebar & Secciones
     document.querySelectorAll('.sidebar-nav a').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -311,22 +299,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Configuración del Buscador de Texto
+    // Configurar Buscador
     quickSearchModal = document.getElementById('scannerModal');
     const modalContent = quickSearchModal?.querySelector('.admin-modal-content');
     if (modalContent) {
         modalContent.innerHTML = `
             <span class="close-button">&times;</span>
-            <h2 style="margin-bottom: 20px; color: #1a202c;"><i class="fas fa-search"></i> Buscador de Cartas</h2>
+            <h2 style="margin-bottom: 20px;"><i class="fas fa-search"></i> Buscador de Cartas</h2>
             <div style="margin-bottom: 16px; text-align: left;">
-                <label style="font-weight: 700; font-size: 0.85rem; color: #4a5568;">Número de Carta (ej: 028 o 028/151)</label>
-                <input type="text" id="searchCardNumber" placeholder="Ej: 028/151" style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px; font-size: 1rem;">
+                <label style="font-weight: 700; font-size: 0.85rem;">Número de Carta (ej: 028 o 028/151)</label>
+                <input type="text" id="searchCardNumber" placeholder="Ej: 028/151" style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px;">
             </div>
             <div style="margin-bottom: 24px; text-align: left;">
-                <label style="font-weight: 700; font-size: 0.85rem; color: #4a5568;">Filtro Expansión (ej: 151, obsidian)</label>
-                <input type="text" id="searchSetId" placeholder="Opcional..." style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px; font-size: 1rem;">
+                <label style="font-weight: 700; font-size: 0.85rem;">Filtro Expansión (ej: 151, obsidian)</label>
+                <input type="text" id="searchSetId" placeholder="Opcional..." style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px;">
             </div>
-            <button id="submitSearch" style="width: 100%; padding: 16px; background: #3182ce; color: white; border-radius: 12px; font-weight: 700; border: none; cursor: pointer; font-size: 1rem;">
+            <button id="submitSearch" style="width: 100%; padding: 16px; background: #3182ce; color: white; border-radius: 12px; font-weight: 700; border: none; cursor: pointer;">
                 Consultar TCGPlayer
             </button>
             <p id="searchStatus" style="margin-top: 20px; font-size: 0.95rem; font-weight: 500;"></p>
@@ -338,20 +326,13 @@ document.addEventListener('DOMContentLoaded', () => {
         submitSearchBtn.addEventListener('click', handleQuickSearch);
     }
 
-    // Eventos Globales
     document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
-    
-    // El botón de recarga que pides (si existe el ID en tu HTML)
-    document.getElementById('refreshAdminPageBtn')?.addEventListener('click', () => location.reload());
-
-    // Cierre de modales y limpieza
     document.querySelectorAll('.close-button').forEach(b => b.addEventListener('click', () => {
         closeModal(quickSearchModal);
         closeModal(document.getElementById('cardModal'));
         clearSearchInputs();
     }));
 
-    // Cerrar sesión manual
     document.getElementById('nav-logout')?.addEventListener('click', (e) => {
         e.preventDefault();
         signOut(auth).then(() => location.reload());
