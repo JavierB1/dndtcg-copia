@@ -31,7 +31,7 @@ let cardForm, cardId, cardName, cardCode, cardExpansion, cardImage, cardPrice, c
 let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBtn;
 
 // ==========================================================================
-// LÓGICA DE BÚSQUEDA POR TEXTO (REEMPLAZA A LA CÁMARA)
+// LÓGICA DE BÚSQUEDA POR TEXTO (MEJORADA)
 // ==========================================================================
 
 async function handleQuickSearch() {
@@ -49,26 +49,33 @@ async function handleQuickSearch() {
     submitSearchBtn.disabled = true;
 
     try {
-        // Query básica por número
-        let query = `number:${number}`;
-        // Si el usuario provee las 3 letras de la expansión, filtramos por set.id o set.symbol
+        // Query optimizada para la API de Pokémon TCG
+        // Usamos comillas para asegurar que el número sea exacto
+        let query = `number:"${number}"`;
+        
         if (setId) {
-            query += ` (set.id:${setId}* OR set.symbol:${setId}*)`;
+            // Buscamos por ID de set exacto o por el nombre del set
+            query += ` (set.id:"${setId}" OR set.name:"${setId}*")`;
         }
 
         const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=${query}`);
+        if (!response.ok) throw new Error("Error en la respuesta de la API");
+        
         const data = await response.json();
 
         if (data.data && data.data.length > 0) {
+            // Intentamos encontrar la mejor coincidencia si hay varios resultados
             let bestMatch = data.data[0];
             
-            // Si hay varios resultados y pusimos expansión, intentamos ser más específicos
             if (setId) {
-                const filtered = data.data.find(c => c.set.id.toLowerCase().includes(setId));
-                if (filtered) bestMatch = filtered;
+                const exactMatch = data.data.find(c => 
+                    c.set.id.toLowerCase() === setId || 
+                    c.set.name.toLowerCase().includes(setId)
+                );
+                if (exactMatch) bestMatch = exactMatch;
             }
 
-            fillFormWithAPIData(bestMatch, `${number}/${bestMatch.set.printedTotal}`);
+            fillFormWithAPIData(bestMatch, `${bestMatch.number}/${bestMatch.set.printedTotal}`);
             closeModal(quickSearchModal);
             
             // Limpiar buscador
@@ -76,12 +83,12 @@ async function handleQuickSearch() {
             searchSetIdInput.value = "";
             searchStatusMessage.textContent = "";
         } else {
-            searchStatusMessage.textContent = "No se encontró ninguna carta con esos datos.";
+            searchStatusMessage.textContent = "No se encontró nada. Intenta solo con el número.";
             searchStatusMessage.style.color = "#ef4444";
         }
     } catch (error) {
         console.error("Error en búsqueda:", error);
-        searchStatusMessage.textContent = "Error de conexión con la API.";
+        searchStatusMessage.textContent = "Hubo un problema al conectar con la API.";
         searchStatusMessage.style.color = "#ef4444";
     } finally {
         submitSearchBtn.disabled = false;
@@ -96,18 +103,23 @@ function fillFormWithAPIData(card, displayCode) {
     cardExpansion.value = card.set.name;
     cardImage.value = card.images.large || card.images.small;
     
-    // Obtener precio de mercado sugerido
+    // Extracción robusta de precios (TCGPlayer maneja varios tipos como holofoil, normal, etc)
     let price = 0;
-    if (card.tcgplayer?.prices) {
+    if (card.tcgplayer && card.tcgplayer.prices) {
         const p = card.tcgplayer.prices;
-        const firstKey = Object.keys(p)[0];
-        price = p[firstKey].market || p[firstKey].mid || 0;
+        // Buscamos el primer precio disponible (market o mid)
+        const categories = Object.keys(p);
+        if (categories.length > 0) {
+            const firstCat = p[categories[0]];
+            price = firstCat.market || firstCat.mid || firstCat.low || 0;
+        }
     }
+    
     cardPrice.value = parseFloat(price).toFixed(2);
     cardCategory.value = 'Pokémon TCG';
 
     // Animación visual de campos autocompletados
-    [cardName, cardCode, cardExpansion, cardImage].forEach(f => {
+    [cardName, cardCode, cardExpansion, cardImage, cardPrice].forEach(f => {
         f.style.backgroundColor = '#ecfdf5';
         setTimeout(() => f.style.backgroundColor = '', 2000);
     });
@@ -189,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sidebarOverlay = document.getElementById('sidebar-overlay');
     loginModal = document.getElementById('loginModal');
     cardModal = document.getElementById('cardModal');
-    quickSearchModal = document.getElementById('scannerModal'); // Reutilizamos el contenedor del modal
+    quickSearchModal = document.getElementById('scannerModal'); 
     
     cardForm = document.getElementById('cardForm');
     cardId = document.getElementById('cardId');
@@ -201,19 +213,20 @@ document.addEventListener('DOMContentLoaded', () => {
     cardStock = document.getElementById('cardStock');
     cardCategory = document.getElementById('cardCategory');
 
-    // Estilos para el buscador manual
+    // Estilos CSS inyectados para el buscador
     const style = document.createElement('style');
     style.innerHTML = `
         @media(max-width:768px){.sidebar{position:fixed;left:-260px;z-index:100;transition:0.3s}.sidebar.show{left:0}.main-content{margin-left:0}.admin-modal-content{width:95%}}
         .search-group { margin-bottom: 15px; }
         .search-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #4a5568; font-size: 0.85rem; }
         .search-input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 1rem; }
-        .btn-search-submit { width: 100%; padding: 14px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-search-submit:disabled { background: #cbd5e0; }
+        .btn-search-submit { width: 100%; padding: 14px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s; }
+        .btn-search-submit:hover { background: #2563eb; }
+        .btn-search-submit:disabled { background: #cbd5e0; cursor: not-allowed; }
     `;
     document.head.appendChild(style);
 
-    // Transformar el modal de "Escáner" en "Buscador de Texto"
+    // Reconfiguración del modal para búsqueda manual
     const modalContent = quickSearchModal.querySelector('.admin-modal-content');
     if (modalContent) {
         modalContent.innerHTML = `
@@ -224,11 +237,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <input type="text" id="searchCardNumber" class="search-input" placeholder="Ej: 152">
             </div>
             <div class="search-group">
-                <label>Código Expansión (ej: sv1, pgo, swsh12)</label>
+                <label>Código o Nombre de Expansión (ej: sv1, silver tempest)</label>
                 <input type="text" id="searchSetId" class="search-input" placeholder="Ej: sv1">
             </div>
-            <button id="submitSearch" class="btn-search-submit">Buscar en API</button>
-            <p id="searchStatus" style="margin-top: 15px; text-align: center; font-size: 0.9rem;"></p>
+            <button id="submitSearch" class="btn-search-submit">Buscar Información</button>
+            <p id="searchStatus" style="margin-top: 15px; text-align: center; font-size: 0.9rem; min-height: 1.2em;"></p>
         `;
         
         searchCardNumberInput = document.getElementById('searchCardNumber');
@@ -237,11 +250,25 @@ document.addEventListener('DOMContentLoaded', () => {
         searchStatusMessage = document.getElementById('searchStatus');
         
         submitSearchBtn.addEventListener('click', handleQuickSearch);
+
+        // Permitir buscar presionando "Enter"
+        [searchCardNumberInput, searchSetIdInput].forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleQuickSearch();
+            });
+        });
     }
 
-    // Eventos de Navegación
-    document.getElementById('sidebarToggleBtn')?.addEventListener('click', () => { sidebarMenu.classList.add('show'); sidebarOverlay.style.display='block'; });
-    sidebarOverlay?.addEventListener('click', () => { sidebarMenu.classList.remove('show'); sidebarOverlay.style.display='none'; });
+    // Eventos de Interfaz
+    document.getElementById('sidebarToggleBtn')?.addEventListener('click', () => { 
+        sidebarMenu.classList.add('show'); 
+        sidebarOverlay.style.display='block'; 
+    });
+    
+    sidebarOverlay?.addEventListener('click', () => { 
+        sidebarMenu.classList.remove('show'); 
+        sidebarOverlay.style.display='none'; 
+    });
     
     document.getElementById('nav-cards')?.addEventListener('click', () => {
         document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
@@ -251,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('openScannerBtn')?.addEventListener('click', () => {
         openModal(quickSearchModal);
+        searchCardNumberInput.focus();
     });
 
     document.querySelectorAll('.close-button').forEach(b => b.addEventListener('click', () => {
@@ -259,7 +287,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
 
     cardForm?.addEventListener('submit', handleSaveCard);
-    document.getElementById('addCardBtn')?.addEventListener('click', () => { cardForm.reset(); cardId.value=''; openModal(cardModal); });
+    
+    document.getElementById('addCardBtn')?.addEventListener('click', () => { 
+        cardForm.reset(); 
+        cardId.value=''; 
+        openModal(cardModal); 
+    });
 
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
