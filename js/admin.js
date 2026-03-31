@@ -1,5 +1,12 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    onAuthStateChanged, 
+    signOut,
+    setPersistence,
+    browserSessionPersistence 
+} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -29,6 +36,7 @@ onAuthStateChanged(auth, async (user) => {
         console.log("Sesión activa detectada:", user.email);
         try {
             await loadDashboardData();
+            document.body.classList.remove('auth-loading', 'auth-guest');
             document.body.classList.add('auth-ready');
         } catch (err) {
             console.error("Error crítico de acceso:", err);
@@ -36,7 +44,8 @@ onAuthStateChanged(auth, async (user) => {
         }
     } else {
         console.log("No hay usuario autenticado.");
-        document.body.classList.remove('auth-ready');
+        document.body.classList.remove('auth-loading', 'auth-ready');
+        document.body.classList.add('auth-guest');
         clearAllTables();
     }
 });
@@ -91,7 +100,6 @@ function renderCardsTable() {
     const tbody = document.querySelector('#cardsTable tbody');
     if (!tbody) return;
 
-    // Placeholder SVG local para evitar errores 404 de dominios externos
     const placeholder = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E`;
 
     tbody.innerHTML = allData.cards.map(c => `
@@ -185,14 +193,20 @@ loginForm?.addEventListener('submit', async (e) => {
 
     try {
         if (btn) btn.disabled = true;
-        loginMessage.textContent = "Verificando credenciales...";
+        loginMessage.textContent = "Iniciando sesión temporal...";
         loginMessage.style.color = "var(--primary)";
         
+        // 1. Configurar persistencia de sesión (se borra al cerrar/recargar)
+        await setPersistence(auth, browserSessionPersistence);
+        
+        // 2. Iniciar sesión normalmente
         await signInWithEmailAndPassword(auth, email, pass);
+        
     } catch (err) {
         if (btn) btn.disabled = false;
         loginMessage.textContent = "Error: Usuario o contraseña incorrectos.";
         loginMessage.style.color = "var(--red)";
+        console.error("Error de login:", err);
     }
 });
 
