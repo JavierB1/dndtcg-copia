@@ -115,6 +115,12 @@ async function handleQuickSearch() {
             if (!card) card = data.data[0];
 
             fillCardForm(card);
+            
+            // Limpiar buscador al tener éxito antes de cerrar
+            if (searchCardNumberInput) searchCardNumberInput.value = '';
+            if (searchSetIdInput) searchSetIdInput.value = '';
+            if (searchStatusMessage) searchStatusMessage.textContent = '';
+            
             closeModal(quickSearchModal);
         } else {
             searchStatusMessage.textContent = "No se encontró nada.";
@@ -319,6 +325,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.close-button').forEach(b => b.addEventListener('click', () => {
         closeModal(quickSearchModal);
         closeModal(document.getElementById('cardModal'));
+        
+        // Limpiar inputs del buscador al cerrar
+        if (searchCardNumberInput) searchCardNumberInput.value = '';
+        if (searchSetIdInput) searchSetIdInput.value = '';
+        if (searchStatusMessage) searchStatusMessage.textContent = '';
     }));
 
     // Cierre de sesión manual
