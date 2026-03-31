@@ -12,46 +12,61 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/admin.css">
+    <style>
+        /* Bloqueo preventivo en el HTML para evitar el error de visualización */
+        body.auth-loading #adminPanelContainer,
+        body.auth-loading #loginModal {
+            display: none !important;
+        }
+        
+        body.auth-guest #adminPanelContainer {
+            display: none !important;
+        }
+
+        body.auth-ready #loginModal {
+            display: none !important;
+        }
+    </style>
 </head>
 <body class="auth-loading">
 
     <!-- Pantalla de Carga Global -->
-    <div id="loadingOverlay">
+    <div id="loadingOverlay" style="display:none;">
         <div class="loader"></div>
     </div>
 
-    <!-- Interfaz de Autenticación (Login) -->
-    <div id="loginModal">
-        <div class="login-card">
-            <div class="text-center mb-8">
-                <i class="fas fa-dragon text-5xl text-indigo-500 mb-4"></i>
-                <h2 class="text-2xl font-bold text-white">Acceso Admin</h2>
-                <p class="text-slate-400 text-sm">DnD TCG Gestión Interna</p>
+    <!-- Interfaz de Autenticación (Login) - Pantalla Completa -->
+    <div id="loginModal" class="admin-login-full-screen">
+        <div class="login-content">
+            <div class="login-branding">
+                <i class="fas fa-dragon" style="font-size: 4rem; color: #6366f1; margin-bottom: 1rem;"></i>
+                <h1>Acceso Admin</h1>
+                <p>DnD TCG Gestión Interna</p>
             </div>
             
-            <form id="loginForm">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-slate-300 mb-1">Correo Electrónico</label>
-                    <input type="email" id="loginEmail" class="login-input" placeholder="admin@dndtcg.com" required>
+            <form id="loginForm" class="login-form-clean">
+                <div class="form-input-wrapper">
+                    <label>CORREO ELECTRÓNICO</label>
+                    <input type="email" id="loginEmail" placeholder="admin@dndtcg.com" required>
                 </div>
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-slate-300 mb-1">Contraseña</label>
-                    <input type="password" id="loginPass" class="login-input" placeholder="••••••••" required>
+                <div class="form-input-wrapper">
+                    <label>CONTRASEÑA</label>
+                    <input type="password" id="loginPass" placeholder="••••••••" required>
                 </div>
-                <button type="submit" id="btnLoginSubmit" class="btn-primary">
-                    <span>Iniciar Sesión</span>
+                <button type="submit" id="btnLoginSubmit" class="login-action-btn">
+                    Iniciar Sesión
                 </button>
+                <p id="loginError" class="login-feedback"></p>
             </form>
-            <p id="loginError" class="text-red-500 text-xs mt-4 text-center hidden"></p>
         </div>
     </div>
 
     <!-- Estructura Principal del Panel -->
-    <div id="adminPanelContainer">
+    <div id="adminPanelContainer" class="admin-container">
         <!-- Barra Lateral (Sidebar) -->
         <aside class="sidebar">
-            <div class="sidebar-brand">
-                <i class="fas fa-shield-halved text-indigo-400"></i>
+            <div class="sidebar-header">
+                <i class="fas fa-shield-halved" style="color: #6366f1;"></i>
                 <span>DnD Admin</span>
             </div>
             
@@ -71,13 +86,11 @@
                 <a href="#orders" class="nav-link" data-section="orders">
                     <i class="fas fa-receipt"></i> Pedidos
                 </a>
-            </nav>
-
-            <div class="sidebar-footer">
-                <button id="btnLogout" class="logout-btn">
+                <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 1rem 0;"></div>
+                <a href="#" id="btnLogout" class="nav-link logout-link" style="color: #ef4444;">
                     <i class="fas fa-power-off"></i> Cerrar Sesión
-                </button>
-            </div>
+                </a>
+            </nav>
         </aside>
 
         <!-- Área de Contenido -->
@@ -85,36 +98,36 @@
             
             <!-- Dashboard Section -->
             <section id="stats-section" class="admin-section active">
-                <header class="section-header">
-                    <h2 class="text-2xl font-bold">Estado de la Tienda</h2>
+                <header class="content-header">
+                    <h1>Estado de la Tienda</h1>
                 </header>
                 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon bg-indigo-500/10 text-indigo-400">
+                        <div class="stat-icon">
                             <i class="fas fa-id-card"></i>
                         </div>
-                        <div>
-                            <p class="text-slate-400 text-xs uppercase font-bold">Total Cartas</p>
-                            <h3 id="count-cards" class="text-3xl font-bold">0</h3>
+                        <div class="stat-info">
+                            <h3 id="count-cards">0</h3>
+                            <p>Total Cartas</p>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon bg-emerald-500/10 text-emerald-400">
+                        <div class="stat-icon">
                             <i class="fas fa-cubes"></i>
                         </div>
-                        <div>
-                            <p class="text-slate-400 text-xs uppercase font-bold">Stock Sellado</p>
-                            <h3 id="count-sealed" class="text-3xl font-bold">0</h3>
+                        <div class="stat-info">
+                            <h3 id="count-sealed">0</h3>
+                            <p>Stock Sellado</p>
                         </div>
                     </div>
-                    <div class="stat-card highlight">
-                        <div class="stat-icon bg-amber-500/10 text-amber-400">
+                    <div class="stat-card">
+                        <div class="stat-icon">
                             <i class="fas fa-truck-fast"></i>
                         </div>
-                        <div>
-                            <p class="text-slate-400 text-xs uppercase font-bold">Pendientes</p>
-                            <h3 id="count-orders" class="text-3xl font-bold">0</h3>
+                        <div class="stat-info">
+                            <h3 id="count-orders">0</h3>
+                            <p>Pedidos</p>
                         </div>
                     </div>
                 </div>
@@ -122,13 +135,13 @@
 
             <!-- Cartas Section -->
             <section id="cards-section" class="admin-section">
-                <header class="section-header">
-                    <h2 class="text-2xl font-bold text-white">Catálogo de Cartas</h2>
-                    <button class="btn-action-add" onclick="alert('Formulario nueva carta')">
+                <header class="content-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>Catálogo de Cartas</h2>
+                    <button class="login-action-btn" style="width: auto; padding: 10px 20px;" onclick="alert('Formulario nueva carta')">
                         <i class="fas fa-plus"></i> Nueva Carta
                     </button>
                 </header>
-                <div class="table-wrapper">
+                <div class="table-container">
                     <table id="table-cards">
                         <thead>
                             <tr>
@@ -136,7 +149,7 @@
                                 <th>Nombre</th>
                                 <th>Precio</th>
                                 <th>Stock</th>
-                                <th class="text-center">Acciones</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -144,10 +157,21 @@
                 </div>
             </section>
 
-            <!-- Otras secciones (Se llenan dinámicamente) -->
-            <section id="sealed-section" class="admin-section"></section>
-            <section id="categories-section" class="admin-section"></section>
-            <section id="orders-section" class="admin-section"></section>
+            <!-- Otras secciones -->
+            <section id="sealed-section" class="admin-section">
+                <header class="content-header"><h2>Productos Sellados</h2></header>
+                <div class="table-container"><table id="table-sealed"><thead><tr><th>Nombre</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+            </section>
+            
+            <section id="categories-section" class="admin-section">
+                <header class="content-header"><h2>Categorías</h2></header>
+                <div class="table-container"><table id="table-categories"><thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+            </section>
+            
+            <section id="orders-section" class="admin-section">
+                <header class="content-header"><h2>Pedidos</h2></header>
+                <div class="table-container"><table id="table-orders"><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+            </section>
 
         </main>
     </div>
