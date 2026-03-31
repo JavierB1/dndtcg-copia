@@ -31,6 +31,7 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projec
 // ==========================================================================
 let isForcedLogoutDone = false;
 
+// Forzar logout inicial para asegurar login manual al recargar la pestaña
 const forceLogout = async () => {
     try { 
         await signOut(auth); 
@@ -63,7 +64,7 @@ function closeModal(m) {
     if(m){ m.style.display='none'; document.body.style.overflow=''; } 
 }
 
-// Muestra alertas con el diseño de la web
+// Muestra alertas con el diseño de la web (Sustituye a alert())
 function showAlert(title, message) {
     const t = document.getElementById('alertTitle');
     const m = document.getElementById('alertText');
@@ -200,7 +201,7 @@ async function handleSaveCard(e) {
     const nombre = document.getElementById('cardName').value.trim();
     
     if (allCards.find(c => c.nombre.toLowerCase() === nombre.toLowerCase() && c.id !== id)) { 
-        showAlert("Elemento Duplicado", "Ya tienes una carta registrada con este nombre."); 
+        showAlert("Elemento Duplicado", "Ya tienes una carta registrada con este nombre: " + nombre); 
         return; 
     }
     
@@ -510,9 +511,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Cerrar modal de alerta
     document.getElementById('btnAlertAccept')?.addEventListener('click', () => closeModal(alertModal));
 
-    // Delegación de clics generales
+    // Delegación de clics generales (Editar / Borrar / Ver Pedido)
     document.body.addEventListener('click', (e) => {
-        // Cerrar modales con la "X"
         if (e.target.classList.contains('close-button')) { 
             closeModal(e.target.closest('.admin-modal')); 
             return; 
@@ -561,7 +561,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             openModal(confirmDeleteModal); 
         }
         
-        // VER PEDIDO
+        // VER PEDIDO (Alerta informativa)
         if (btn.classList.contains('view-order')) {
             const order = allOrders.find(o => o.id === btn.dataset.id);
             if(order) {
@@ -572,6 +572,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('nav-logout-btn')?.addEventListener('click', () => signOut(auth).then(() => location.reload()));
 
+    // Autenticación inicial del entorno
     const initAuth = async () => {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { 
             await signInWithCustomToken(auth, __initial_auth_token); 
