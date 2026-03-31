@@ -7,36 +7,37 @@
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body>
+<body class="login-state"> <!-- Clase inicial para control de estado -->
 
-    <!-- MODAL DE LOGIN (ESTRUCTURA DE CAPA SUPERIOR) -->
-    <div id="loginModal" class="admin-login-overlay">
-        <div class="login-box">
-            <div class="login-logo">
+    <!-- PANTALLA DE LOGIN (BLOQUEO TOTAL) -->
+    <div id="loginModal" class="admin-login-full-screen">
+        <div class="login-content">
+            <div class="login-branding">
                 <i class="fas fa-user-shield"></i>
-                <h2>Admin Login</h2>
+                <h1>D&D TCG</h1>
+                <p>Panel de Control Administrativo</p>
             </div>
-            <form id="loginForm">
-                <div class="form-group">
-                    <label><i class="fas fa-envelope"></i> Email</label>
-                    <input type="email" id="username" placeholder="admin@dndtcg.com" required>
+            <form id="loginForm" class="login-form-clean">
+                <div class="form-input-wrapper">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="username" placeholder="ejemplo@dndtcg.com" required>
                 </div>
-                <div class="form-group">
-                    <label><i class="fas fa-lock"></i> Contraseña</label>
+                <div class="form-input-wrapper">
+                    <label>Contraseña</label>
                     <input type="password" id="password" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="login-submit-btn">Ingresar</button>
-                <p id="loginMessage" class="login-error-msg"></p>
+                <button type="submit" class="login-action-btn">Iniciar Sesión</button>
+                <p id="loginMessage" class="login-feedback"></p>
             </form>
         </div>
     </div>
 
+    <!-- CONTENEDOR DEL PANEL (OCULTO HASTA EL LOGIN) -->
     <div class="admin-container">
-        <!-- BARRA LATERAL -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <img src="img/logo.png" alt="Logo" onerror="this.src='https://via.placeholder.com/40'">
-                <span>D&D TCG Admin</span>
+                <span>Admin Panel</span>
             </div>
             <nav class="sidebar-nav">
                 <a href="#dashboard-section" class="nav-link active"><i class="fas fa-th-large"></i> Dashboard</a>
@@ -44,55 +45,48 @@
                 <a href="#sealed-products-section" class="nav-link"><i class="fas fa-box-open"></i> Productos</a>
                 <a href="#categories-section" class="nav-link"><i class="fas fa-tags"></i> Categorías</a>
                 <a href="#orders-section" class="nav-link"><i class="fas fa-shopping-cart"></i> Pedidos</a>
-                <a href="#" id="btnLogout" class="nav-link logout-btn"><i class="fas fa-sign-out-alt"></i> Salir</a>
+                <a href="#" id="btnLogout" class="nav-link logout-link"><i class="fas fa-sign-out-alt"></i> Salir</a>
             </nav>
         </aside>
 
-        <!-- CONTENIDO PRINCIPAL -->
         <main class="main-content">
-            <!-- DASHBOARD -->
+            <!-- SECCIONES ADMINISTRATIVAS -->
             <section id="dashboard-section" class="admin-section active">
                 <header class="content-header">
                     <h1>Dashboard</h1>
                 </header>
-                <div class="stats-container">
+                <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-clone"></i></div>
-                        <div class="stat-details">
+                        <div class="stat-info">
                             <h3 id="stat-total-cards">0</h3>
-                            <p>Cartas en Base</p>
+                            <p>Cartas</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-boxes"></i></div>
-                        <div class="stat-details">
+                        <div class="stat-info">
                             <h3 id="stat-total-stock">0</h3>
-                            <p>Stock Total</p>
+                            <p>Stock</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
-                        <div class="stat-details">
+                        <div class="stat-info">
                             <h3 id="stat-total-orders">0</h3>
-                            <p>Pedidos Totales</p>
+                            <p>Pedidos</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- GESTIÓN DE CARTAS -->
+            <!-- RESTO DE SECCIONES (CARTAS, PRODUCTOS, ETC) -->
             <section id="cards-section" class="admin-section">
                 <header class="content-header">
-                    <h2>Gestión de Cartas</h2>
-                    <button class="action-btn-primary" onclick="openAddCardModal()">Nueva Carta</button>
+                    <h2>Gestión de Inventario</h2>
+                    <button class="btn-primary">Añadir Nueva Carta</button>
                 </header>
-                <div class="filter-bar">
-                    <input type="text" id="adminSearchInput" placeholder="Buscar carta...">
-                    <select id="adminCategoryFilter">
-                        <option value="">Todas las categorías</option>
-                    </select>
-                </div>
-                <div class="table-wrapper">
+                <div class="table-container">
                     <table id="cardsTable">
                         <thead>
                             <tr>
@@ -101,70 +95,6 @@
                                 <th>Nombre</th>
                                 <th>Precio</th>
                                 <th>Stock</th>
-                                <th>Categoría</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- GESTIÓN DE PRODUCTOS SELLADOS -->
-            <section id="sealed-products-section" class="admin-section">
-                <header class="content-header">
-                    <h2>Productos Sellados</h2>
-                    <button class="action-btn-primary">Nuevo Producto</button>
-                </header>
-                <div class="table-wrapper">
-                    <table id="sealedProductsTable">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Producto</th>
-                                <th>Precio</th>
-                                <th>Stock</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- GESTIÓN DE CATEGORÍAS -->
-            <section id="categories-section" class="admin-section">
-                <header class="content-header">
-                    <h2>Categorías</h2>
-                    <button class="action-btn-primary">Añadir Categoría</button>
-                </header>
-                <div class="table-wrapper">
-                    <table id="categoriesTable">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- GESTIÓN DE PEDIDOS -->
-            <section id="orders-section" class="admin-section">
-                <header class="content-header">
-                    <h2>Pedidos Recientes</h2>
-                </header>
-                <div class="table-wrapper">
-                    <table id="ordersTable">
-                        <thead>
-                            <tr>
-                                <th>ID Pedido</th>
-                                <th>Cliente</th>
-                                <th>Total</th>
-                                <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
