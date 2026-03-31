@@ -3,340 +3,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin TCG - DND</title>
-    <link rel="stylesheet" href="css/admin.css">
+    <title>DND TCG Admin - Panel Profesional</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Estilo crítico para evitar el flash del panel administrativo */
-        .admin-container { display: none !important; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: #f1f5f9; color: #334155; overflow-x: hidden; }
+
+        /* Estilo crítico para evitar el flash */
+        .admin-container { display: none; min-height: 100vh; }
         
         #loginModal { 
-            display: flex !important; 
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100vw; height: 100vh; 
-            background: linear-gradient(135deg, #f6f8fb 0%, #e9edf3 100%); 
-            z-index: 99999; 
-            align-items: center; 
-            justify-content: center;
+            display: flex; position: fixed; top: 0; left: 0; 
+            width: 100vw; height: 100vh; background: linear-gradient(135deg, #f6f8fb 0%, #e9edf3 100%); 
+            z-index: 99999; align-items: center; justify-content: center;
         }
 
-        .login-card {
-            background: white; 
-            padding: 40px; 
-            border-radius: 24px; 
-            width: 90%; 
-            max-width: 420px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.08); 
-            text-align: center;
-        }
+        /* Sidebar */
+        .sidebar { width: 260px; background: #1e293b; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; }
+        .sidebar-header { padding: 25px; border-bottom: 1px solid #334155; }
+        .sidebar-nav { flex: 1; padding: 20px 0; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 15px 25px; color: #94a3b8; text-decoration: none; transition: 0.3s; }
+        .nav-link:hover, .nav-link.active { background: #334155; color: white; border-left: 4px solid #3b82f6; }
 
-        /* --- ESTILOS DEL MODAL CON VISTA PREVIA --- */
-        .admin-modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 24px;
-            position: relative;
-            width: 95%;
-            max-width: 900px; /* Ancho ampliado para preview */
-        }
+        /* Contenido */
+        .main-content { flex: 1; padding: 30px; }
+        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .admin-section { display: none; animation: fadeIn 0.3s ease; }
+        .admin-section.active { display: block; }
 
-        .modal-body-layout {
-            display: flex;
-            gap: 30px;
-            margin-top: 20px;
-        }
+        /* Tablas */
+        .table-responsive { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background: #f8fafc; padding: 15px; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 700; }
+        td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+        
+        /* Dashboard */
+        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, min-minmax(200px, 1fr)); gap: 20px; }
+        .stat-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .stat-card h3 { font-size: 0.8rem; color: #64748b; text-transform: uppercase; margin-bottom: 10px; }
+        .stat-card p { font-size: 2rem; font-weight: 700; color: #1e293b; }
 
-        .form-side {
-            flex: 1.5;
-        }
+        /* Modales */
+        .admin-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .admin-modal-content { background: white; padding: 30px; border-radius: 24px; position: relative; width: 90%; max-width: 500px; }
+        .admin-modal-content.wide { max-width: 850px; }
 
-        .preview-side {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 18px;
-            border: 1.5px solid #e2e8f0;
-        }
+        /* Layout con Vista Previa */
+        .modal-body-layout { display: flex; gap: 30px; margin-top: 20px; }
+        .form-side { flex: 1.5; }
+        .preview-side { flex: 1; background: #f8fafc; padding: 20px; border-radius: 18px; border: 1.5px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; }
+        .image-preview-container { width: 100%; aspect-ratio: 2.5/3.5; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #e2e8f0; }
+        .image-preview-container img { width: 100%; height: 100%; object-fit: contain; display: none; }
+        .image-preview-container.active img { display: block; }
+        .image-preview-container .placeholder-icon { font-size: 3rem; color: #cbd5e1; }
+        .image-preview-container.active .placeholder-icon { display: none; }
 
-        .image-preview-container {
-            width: 100%;
-            aspect-ratio: 2.5 / 3.5;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            margin-bottom: 15px;
-            border: 1px solid #e2e8f0;
-        }
+        /* Formularios */
+        .form-row { display: flex; gap: 15px; }
+        .form-group { flex: 1; display: flex; flex-direction: column; margin-bottom: 15px; }
+        .form-group label { font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 5px; text-transform: uppercase; }
+        .form-group input, .form-group select { padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 0.9rem; outline: none; }
+        
+        /* Botones */
+        .add-button { background: #3b82f6; color: white; width: 45px; height: 45px; border-radius: 12px; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .confirm-button { background: #3b82f6; color: white; border: none; padding: 12px 25px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        .action-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #64748b; padding: 5px; }
+        .close-button { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #94a3b8; }
 
-        .image-preview-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: none;
-        }
-
-        .image-preview-container.active img {
-            display: block;
-        }
-
-        .image-preview-container .placeholder-icon {
-            font-size: 3rem;
-            color: #cbd5e1;
-        }
-
-        .image-preview-container.active .placeholder-icon {
-            display: none;
-        }
-
-        .preview-info {
-            text-align: center;
-            color: #64748b;
-            font-size: 0.8rem;
-        }
-
-        .form-row {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 10px;
-        }
-
-        .form-group {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 15px;
-            text-align: left;
-        }
-
-        .form-group label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #475569;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-
-        .form-group input, .form-group select {
-            padding: 12px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            outline: none;
-            transition: all 0.2s;
-        }
-
-        .form-group input:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
         @media (max-width: 850px) {
-            .modal-body-layout {
-                flex-direction: column-reverse;
-            }
-            .preview-side {
-                flex-direction: row;
-                gap: 15px;
-                padding: 15px;
-            }
-            .image-preview-container {
-                width: 100px;
-                margin-bottom: 0;
-            }
+            .modal-body-layout { flex-direction: column-reverse; }
+            .sidebar { display: none; }
         }
     </style>
 </head>
 <body>
 
-    <!-- PANTALLA DE LOGIN -->
+    <!-- LOGIN -->
     <div id="loginModal">
-        <div class="login-card">
-            <div class="svg-header">
-                <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="10" stroke="#3182ce" stroke-width="2" fill="none"/>
-                    <line x1="2" y1="12" x2="22" y2="12" stroke="#3182ce" stroke-width="2"/>
-                    <circle cx="12" cy="12" r="3" stroke="#3182ce" stroke-width="2" fill="white"/>
-                </svg>
+        <div style="background: white; padding: 40px; border-radius: 32px; width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); text-align: center;">
+            <div style="width: 60px; height: 60px; background: #eff6ff; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                <i class="fas fa-shield-alt" style="color: #3b82f6; font-size: 1.5rem;"></i>
             </div>
-            <h2 style="font-weight: 700; color: #1a202c; margin-bottom: 8px;">DND TCG Panel</h2>
+            <h2 style="font-weight: 800; color: #1e293b; margin-bottom: 5px;">DND TCG Admin</h2>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 30px;">Ingresa para gestionar tu inventario</p>
             <form id="loginForm">
-                <div style="text-align: left; margin-bottom: 16px;">
-                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568;">Email</label>
-                    <input type="email" id="username" placeholder="admin@dndtcg.com" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
+                <div style="text-align: left; margin-bottom: 15px;">
+                    <label style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Email</label>
+                    <input type="email" id="username" placeholder="admin@dndtcg.com" style="width: 100%; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 15px; margin-top: 5px;" required>
                 </div>
-                <div style="text-align: left; margin-bottom: 24px;">
-                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568;">Contraseña</label>
-                    <input type="password" id="password" placeholder="••••••••" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
+                <div style="text-align: left; margin-bottom: 25px;">
+                    <label style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Contraseña</label>
+                    <input type="password" id="password" placeholder="••••••••" style="width: 100%; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 15px; margin-top: 5px;" required>
                 </div>
-                <button type="submit" id="loginBtnSubmit" style="width: 100%; padding: 16px; background: #3182ce; color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer;">
-                    Iniciar Sesión
-                </button>
+                <button type="submit" id="loginBtnSubmit" class="confirm-button" style="width: 100%; padding: 16px; font-size: 1rem; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);">Acceder</button>
             </form>
-            <p id="loginMessage" style="color: #e53e3e; margin-top: 20px; font-size: 0.85rem; display: none; padding: 10px; background: #fff5f5; border-radius: 8px;"></p>
+            <p id="loginMessage" style="color: #ef4444; margin-top: 20px; font-size: 0.85rem; display: none;"></p>
         </div>
     </div>
 
-    <!-- PANEL ADMINISTRATIVO -->
-    <div class="admin-container">
+    <!-- PANEL ADMIN -->
+    <div class="admin-container" id="adminContainer">
         <aside class="sidebar" id="sidebar-menu">
             <div class="sidebar-header">
-                <h3>DND TCG Admin</h3>
-                <button id="closeSidebarBtn" class="close-sidebar-btn"><i class="fas fa-times"></i></button>
+                <h3 style="font-weight: 800; letter-spacing: -0.5px;">DND TCG Admin</h3>
             </div>
             <nav class="sidebar-nav">
-                <ul class="sidebar-links-list">
-                    <li><a href="#" data-section="dashboard-section" class="nav-link active"><i class="fas fa-chart-line"></i> Dashboard</a></li>
-                    <li><a href="#" data-section="cards-section" class="nav-link"><i class="fas fa-clone"></i> Gestión de Cartas</a></li>
-                    <li><a href="#" data-section="sealed-products-section" class="nav-link"><i class="fas fa-box"></i> Productos Sellados</a></li>
-                    <li><a href="#" data-section="categories-section" class="nav-link"><i class="fas fa-tags"></i> Categorías</a></li>
-                    <li><a href="#" data-section="orders-section" class="nav-link"><i class="fas fa-shopping-cart"></i> Pedidos</a></li>
-                    <li><a href="#" id="nav-logout-btn" style="color: #e53e3e; margin-top: 20px;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
-                </ul>
+                <a href="#" data-section="dashboard-section" class="nav-link active"><i class="fas fa-chart-line"></i> Dashboard</a>
+                <a href="#" data-section="cards-section" class="nav-link"><i class="fas fa-clone"></i> Gestión de Cartas</a>
+                <a href="#" data-section="sealed-products-section" class="nav-link"><i class="fas fa-box"></i> Productos Sellados</a>
+                <a href="#" data-section="categories-section" class="nav-link"><i class="fas fa-tags"></i> Categorías</a>
+                <a href="#" data-section="orders-section" class="nav-link"><i class="fas fa-shopping-cart"></i> Pedidos</a>
             </nav>
+            <div style="padding: 20px; border-top: 1px solid #334155;">
+                <a href="#" id="nav-logout-btn" style="color: #f87171; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 0.9rem;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+            </div>
         </aside>
 
         <main class="main-content">
             <header class="main-header">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <button id="sidebarToggleBtn" class="sidebar-toggle-btn"><i class="fas fa-bars"></i></button>
-                    <h1 id="main-title">Panel de Control</h1>
-                </div>
-                <div class="header-right-controls">
-                    <button id="refreshAdminPageBtn" class="refresh-button"><i class="fas fa-sync-alt"></i></button>
-                    <div class="user-info">Admin TCG</div>
-                </div>
+                <h2 id="main-title" style="font-weight: 800; color: #1e293b;">Panel de Control</h2>
+                <button id="refreshAdminPageBtn" class="action-btn" style="background: white; width: 40px; height: 40px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><i class="fas fa-sync-alt"></i></button>
             </header>
 
+            <!-- SECCIÓN DASHBOARD -->
             <section id="dashboard-section" class="admin-section active">
                 <div class="dashboard-stats">
                     <div class="stat-card"><h3>Total Cartas</h3><p id="totalCardsCount">0</p></div>
                     <div class="stat-card"><h3>Sellados</h3><p id="totalSealedProductsCount">0</p></div>
                     <div class="stat-card"><h3>Categorías</h3><p id="uniqueCategoriesCount">0</p></div>
-                    <div class="stat-card"><h3>Sin Stock</h3><p id="outOfStockCount" style="color: #e53e3e;">0</p></div>
+                    <div class="stat-card"><h3>Sin Stock</h3><p id="outOfStockCount" style="color: #ef4444;">0</p></div>
                 </div>
             </section>
 
+            <!-- SECCIÓN CARTAS -->
             <section id="cards-section" class="admin-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                    <h2>Inventario de Cartas</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <h3 style="font-weight: 700;">Cartas Pokémon</h3>
                     <div style="display: flex; gap: 10px;">
-                        <button id="openScannerBtn" class="confirm-button" style="background-color: #10b981; border-radius: 50px;">
-                            <i class="fas fa-search"></i> Buscar Código
-                        </button>
+                        <button id="openScannerBtn" class="confirm-button" style="background: #10b981;"><i class="fas fa-search"></i> Buscador TCG</button>
                         <button id="addCardBtn" class="add-button">+</button>
                     </div>
                 </div>
                 <div class="table-responsive">
                     <table id="cardsTable">
-                        <thead>
-                            <tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Expansión</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>
-                        </thead>
+                        <thead><tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Expansión</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- ... (Otras secciones) ... -->
+            <!-- SECCIÓN SELLADOS -->
+            <section id="sealed-products-section" class="admin-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <h3 style="font-weight: 700;">Productos Sellados</h3>
+                    <button id="addSealedProductBtn" class="add-button">+</button>
+                </div>
+                <div class="table-responsive">
+                    <table id="sealedProductsTable">
+                        <thead><tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECCIÓN CATEGORÍAS -->
+            <section id="categories-section" class="admin-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <h3 style="font-weight: 700;">Gestión de Categorías</h3>
+                    <button id="addCategoryBtn" class="add-button">+</button>
+                </div>
+                <div class="table-responsive" style="max-width: 600px;">
+                    <table id="categoriesTable">
+                        <thead><tr><th>Nombre</th><th>Acciones</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECCIÓN PEDIDOS -->
+            <section id="orders-section" class="admin-section">
+                <h3 style="margin-bottom: 25px; font-weight: 700;">Pedidos Recientes</h3>
+                <div class="table-responsive">
+                    <table id="ordersTable">
+                        <thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
         </main>
     </div>
 
-    <!-- MODAL CARTA (REDISEÑADO CON VISTA PREVIA) -->
+    <!-- MODALES -->
     <div id="cardModal" class="admin-modal">
-        <div class="admin-modal-content">
+        <div class="admin-modal-content wide">
             <span class="close-button">&times;</span>
-            <h3 id="cardModalTitle" style="font-weight: 700; color: #1e293b;">Gestionar Carta</h3>
-            
+            <h3 id="cardModalTitle" style="font-weight: 800;">Gestionar Carta</h3>
             <div class="modal-body-layout">
-                <!-- LADO IZQUIERDO: FORMULARIO -->
                 <div class="form-side">
                     <form id="cardForm">
                         <input type="hidden" id="cardId">
-                        
-                        <!-- Fila 1: Nombre -->
-                        <div class="form-group">
-                            <label>Nombre de la Carta</label>
-                            <input type="text" id="cardName" placeholder="Ej: Pikachu" required>
-                        </div>
-
-                        <!-- Fila 2: Código, Expansión, Categoría -->
+                        <div class="form-group"><label>Nombre de la Carta</label><input type="text" id="cardName" required></div>
                         <div class="form-row">
-                            <div class="form-group">
-                                <label>Código</label>
-                                <input type="text" id="cardCode" placeholder="028/151" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Expansión</label>
-                                <input type="text" id="cardExpansion" placeholder="Ej: 151" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Categoría</label>
-                                <select id="cardCategory" required></select>
-                            </div>
+                            <div class="form-group"><label>Código</label><input type="text" id="cardCode" required></div>
+                            <div class="form-group"><label>Expansión</label><input type="text" id="cardExpansion" required></div>
+                            <div class="form-group"><label>Categoría</label><select id="cardCategory" required></select></div>
                         </div>
-
-                        <!-- Fila 3: Precio y Stock -->
                         <div class="form-row">
-                            <div class="form-group">
-                                <label>Precio ($)</label>
-                                <input type="number" step="0.01" id="cardPrice" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Stock</label>
-                                <input type="number" id="cardStock" required>
-                            </div>
+                            <div class="form-group"><label>Precio ($)</label><input type="number" step="0.01" id="cardPrice" required></div>
+                            <div class="form-group"><label>Stock</label><input type="number" id="cardStock" required></div>
                         </div>
-
-                        <!-- Fila 4: Imagen URL -->
-                        <div class="form-group">
-                            <label>URL de Imagen</label>
-                            <input type="url" id="cardImage" placeholder="https://...">
-                        </div>
-
-                        <button type="submit" class="confirm-button" style="width: 100%; margin-top: 10px; padding: 15px; border-radius: 12px; font-weight: 700;">
-                            Guardar en Inventario
-                        </button>
+                        <div class="form-group"><label>URL de Imagen</label><input type="url" id="cardImage" placeholder="https://..."></div>
+                        <button type="submit" class="confirm-button" style="width: 100%; margin-top: 10px;">Guardar Inventario</button>
                     </form>
                 </div>
-
-                <!-- LADO DERECHO: VISTA PREVIA -->
                 <div class="preview-side">
                     <div id="imagePreviewContainer" class="image-preview-container">
                         <i class="fas fa-image placeholder-icon"></i>
-                        <img id="cardImagePreview" src="" alt="Vista previa de carta">
+                        <img id="cardImagePreview" src="" alt="Preview">
                     </div>
-                    <div class="preview-info">
-                        <p style="font-weight: 700; color: #475569; font-size: 0.85rem;">Vista Previa</p>
-                        <p style="font-size: 0.7rem;">La imagen se actualizará al escribir o buscar una carta.</p>
-                    </div>
+                    <p style="font-size: 0.7rem; color: #94a3b8; text-align: center; margin-top: 10px;">Vista Previa del Arte</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- OTROS MODALES -->
     <div id="sealedProductModal" class="admin-modal">
         <div class="admin-modal-content">
             <span class="close-button">&times;</span>
             <h3 id="sealedProductModalTitle">Producto Sellado</h3>
-            <form id="sealedProductForm">
+            <form id="sealedProductForm" style="margin-top: 20px;">
                 <input type="hidden" id="sealedProductId">
-                <label>Nombre</label><input type="text" id="sealedProductName" required>
-                <label>Categoría</label><select id="sealedProductCategory" required></select>
-                <label>Precio</label><input type="number" step="0.01" id="sealedProductPrice" required>
-                <label>Stock</label><input type="number" id="sealedProductStock" required>
-                <label>Imagen URL</label><input type="url" id="sealedProductImage">
-                <button type="submit" class="confirm-button" style="width: 100%; margin-top: 15px;">Guardar</button>
+                <div class="form-group"><label>Nombre del Producto</label><input type="text" id="sealedProductName" required></div>
+                <div class="form-group"><label>Categoría</label><select id="sealedProductCategory" required></select></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Precio</label><input type="number" step="0.01" id="sealedProductPrice" required></div>
+                    <div class="form-group"><label>Stock</label><input type="number" id="sealedProductStock" required></div>
+                </div>
+                <div class="form-group"><label>Imagen URL</label><input type="url" id="sealedProductImage"></div>
+                <button type="submit" class="confirm-button" style="width: 100%;">Guardar Producto</button>
             </form>
         </div>
     </div>
@@ -345,10 +253,10 @@
         <div class="admin-modal-content">
             <span class="close-button">&times;</span>
             <h3 id="categoryModalTitle">Categoría</h3>
-            <form id="categoryForm">
+            <form id="categoryForm" style="margin-top: 20px;">
                 <input type="hidden" id="categoryId">
-                <label>Nombre</label><input type="text" id="categoryName" required>
-                <button type="submit" class="confirm-button" style="width: 100%; margin-top: 15px;">Guardar</button>
+                <div class="form-group"><label>Nombre de Categoría</label><input type="text" id="categoryName" required></div>
+                <button type="submit" class="confirm-button" style="width: 100%;">Guardar Categoría</button>
             </form>
         </div>
     </div>
