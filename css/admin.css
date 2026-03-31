@@ -1,192 +1,261 @@
-/* --- ESTILOS GENERALES Y RESET --- */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+:root {
+    --primary-color: #3182ce;
+    --success-color: #48bb78;
+    --warning-color: #ecc94b;
+    --danger-color: #e53e3e;
+    --dark-bg: #2d3748;
+    --light-bg: #f4f7f9;
 }
 
 body {
-    background-color: #f4f7f6;
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--light-bg);
     color: #333;
+    margin: 0;
+    padding: 0;
 }
 
-/* --- LAYOUT PRINCIPAL --- */
+/* ==========================================================================
+   Layout Principal
+   ========================================================================== */
 .admin-container {
     display: flex;
     min-height: 100vh;
 }
 
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-header {
+    background-color: #fff;
+    padding: 15px 30px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-right-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-section {
+    padding: 25px;
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.admin-section.active {
+    display: flex;
+}
+
+/* ==========================================================================
+   Sidebar
+   ========================================================================== */
 .sidebar {
     width: 260px;
-    background-color: #2c3e50;
-    color: white;
-    transition: all 0.3s ease;
+    background-color: var(--dark-bg);
+    color: #a0aec0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
 }
 
-.main-content {
-    flex-grow: 1;
-    padding: 25px;
-    background-color: #f4f7f6;
+.sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #a0aec0;
+    text-decoration: none;
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    transition: 0.2s;
 }
 
-/* --- BOTONES CUADRADOS (NUEVOS) --- */
-.btn-square {
-    width: 45px;
-    height: 45px;
+.sidebar-nav a:hover, .sidebar-nav a.active {
+    background-color: #4a5568;
+    color: #fff;
+}
+
+/* ==========================================================================
+   NUEVO: Estilos del Escáner
+   ========================================================================== */
+.scanner-container {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    border: 4px solid #fff;
+}
+
+.scanner-overlay div {
+    transition: border-color 0.3s ease;
+}
+
+/* Animación de escaneo (línea roja que baja) */
+@keyframes scanline {
+    0% { top: 10%; }
+    100% { top: 90%; }
+}
+
+.scanner-container::after {
+    content: "";
+    position: absolute;
+    left: 15%;
+    width: 70%;
+    height: 2px;
+    background: rgba(49, 130, 206, 0.8);
+    box-shadow: 0 0 15px 2px rgba(49, 130, 206, 0.8);
+    animation: scanline 2s infinite alternate ease-in-out;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   Botones y Controles
+   ========================================================================== */
+.add-button {
+    background-color: var(--success-color);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.edit-button { background-color: var(--warning-color); color: #fff; }
+.delete-button { background-color: var(--danger-color); color: #fff; }
+
+.refresh-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1.2rem;
-    transition: all 0.2s ease;
-    color: white;
+    background: #edf2f7;
+    transition: 0.2s;
 }
 
-.btn-green {
-    background-color: #28a745;
-}
-
-.btn-green:hover {
-    background-color: #218838;
-}
-
-.btn-blue {
-    background-color: #007bff;
-}
-
-.btn-blue:hover {
-    background-color: #0069d9;
-}
-
-/* --- TABLAS Y CONTENEDORES --- */
+/* ==========================================================================
+   Tablas
+   ========================================================================== */
 .table-responsive {
-    width: 100%;
-    overflow-x: auto;
-    background: white;
-    padding: 15px;
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    overflow: hidden;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
 }
 
-table th, table td {
-    padding: 12px;
+table th {
+    background-color: #f8fafc;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    padding: 15px;
     text-align: left;
-    border-bottom: 1px solid #eee;
 }
 
-/* --- MODAL (ACTUALIZADO) --- */
+table td {
+    padding: 15px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.set-badge {
+    background: #edf2f7;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+/* ==========================================================================
+   Modales
+   ========================================================================== */
 .admin-modal {
     display: none;
     position: fixed;
-    z-index: 2000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.6);
-    backdrop-filter: blur(3px);
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
 }
 
 .admin-modal-content {
-    background-color: #fff;
-    margin: 5% auto;
+    background: #fff;
     padding: 30px;
-    width: 90%;
+    border-radius: 16px;
+    width: 100%;
     max-width: 550px;
-    border-radius: 12px;
+    max-height: 90vh;
+    overflow-y: auto;
     position: relative;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
-.close-button {
-    position: absolute;
-    right: 20px;
-    top: 15px;
-    font-size: 24px;
-    cursor: pointer;
-    color: #666;
+.admin-modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
-/* --- FORMULARIOS --- */
-form label {
-    display: block;
-    margin-top: 15px;
-    font-weight: bold;
-    color: #444;
-}
-
-form input, form select {
-    width: 100%;
-    padding: 10px;
-    margin-top: 5px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-}
-
-#saveCardBtn {
-    background-color: #ed1c24;
-    color: white;
-    border: none;
+input, select {
     padding: 12px;
-    width: 100%;
-    margin-top: 25px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: bold;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: inherit;
 }
 
-/* --- ESCÁNER --- */
-.scanner-container {
-    position: relative;
-    max-width: 500px;
-    margin: 20px auto;
-    border-radius: 15px;
-    overflow: hidden;
-    background: #000;
-    aspect-ratio: 3/4;
-    border: 4px solid #333;
-}
-
-#video-preview {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.scanner-overlay {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 80%;
-    height: 70%;
-    border: 2px solid #ed1c24;
-    border-radius: 10px;
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-    pointer-events: none;
-}
-
-.scanner-line {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: #ed1c24;
-    box-shadow: 0 0 15px #ed1c24;
-    animation: scan-anim 2s infinite linear;
-}
-
-@keyframes scan-anim {
-    0% { top: 0; }
-    100% { top: 100%; }
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 1001;
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .sidebar-overlay.active {
+        display: block;
+    }
+    
+    .main-header h1 {
+        font-size: 1.1rem;
+    }
 }
