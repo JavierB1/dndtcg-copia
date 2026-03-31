@@ -29,11 +29,9 @@ const appId = firebaseConfig.projectId;
 // ==========================================================================
 // 2. CONTROL DE SESIÓN (OBLIGATORIO AL RECARGAR PESTAÑA)
 // ==========================================================================
-// Forzamos el cierre de sesión inmediatamente al cargar el script
 let isForcedLogoutDone = false;
 signOut(auth).then(() => {
     isForcedLogoutDone = true;
-    console.log("Sesión previa limpiada correctamente.");
 });
 
 // Variables Globales de Estado
@@ -158,7 +156,7 @@ function fillCardForm(card) {
 }
 
 // ==========================================================================
-// 5. CRUD Y CARGA DE DATOS (REFORZADO CONTRA DUPLICADOS)
+// 5. CRUD Y CARGA DE DATOS
 // ==========================================================================
 
 async function handleSaveCard(e) {
@@ -166,7 +164,6 @@ async function handleSaveCard(e) {
     const id = document.getElementById('cardId').value;
     const nombre = document.getElementById('cardName').value.trim();
     
-    // --- VALIDACIÓN DE NOMBRE DUPLICADO ---
     const duplicado = allCards.find(c => c.nombre.toLowerCase() === nombre.toLowerCase() && c.id !== id);
     if (duplicado) {
         alert("¡Error! Ya existe una carta con el nombre: " + nombre);
@@ -233,12 +230,10 @@ async function handleSaveCategory(e) {
 
 async function loadAllData() {
     try {
-        // Cargar Categorías
         const catSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'categories'));
         allCategories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCategoriesTable();
         
-        // Llenar Selects
         const catSelects = [document.getElementById('cardCategory'), document.getElementById('sealedProductCategory')];
         catSelects.forEach(sel => {
             if(sel) {
@@ -247,17 +242,14 @@ async function loadAllData() {
             }
         });
 
-        // Cargar Cartas
         const cardSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'cards'));
         allCards = cardSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCardsTable();
 
-        // Cargar Productos Sellados
         const sealedSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'));
         allSealed = sealedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderSealedTable();
 
-        // Cargar Pedidos
         const orderSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
         allOrders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderOrdersTable();
@@ -365,7 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
     sealedProductModal = document.getElementById('sealedProductModal');
     categoryModal = document.getElementById('categoryModal');
 
-    // Navegación Sidebar
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -373,7 +364,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Login Form
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const user = document.getElementById('username').value.trim();
@@ -403,7 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Inyectar Buscador en el modal vacío del HTML
     const modalContent = document.getElementById('quickSearchContent');
     if (modalContent) {
         modalContent.innerHTML = `
@@ -429,26 +418,21 @@ document.addEventListener('DOMContentLoaded', () => {
         submitSearchBtn.addEventListener('click', handleQuickSearch);
     }
 
-    // Formularios
     cardForm?.addEventListener('submit', handleSaveCard);
     sealedForm?.addEventListener('submit', handleSaveSealed);
     catForm?.addEventListener('submit', handleSaveCategory);
 
-    // Botones Añadir
     document.getElementById('addCardBtn')?.addEventListener('click', () => { cardForm.reset(); document.getElementById('cardId').value = ''; openModal(cardModal); });
     document.getElementById('addSealedProductBtn')?.addEventListener('click', () => { sealedForm.reset(); document.getElementById('sealedProductId').value = ''; openModal(sealedProductModal); });
     document.getElementById('addCategoryBtn')?.addEventListener('click', () => { catForm.reset(); document.getElementById('categoryId').value = ''; openModal(categoryModal); });
     document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
     document.getElementById('refreshAdminPageBtn')?.addEventListener('click', () => location.reload());
 
-    // Sidebar e iPad
     document.getElementById('sidebarToggleBtn')?.addEventListener('click', (e) => { e.preventDefault(); toggleSidebar(true); });
     document.getElementById('closeSidebarBtn')?.addEventListener('click', (e) => { e.preventDefault(); toggleSidebar(false); });
     sidebarOverlay?.addEventListener('click', () => toggleSidebar(false));
 
-    // Delegación de eventos (X, Editar, Eliminar)
     document.body.addEventListener('click', async (e) => {
-        // CORRECCIÓN: Manejar clics en las X (span) y botones de cierre
         if (e.target.classList.contains('close-button')) {
             const modal = e.target.closest('.admin-modal');
             if (modal) {
@@ -464,7 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = btn.dataset.id;
         const type = btn.dataset.type;
 
-        // EDITAR
         if (btn.classList.contains('edit')) {
             if (type === 'card') {
                 const d = allCards.find(x => x.id === id);
@@ -497,7 +480,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // ELIMINAR
         if (btn.classList.contains('delete')) {
             if (!confirm("¿Seguro que deseas eliminar este elemento?")) return;
             const col = type === 'card' ? 'cards' : (type === 'sealed' ? 'sealed_products' : 'categories');
