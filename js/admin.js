@@ -31,28 +31,27 @@ const btnLogout = document.getElementById('btnLogout');
 let allData = { cards: [], products: [], categories: [], orders: [] };
 
 // --- GESTIÓN DE ESTADO DE AUTENTICACIÓN ---
+// Esta función detecta si el usuario ya está logueado o no
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        console.log("Sesion activa detectada:", user.email);
+        console.log("Sesión activa detectada:", user.email);
         try {
             await loadDashboardData();
-            // Mostramos el panel y ocultamos el login
             document.body.classList.remove('auth-loading', 'auth-guest');
             document.body.classList.add('auth-ready');
         } catch (err) {
-            console.error("Error critico de acceso:", err);
+            console.error("Error al cargar datos tras login:", err);
             handleLogout();
         }
     } else {
-        console.log("No hay usuario autenticado.");
-        // Ocultamos el panel y mostramos el login
+        console.log("No hay usuario. Mostrando login.");
         document.body.classList.remove('auth-loading', 'auth-ready');
         document.body.classList.add('auth-guest');
         clearAllTables();
     }
 });
 
-// --- CARGA DE DATOS DESDE FIRESTORE ---
+// --- CARGA DE DATOS ---
 async function loadDashboardData() {
     const publicPath = (coll) => collection(db, 'artifacts', appId, 'public', 'data', coll);
 
@@ -71,18 +70,42 @@ async function loadDashboardData() {
 
         renderAll();
     } catch (err) {
+        console.error("Error cargando Firestore:", err);
         throw err;
     }
 }
 
-// --- RENDERIZADO DE INTERFAZ ---
+// --- RENDERIZADO ---
 function renderAll() {
     updateStats();
+    addSectionActionButtons(); // Nueva función para los botones "Nuevo"
     renderCardsTable();
     renderCategoriesTable();
     renderProductsTable();
     renderOrdersTable();
-    populateFilters();
+}
+
+// Agregamos los botones de "Añadir Nuevo" a las cabeceras que no los tengan
+function addSectionActionButtons() {
+    const sections = [
+        { id: 'cards-section', label: 'Nueva Carta', icon: 'fa-plus' },
+        { id: 'sealed-products-section', label: 'Nuevo Producto', icon: 'fa-box' },
+        { id: 'categories-section', label: 'Nueva Categoría', icon: 'fa-folder-plus' }
+    ];
+
+    sections.forEach(sec => {
+        const header = document.querySelector(`#${sec.id} .content-header`);
+        if (header && !header.querySelector('.btn-add-new')) {
+            const btn = document.createElement('button');
+            btn.className = 'login-action-btn btn-add-new';
+            btn.style.width = 'auto';
+            btn.style.padding = '0.5rem 1rem';
+            btn.style.fontSize = '0.9rem';
+            btn.innerHTML = `<i class="fas ${sec.icon}"></i> ${sec.label}`;
+            btn.onclick = () => console.log(`Acción: ${sec.label}`);
+            header.appendChild(btn);
+        }
+    });
 }
 
 function updateStats() {
@@ -107,12 +130,7 @@ function renderCardsTable() {
     tbody.innerHTML = allData.cards.map(c => `
         <tr>
             <td>
-                <div class="img-wrapper" style="width: 40px; height: 40px; overflow: hidden; border-radius: 4px; background: #334155;">
-                    <img src="${c.imagen_url || placeholder}" 
-                         width="40" 
-                         style="object-fit: cover; display: block;"
-                         onerror="this.onerror=null;this.src='${placeholder}';">
-                </div>
+                <img src="${c.imagen_url || placeholder}" width="40" height="40" style="object-fit: cover; border-radius: 4px;" onerror="this.src='${placeholder}'">
             </td>
             <td>${c.nombre || 'Sin nombre'}</td>
             <td>$${parseFloat(c.precio || 0).toFixed(2)}</td>
@@ -120,8 +138,8 @@ function renderCardsTable() {
             <td>${c.categoria || 'N/A'}</td>
             <td>
                 <div class="action-buttons-cell">
-                    <button class="btn-icon" onclick="console.log('Editar carta')" title="Editar"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon text-red" onclick="console.log('Eliminar carta')" title="Eliminar"><i class="fas fa-trash"></i></button>
+                    <button class="btn-icon" onclick="console.log('Editar', '${c.id}')" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon text-red" onclick="console.log('Eliminar', '${c.id}')" title="Eliminar"><i class="fas fa-trash"></i></button>
                 </div>
             </td>
         </tr>
@@ -137,7 +155,7 @@ function renderCategoriesTable() {
             <td>${c.name || 'Sin nombre'}</td>
             <td>
                 <div class="action-buttons-cell">
-                    <button class="btn-icon text-red" title="Eliminar"><i class="fas fa-trash"></i></button>
+                    <button class="btn-icon text-red" onclick="console.log('Borrar Categoría', '${c.id}')" title="Eliminar"><i class="fas fa-trash"></i></button>
                 </div>
             </td>
         </tr>
@@ -154,8 +172,8 @@ function renderProductsTable() {
             <td>${p.stock || 0}</td>
             <td>
                 <div class="action-buttons-cell">
-                    <button class="btn-icon" title="Editar"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon text-red" title="Eliminar"><i class="fas fa-trash"></i></button>
+                    <button class="btn-icon" onclick="console.log('Editar Producto', '${p.id}')" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon text-red" onclick="console.log('Borrar Producto', '${p.id}')" title="Eliminar"><i class="fas fa-trash"></i></button>
                 </div>
             </td>
         </tr>
@@ -168,12 +186,12 @@ function renderOrdersTable() {
     tbody.innerHTML = allData.orders.map(o => `
         <tr>
             <td>#${o.id.substring(0, 8)}</td>
-            <td>${o.customer?.nombre || 'Anonimo'}</td>
+            <td>${o.customer?.nombre || 'Anónimo'}</td>
             <td>$${(o.total || 0).toFixed(2)}</td>
             <td><span class="status-badge status-${o.status || 'pending'}">${o.status || 'pendiente'}</span></td>
             <td>
                 <div class="action-buttons-cell">
-                    <button class="btn-icon" title="Ver detalle"><i class="fas fa-eye"></i></button>
+                    <button class="btn-icon" onclick="console.log('Ver pedido', '${o.id}')" title="Ver detalle"><i class="fas fa-eye"></i></button>
                 </div>
             </td>
         </tr>
@@ -184,23 +202,14 @@ function clearAllTables() {
     document.querySelectorAll('table tbody').forEach(tb => tb.innerHTML = '');
 }
 
-function populateFilters() {
-    const select = document.getElementById('adminCategoryFilter');
-    if (!select) return;
-    const options = allData.categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    select.innerHTML = '<option value="">Todas las categorias</option>' + options;
-}
-
 // --- ACCIONES DE USUARIO ---
 
 async function handleLogout() {
     try {
         await signOut(auth);
-        // Al cerrar sesion forzamos la limpieza visual y recarga
-        document.body.className = 'auth-guest';
         window.location.reload();
     } catch (err) {
-        console.error("Error al cerrar sesion:", err);
+        console.error("Error logout:", err);
     }
 }
 
@@ -212,20 +221,18 @@ loginForm?.addEventListener('submit', async (e) => {
 
     try {
         if (btn) btn.disabled = true;
-        loginMessage.textContent = "Iniciando sesion...";
-        loginMessage.style.color = "var(--primary)";
+        loginMessage.textContent = "Verificando...";
         
-        // Configuramos persistencia de sesion (se borra al cerrar/recargar)
+        // REINSTAURADO: Persistencia de sesión (se borra al cerrar/recargar)
         await setPersistence(auth, browserSessionPersistence);
         
-        // Iniciar sesion
         await signInWithEmailAndPassword(auth, email, pass);
         
     } catch (err) {
         if (btn) btn.disabled = false;
-        loginMessage.textContent = "Error: Usuario o contraseña incorrectos.";
+        loginMessage.textContent = "Acceso denegado.";
         loginMessage.style.color = "var(--red)";
-        console.error("Error de login:", err);
+        console.error("Login Error:", err);
     }
 });
 
