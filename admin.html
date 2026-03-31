@@ -16,7 +16,6 @@
     <!-- Overlay para móviles -->
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-    <!-- EL CONTENEDOR PRINCIPAL QUE FALTABA -->
     <div class="admin-container">
         
         <!-- Barra lateral (Sidebar) -->
@@ -78,7 +77,13 @@
             <section id="cards-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <h2>Inventario de Cartas</h2>
-                    <button id="addCardBtn" class="add-button" title="Añadir nueva carta">+</button>
+                    <div style="display: flex; gap: 10px;">
+                        <!-- NUEVO BOTÓN DE ESCÁNER -->
+                        <button id="openScannerBtn" class="confirm-button" style="background-color: #10b981; border-radius: 50px; display: flex; align-items: center; gap: 8px;" title="Escanear carta con cámara">
+                            <i class="fas fa-barcode"></i> Escanear
+                        </button>
+                        <button id="addCardBtn" class="add-button" title="Añadir nueva carta manualmente">+</button>
+                    </div>
                 </div>
                 
                 <div style="display: flex; gap: 15px; margin-bottom: 20px;">
@@ -244,6 +249,31 @@
         </div>
     </div>
 
+    <!-- EL NUEVO MODAL DEL ESCÁNER -->
+    <div id="scannerModal" class="admin-modal">
+        <div class="admin-modal-content" style="max-width: 500px; text-align: center;">
+            <span class="close-button" id="closeScannerBtn">&times;</span>
+            <h3><i class="fas fa-expand"></i> Escaneando Carta...</h3>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 15px;">Coloca la carta frente a la cámara</p>
+            
+            <div class="scanner-container">
+                <!-- Aquí irá el video de la cámara -->
+                <div id="cameraPlaceholder" style="width: 100%; height: 100%; background-color: #1e293b; display: flex; align-items: center; justify-content: center; color: white;">
+                    [Cámara Activa]
+                </div>
+                <!-- El efecto láser -->
+                <div class="scanner-overlay">
+                    <div class="laser-line"></div>
+                </div>
+            </div>
+            
+            <!-- Botón para simular el éxito del escaneo -->
+            <button id="simulateScanBtn" class="confirm-button" style="margin-top: 20px; width: 100%; background-color: #3b82f6;">
+                <i class="fas fa-magic"></i> Simular Escaneo Exitoso
+            </button>
+        </div>
+    </div>
+
     <!-- MODAL: Formulario de Producto Sellado -->
     <div id="sealedProductModal" class="admin-modal">
         <div class="admin-modal-content">
@@ -338,5 +368,54 @@
     <!-- Script principal de tu lógica -->
     <!-- Asegúrate de tener una carpeta llamada "js" -->
     <script type="module" src="js/admin.js"></script>
+
+    <!-- SCRIPT TEMPORAL PARA SIMULAR EL ESCÁNER Y EL AUTOLLENADO -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const scannerModal = document.getElementById('scannerModal');
+            const openScannerBtn = document.getElementById('openScannerBtn');
+            const closeScannerBtn = document.getElementById('closeScannerBtn');
+            const simulateScanBtn = document.getElementById('simulateScanBtn');
+            const cardModal = document.getElementById('cardModal');
+
+            // Abrir escáner
+            openScannerBtn.addEventListener('click', () => {
+                scannerModal.style.display = 'flex';
+            });
+
+            // Cerrar escáner (usamos querySelector para asegurarnos de cerrarlo desde el botón del modal)
+            scannerModal.querySelector('.close-button').addEventListener('click', () => {
+                scannerModal.style.display = 'none';
+            });
+
+            // Al hacer clic en simular escaneo
+            simulateScanBtn.addEventListener('click', () => {
+                // 1. Cerramos el escáner
+                scannerModal.style.display = 'none';
+                
+                // 2. Abrimos el formulario de añadir carta
+                cardModal.style.display = 'flex';
+                document.getElementById('cardModalTitle').innerText = 'Carta Detectada';
+                
+                // 3. ¡AUTOCOMPLETAMOS LOS DATOS! (Esto es lo que hará la API real)
+                document.getElementById('cardName').value = 'Pikachu VMAX (Ejemplo Escaneado)';
+                document.getElementById('cardPrice').value = '25.50';
+                document.getElementById('cardImage').value = 'https://assets.pokemon.com/assets/cms2/img/cards/web/swsh4/swsh4_en_44.png';
+                
+                // Agregamos una categoría de ejemplo temporalmente si no existe
+                const categorySelect = document.getElementById('cardCategory');
+                if(categorySelect.options.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = 'Vivid Voltage';
+                    option.text = 'Vivid Voltage';
+                    categorySelect.appendChild(option);
+                }
+                
+                // Resaltamos los campos para que veas que se llenaron solos
+                document.getElementById('cardName').style.backgroundColor = '#ecfdf5';
+                setTimeout(() => document.getElementById('cardName').style.backgroundColor = '', 2000);
+            });
+        });
+    </script>
 </body>
 </html>
