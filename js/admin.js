@@ -3,6 +3,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { getFirestore, collection, getDocs, doc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
+// CONFIGURACIÓN DE FIREBASE
 const firebaseConfig = {
     apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
     authDomain: "dndtcgadmin.firebaseapp.com",
@@ -30,19 +31,24 @@ let allProducts = [];
 let allCategories = [];
 let allOrders = [];
 
-// CONTROL DE ACCESO Y CARGA INICIAL
+// ==========================================
+// CONTROL DE ACCESO (BLOQUEO TOTAL)
+// ==========================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
         console.log("Sesión activa para:", user.email);
+        // Agregamos la clase al body para desbloquear el CSS
         document.body.classList.add('auth-ready');
         loadAllAdminData();
     } else {
-        console.log("No hay sesión");
+        console.log("No hay sesión activa");
         document.body.classList.remove('auth-ready');
     }
 });
 
-// FUNCIÓN MAESTRA DE CARGA
+// ==========================================
+// CARGA DE DATOS DESDE FIRESTORE
+// ==========================================
 async function loadAllAdminData() {
     try {
         await Promise.all([
@@ -57,7 +63,6 @@ async function loadAllAdminData() {
     }
 }
 
-// OBTENER CATEGORÍAS
 async function fetchCategories() {
     const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'categories');
     const snap = await getDocs(colRef);
@@ -66,7 +71,6 @@ async function fetchCategories() {
     populateCategoryFilters();
 }
 
-// OBTENER CARTAS
 async function fetchCards() {
     const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'cards');
     const snap = await getDocs(colRef);
@@ -74,7 +78,6 @@ async function fetchCards() {
     renderCards();
 }
 
-// OBTENER PRODUCTOS SELLADOS
 async function fetchSealedProducts() {
     const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products');
     const snap = await getDocs(colRef);
@@ -82,7 +85,6 @@ async function fetchSealedProducts() {
     renderProducts();
 }
 
-// OBTENER PEDIDOS
 async function fetchOrders() {
     const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
     const snap = await getDocs(colRef);
@@ -90,15 +92,25 @@ async function fetchOrders() {
     renderOrders();
 }
 
-// ACTUALIZAR DASHBOARD
+// ==========================================
+// ACTUALIZACIÓN DEL DASHBOARD
+// ==========================================
 function updateDashboardStats() {
-    document.getElementById('stat-total-cards').textContent = allCards.length;
-    const totalStock = allCards.reduce((acc, card) => acc + (parseInt(card.stock) || 0), 0);
-    document.getElementById('stat-total-stock').textContent = totalStock;
-    document.getElementById('stat-total-orders').textContent = allOrders.length;
+    const statCards = document.getElementById('stat-total-cards');
+    const statStock = document.getElementById('stat-total-stock');
+    const statOrders = document.getElementById('stat-total-orders');
+
+    if (statCards) statCards.textContent = allCards.length;
+    if (statStock) {
+        const totalStock = allCards.reduce((acc, card) => acc + (parseInt(card.stock) || 0), 0);
+        statStock.textContent = totalStock;
+    }
+    if (statOrders) statOrders.textContent = allOrders.length;
 }
 
+// ==========================================
 // RENDERIZADO DE TABLAS
+// ==========================================
 function renderCards() {
     const tbody = document.querySelector('#cardsTable tbody');
     if (!tbody) return;
@@ -116,13 +128,16 @@ function renderCards() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${card.id.substring(0, 6)}</td>
-            <td><img src="${card.imagen_url}" style="width:40px; border-radius:4px;"></td>
+            <td><img src="${card.imagen_url}" style="width:40px; height:auto; border-radius:4px;" onerror="this.src='https://via.placeholder.com/40'"></td>
             <td>${card.nombre}</td>
-            <td>$${parseFloat(card.precio).toFixed(2)}</td>
-            <td>${card.stock}</td>
-            <td>${card.categoria || 'N/A'}</td>
+            <td>$${parseFloat(card.precio || 0).toFixed(2)}</td>
+            <td>${card.stock || 0}</td>
+            <td>${card.categoria || 'Sin categoría'}</td>
             <td>
-                <button class="action-btn-edit" onclick="editCard('${card.id}')"><i class="fas fa-edit"></i></button>
+                <div class="actions-flex">
+                    <button class="action-btn-edit" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn-delete" title="Eliminar"><i class="fas fa-trash"></i></button>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
@@ -136,7 +151,9 @@ function renderCategories() {
         <tr>
             <td>${cat.id.substring(0,6)}</td>
             <td>${cat.name}</td>
-            <td><button class="action-btn-delete"><i class="fas fa-trash"></i></button></td>
+            <td>
+                <button class="action-btn-delete"><i class="fas fa-trash"></i></button>
+            </td>
         </tr>
     `).join('');
 }
@@ -148,9 +165,11 @@ function renderProducts() {
         <tr>
             <td>${p.id.substring(0,6)}</td>
             <td>${p.nombre}</td>
-            <td>$${parseFloat(p.precio).toFixed(2)}</td>
-            <td>${p.stock}</td>
-            <td><button class="action-btn-edit"><i class="fas fa-edit"></i></button></td>
+            <td>$${parseFloat(p.precio || 0).toFixed(2)}</td>
+            <td>${p.stock || 0}</td>
+            <td>
+                <button class="action-btn-edit"><i class="fas fa-edit"></i></button>
+            </td>
         </tr>
     `).join('');
 }
@@ -161,10 +180,12 @@ function renderOrders() {
     tbody.innerHTML = allOrders.map(o => `
         <tr>
             <td>${o.id.substring(0,8)}</td>
-            <td>${o.customer?.nombre || 'Cliente'}</td>
+            <td>${o.customer?.nombre || 'Cliente Anónimo'}</td>
             <td>$${(o.total || 0).toFixed(2)}</td>
-            <td><span class="badge-${o.status}">${o.status}</span></td>
-            <td><button class="action-btn-view"><i class="fas fa-eye"></i></button></td>
+            <td><span class="status-badge status-${o.status || 'pending'}">${o.status || 'pendiente'}</span></td>
+            <td>
+                <button class="action-btn-view"><i class="fas fa-eye"></i></button>
+            </td>
         </tr>
     `).join('');
 }
@@ -175,12 +196,16 @@ function populateCategoryFilters() {
     adminCategoryFilter.innerHTML = '<option value="">Todas las categorías</option>' + options;
 }
 
-// EVENTOS DE BÚSQUEDA
+// ==========================================
+// EVENTOS DE BUSQUEDA Y FILTRADO
+// ==========================================
 adminSearchInput?.addEventListener('input', renderCards);
 adminCategoryFilter?.addEventListener('change', renderCards);
 
-// LÓGICA DE LOGIN
-loginForm.addEventListener('submit', async (e) => {
+// ==========================================
+// LÓGICA DE AUTENTICACIÓN (LOGIN)
+// ==========================================
+loginForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('username').value;
     const pass = document.getElementById('password').value;
@@ -188,31 +213,44 @@ loginForm.addEventListener('submit', async (e) => {
     try {
         loginMessage.style.display = "block";
         loginMessage.style.color = "var(--primary)";
-        loginMessage.textContent = "Validando acceso...";
+        loginMessage.textContent = "Verificando identidad...";
+        
         await signInWithEmailAndPassword(auth, email, pass);
     } catch (error) {
+        console.error("Login error:", error);
         loginMessage.style.color = "var(--red)";
-        loginMessage.textContent = "Credenciales incorrectas.";
+        loginMessage.textContent = "Acceso denegado. Verifique sus credenciales.";
     }
 });
 
-// LÓGICA DE SALIDA
-btnLogout.addEventListener('click', async (e) => {
+// LÓGICA DE CIERRE DE SESIÓN
+btnLogout?.addEventListener('click', async (e) => {
     e.preventDefault();
-    await signOut(auth);
-    window.location.reload();
+    try {
+        await signOut(auth);
+        window.location.reload();
+    } catch (error) {
+        console.error("Logout error:", error);
+    }
 });
 
-// NAVEGACIÓN
+// ==========================================
+// NAVEGACIÓN ENTRE SECCIONES DEL PANEL
+// ==========================================
 document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', (e) => {
         const targetId = link.getAttribute('href')?.substring(1);
-        if (targetId && targetId !== '') {
+        if (targetId && targetId !== '' && targetId !== '#') {
             e.preventDefault();
+            
+            // Actualizar estado del enlace
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             link.classList.add('active');
+
+            // Cambiar visibilidad de la sección
             document.querySelectorAll('.admin-section').forEach(sec => sec.classList.remove('active'));
-            document.getElementById(targetId).classList.add('active');
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) targetSection.classList.add('active');
         }
     });
 });
