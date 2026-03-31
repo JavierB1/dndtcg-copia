@@ -39,16 +39,62 @@ const elements = {
     adminSearchInput: document.getElementById('adminSearchInput'),
     adminCategoryFilter: document.getElementById('adminCategoryFilter'),
     adminPageInfo: document.getElementById('adminPageInfo'),
-    btnLogout: document.getElementById('btnLogout')
+    btnLogout: document.getElementById('btnLogout'),
+    mainContent: document.querySelector('.main-content'),
+    sidebar: document.querySelector('.sidebar')
 };
 
 // ==========================================================================
-// FUNCIONES DE CARGA
+// GESTIÓN DE INTERFAZ Y NAVEGACIÓN
+// ==========================================================================
+
+function hideAllSections() {
+    const sections = document.querySelectorAll('.admin-section');
+    sections.forEach(s => {
+        s.classList.remove('active');
+        s.style.display = 'none';
+    });
+}
+
+function showSection(sectionId) {
+    hideAllSections();
+    const target = document.getElementById(sectionId);
+    if (target) {
+        target.classList.add('active');
+        target.style.display = 'block';
+    }
+}
+
+/**
+ * Control crítico de visibilidad inicial.
+ * Bloquea la interfaz hasta que auth responda.
+ */
+function setInitialUIState(isAuthenticated) {
+    if (isAuthenticated) {
+        // Usuario logueado: Mostrar app, ocultar modal
+        if (elements.loginModal) elements.loginModal.style.setProperty('display', 'none', 'important');
+        if (elements.sidebar) elements.sidebar.style.display = 'flex';
+        if (elements.mainContent) elements.mainContent.style.display = 'block';
+        showSection('dashboard-section');
+    } else {
+        // Usuario no logueado: Ocultar todo, forzar modal
+        if (elements.sidebar) elements.sidebar.style.display = 'none';
+        if (elements.mainContent) elements.mainContent.style.display = 'none';
+        hideAllSections();
+        if (elements.loginModal) {
+            elements.loginModal.style.setProperty('display', 'flex', 'important');
+            elements.loginModal.style.visibility = 'visible';
+            elements.loginModal.style.opacity = '1';
+        }
+    }
+}
+
+// ==========================================================================
+// FUNCIONES DE CARGA DE DATOS
 // ==========================================================================
 
 async function loadAllData() {
     if (!auth.currentUser) return;
-
     try {
         await Promise.all([
             loadCategories(),
@@ -57,9 +103,8 @@ async function loadAllData() {
             loadOrdersData()
         ]);
         updateDashboardStats();
-        console.log("Datos cargados exitosamente.");
     } catch (error) {
-        console.error("Error al sincronizar datos:", error);
+        console.error("Error en carga masiva:", error);
     }
 }
 
@@ -104,41 +149,17 @@ async function loadOrdersData() {
 }
 
 // ==========================================================================
-// GESTIÓN DE INTERFAZ Y AUTH
+// AUTENTICACIÓN
 // ==========================================================================
-
-function showSection(sectionId) {
-    // Ocultar todas las secciones usando la lógica del CSS (.active)
-    const sections = document.querySelectorAll('.admin-section');
-    sections.forEach(s => {
-        s.classList.remove('active');
-        s.style.display = 'none'; // Refuerzo para asegurar que desaparezca
-    });
-
-    const target = document.getElementById(sectionId);
-    if (target) {
-        target.classList.add('active');
-        target.style.display = 'block';
-    }
-}
 
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        console.log("Usuario autenticado:", user.email);
-        if (elements.loginModal) elements.loginModal.style.setProperty('display', 'none', 'important');
-        
-        // Mostrar Dashboard por defecto al entrar
-        showSection('dashboard-section');
+        console.log("Acceso autorizado:", user.email);
+        setInitialUIState(true);
         loadAllData();
     } else {
-        console.log("Estado: Sin sesión.");
-        // Ocultamos todo el contenido para que no se vea el dashboard vacío
-        const sections = document.querySelectorAll('.admin-section');
-        sections.forEach(s => s.style.display = 'none');
-        
-        if (elements.loginModal) {
-            elements.loginModal.style.setProperty('display', 'flex', 'important');
-        }
+        console.log("Acceso restringido: Mostrando Login.");
+        setInitialUIState(false);
     }
 });
 
@@ -150,23 +171,31 @@ async function handleLogin(e) {
 
     try {
         if(msg) {
-            msg.textContent = "Validando...";
+            msg.textContent = "Verificando credenciales...";
             msg.style.display = "block";
+            msg.style.color = "#6366f1";
         }
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-        if(msg) msg.textContent = "Acceso denegado: Revise sus datos.";
-        console.error("Error login:", error.code);
+        if(msg) {
+            msg.textContent = "Error: Usuario o contraseña incorrectos.";
+            msg.style.color = "#ef4444";
+        }
+        console.error("Auth Error:", error.code);
     }
 }
 
 async function handleLogout() {
-    await signOut(auth);
-    window.location.reload();
+    try {
+        await signOut(auth);
+        window.location.reload();
+    } catch (error) {
+        console.error("Logout error:", error);
+    }
 }
 
 // ==========================================================================
-// RENDERIZADO
+// RENDERIZADO DE COMPONENTES
 // ==========================================================================
 
 function updateDashboardStats() {
@@ -254,21 +283,22 @@ function populateCategoryFilters() {
 }
 
 // ==========================================================================
-// INIT
+// INICIALIZACIÓN DE EVENTOS
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Estado inicial de seguridad: Ocultar todo hasta que Firebase hable
+    setInitialUIState(false);
+
     if (elements.loginForm) elements.loginForm.onsubmit = handleLogin;
     if (elements.btnLogout) elements.btnLogout.onclick = handleLogout;
 
-    // Listener para los enlaces de la barra lateral (Navegación)
     document.querySelectorAll('.sidebar-nav a').forEach(link => {
         link.addEventListener('click', (e) => {
             const sectionId = link.getAttribute('href')?.replace('#', '');
             if (sectionId && sectionId !== 'logout') {
                 e.preventDefault();
                 showSection(sectionId);
-                // Marcar como activo visualmente en la sidebar
                 document.querySelectorAll('.sidebar-nav a').forEach(l => l.classList.remove('active'));
                 link.classList.add('active');
             }
