@@ -215,10 +215,9 @@ function showMessageModal(title, text) {
 }
 
 // ==========================================================================
-// FUNCIÓN DE CÁMARA Y ESCÁNER EN VIVO (CONEXIÓN POKÉMON TCG REAL)
+// FUNCIÓN DE CÁMARA Y ESCÁNER REAL (OBTENCIÓN DE URL OFICIAL)
 // ==========================================================================
 
-// Función para cargar la Inteligencia Artificial de lectura de texto
 function loadTesseractAPI() {
     return new Promise((resolve) => {
         if (window.Tesseract) {
@@ -235,15 +234,16 @@ function loadTesseractAPI() {
 async function startCamera() {
     try {
         scannerStatusMessage.textContent = "Solicitando permisos de cámara...";
-        scannerStatusMessage.style.color = "#3b82f6";
         
         mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' }
+            video: { 
+                facingMode: 'environment',
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            }
         });
         
         cameraStream.srcObject = mediaStream;
-        
-        // Iniciar proceso de lectura de inmediato
         startScanningProcess();
     } catch (err) {
         console.error("Error al acceder a la cámara:", err);
@@ -264,111 +264,87 @@ function stopCamera() {
 }
 
 async function startScanningProcess() {
-    scannerStatusMessage.textContent = "Cargando motor de Inteligencia Artificial...";
-    scannerStatusMessage.style.color = "#3b82f6";
-    
+    scannerStatusMessage.textContent = "Cargando motor de IA...";
     await loadTesseractAPI();
-    
-    scannerStatusMessage.textContent = "Buscando código (Ej: 025/165). Mantén la carta quieta...";
+    scannerStatusMessage.textContent = "Enfoca el CÓDIGO (Ej: 025/165) bajo el láser.";
     scannerStatusMessage.style.color = "#10b981";
-    
-    // Inicia un bucle que toma una foto cada 3 segundos hasta encontrar algo
     scanTimeout = setTimeout(processScannedFrame, 3000);
 }
 
 async function processScannedFrame() {
-    if (!mediaStream) return; // Si la cámara se apagó, detenemos el proceso
+    if (!mediaStream) return;
 
     try {
-        scannerStatusMessage.textContent = "Analizando texto de la carta...";
-        scannerStatusMessage.style.color = "#f59e0b"; // Naranja
+        scannerStatusMessage.textContent = "Analizando carta...";
+        scannerStatusMessage.style.color = "#f59e0b";
 
-        // Tomamos una "foto" invisible del video
         const context = captureCanvas.getContext('2d');
         captureCanvas.width = cameraStream.videoWidth;
         captureCanvas.height = cameraStream.videoHeight;
         context.drawImage(cameraStream, 0, 0, captureCanvas.width, captureCanvas.height);
 
-        // Usamos la IA para leer el texto de esa foto
         const result = await Tesseract.recognize(captureCanvas, 'eng');
         const text = result.data.text;
 
-        // Buscamos un patrón típico de Pokémon (números divididos por un slash, ej. 025/165)
-        const numberMatch = text.match(/([a-zA-Z0-9]{1,4})\/(\d{1,3})/);
+        // Buscamos el patrón Number/Total
+        const numberMatch = text.match(/([a-zA-Z0-9]{1,4})\s*\/\s*(\d{1,3})/);
 
         if (numberMatch) {
-            let cardNumber = numberMatch[1];
-            // Removemos ceros a la izquierda (ej. 025 se vuelve 25) porque la API oficial los usa así
-            cardNumber = cardNumber.replace(/^0+/, '');
+            let cardNumber = numberMatch[1].replace(/^0+/, ''); // Limpiar ceros iniciales
+            scannerStatusMessage.textContent = `¡Código detectado: ${numberMatch[0]}! Buscando URL...`;
 
-            scannerStatusMessage.textContent = `¡Código detectado: ${numberMatch[0]}! Descargando datos...`;
-            scannerStatusMessage.style.color = "#10b981";
-
-            // CONEXIÓN A LA API REAL DE POKÉMON TCG
+            // CONEXIÓN A POKÉMON TCG API
             const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:${cardNumber}`);
             const data = await response.json();
 
             if (data.data && data.data.length > 0) {
-                // Si encontramos la carta, autocompletamos
                 fillFormWithAPIData(data.data[0], numberMatch[0]);
             } else {
-                scannerStatusMessage.textContent = `Código ${numberMatch[0]} no encontrado. Intentando de nuevo...`;
-                scannerStatusMessage.style.color = "#ef4444";
-                scanTimeout = setTimeout(processScannedFrame, 3000);
+                scannerStatusMessage.textContent = "No encontrado en base de datos. Reintentando...";
+                scanTimeout = setTimeout(processScannedFrame, 2000);
             }
         } else {
-            // Si la IA no logró leer el texto
-            scannerStatusMessage.textContent = "No detecto el código. Ilumina bien la carta y acércala.";
-            scannerStatusMessage.style.color = "#ef4444";
-            scanTimeout = setTimeout(processScannedFrame, 3000);
+            scannerStatusMessage.textContent = "No detecto el código. Acerca la cámara.";
+            scanTimeout = setTimeout(processScannedFrame, 2000);
         }
     } catch (error) {
-        console.error("Error al leer la carta:", error);
-        scannerStatusMessage.textContent = "Error al procesar. Reintentando...";
-        scanTimeout = setTimeout(processScannedFrame, 3000);
+        console.error("Error:", error);
+        scanTimeout = setTimeout(processScannedFrame, 2000);
     }
 }
 
-// Función que toma los datos de la API de Pokémon y los pega en tu formulario
 function fillFormWithAPIData(card, originalCode) {
     stopCamera();
     closeModal(scannerModal);
     openModal(cardModal);
-    cardModalTitle.textContent = 'Carta Encontrada Automáticamente';
+    cardModalTitle.textContent = 'Carta Identificada';
 
-    // Rellenamos los datos reales
+    // Rellenamos los campos
     cardName.value = card.name;
     cardCode.value = originalCode || card.number;
     cardExpansion.value = card.set.name;
-
-    // Buscamos el precio en la base de datos (Cardmarket o TCGPlayer)
-    let price = 0;
-    if (card.cardmarket && card.cardmarket.prices && card.cardmarket.prices.averageSellPrice) {
-        price = card.cardmarket.prices.averageSellPrice;
-    } else if (card.tcgplayer && card.tcgplayer.prices) {
-        const priceKeys = Object.keys(card.tcgplayer.prices);
-        if (priceKeys.length > 0) {
-            price = card.tcgplayer.prices[priceKeys[0]].market || 0;
-        }
-    }
-    cardPrice.value = parseFloat(price).toFixed(2);
     
-    // Rellenamos la foto oficial
-    cardImage.value = card.images.small || '';
+    // EXTRACCIÓN DE URL (Usa la versión Large si existe, si no la Small)
+    cardImage.value = card.images.large || card.images.small || '';
 
-    // Rellenamos la categoría a "Pokémon TCG"
-    if(cardCategory.options.length === 0) {
-        cardCategory.appendChild(new Option('Pokémon TCG', 'Pokémon TCG'));
-    } else {
-        let exists = Array.from(cardCategory.options).some(opt => opt.value === 'Pokémon TCG');
-        if(!exists) cardCategory.appendChild(new Option('Pokémon TCG', 'Pokémon TCG'));
+    // Autocalcular precio de mercado
+    let marketPrice = 0;
+    if (card.tcgplayer && card.tcgplayer.prices) {
+        const p = card.tcgplayer.prices;
+        const key = Object.keys(p)[0];
+        marketPrice = p[key].market || 0;
     }
+    cardPrice.value = parseFloat(marketPrice).toFixed(2);
+    
+    // Categoría predeterminada
+    if(cardCategory.options.length === 0) cardCategory.appendChild(new Option('Pokémon TCG', 'Pokémon TCG'));
     cardCategory.value = 'Pokémon TCG';
 
-    // Hacemos que brillen en verde un segundo para que veas qué se llenó
-    const fields = [cardName, cardCode, cardExpansion, cardPrice];
-    fields.forEach(f => f.style.backgroundColor = '#ecfdf5');
-    setTimeout(() => fields.forEach(f => f.style.backgroundColor = ''), 2000);
+    // Brillo de éxito
+    [cardName, cardCode, cardExpansion, cardImage].forEach(f => {
+        f.style.backgroundColor = '#ecfdf5';
+        setTimeout(() => f.style.backgroundColor = '', 2000);
+    });
 }
 
 
@@ -383,21 +359,11 @@ async function handleLogin(event) {
 
     try {
         await signInWithEmailAndPassword(auth, email, password);
-        console.log('Administrador ha iniciado sesión con Firebase Auth.');
         closeModal(loginModal);
         showSection(dashboardSection);
         await loadAllData();
     } catch (error) {
-        console.error('Error al iniciar sesión con Firebase:', error);
-        let errorMessage = 'Error al iniciar sesión. Por favor, inténtalo de nuevo.';
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-            errorMessage = 'Correo electrónico o contraseña incorrectos. Por favor, verifica tus credenciales.';
-        } else if (error.code === 'auth/invalid-email') {
-            errorMessage = 'Formato de correo electrónico no válido.';
-        } else if (error.code === 'auth/network-request-failed') {
-            errorMessage = 'Error de red. Verifica tu conexión a internet.';
-        }
-        showLoginError(errorMessage);
+        showLoginError('Error al iniciar sesión. Revisa tus credenciales.');
     }
 }
 
@@ -409,7 +375,7 @@ async function handleLogout() {
         hideAllSections();
         openModal(loginModal);
     } catch (error) {
-        showMessageModal("Error al cerrar sesión", 'Error al cerrar sesión. Por favor, inténtalo de nuevo.');
+        showMessageModal("Error", 'No se pudo cerrar sesión.');
     }
 }
 
@@ -498,7 +464,7 @@ function populateCategoryFiltersAndSelects() {
 
     adminCategoryFilter.innerHTML = '<option value="">Todas las categorías</option>';
     adminSealedCategoryFilter.innerHTML = '<option value="">Todos los tipos</option>';
-    cardCategory.innerHTML = '<option value="" disabled selected>Selecciona una categoría (Juego)</option>';
+    cardCategory.innerHTML = '<option value="" disabled selected>Selecciona un Juego</option>';
     sealedProductCategory.innerHTML = '<option value="" disabled selected>Selecciona un tipo</option>';
 
     categoryNames.forEach(category => {
@@ -518,17 +484,11 @@ function renderOrdersTable() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    if (allOrders.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay pedidos para mostrar.</td></tr>';
-        return;
-    }
-
     allOrders.forEach(order => {
-        const orderDate = new Date(order.timestamp).toLocaleString('es-SV');
         const row = tbody.insertRow();
         row.innerHTML = `
             <td>${order.id}</td>
-            <td>${orderDate}</td>
+            <td>${new Date(order.timestamp).toLocaleString()}</td>
             <td>${order.customerName}</td>
             <td>$${parseFloat(order.total).toFixed(2)}</td>
             <td>${order.status}</td>
@@ -546,69 +506,46 @@ function renderCardsTable() {
 
     const filteredCards = allCards.filter(card => {
         const matchesSearch = card.nombre?.toLowerCase().includes(searchQuery) || 
-                              card.id?.toLowerCase().includes(searchQuery) ||
                               card.codigo?.toLowerCase().includes(searchQuery);
-                              
         const matchesCategory = categoryFilter === "" || card.categoria === categoryFilter;
         return matchesSearch && matchesCategory;
     });
 
     const totalPages = Math.ceil(filteredCards.length / itemsPerPage);
-    currentCardsPage = Math.min(Math.max(currentCardsPage, 1), totalPages || 1);
     const startIndex = (currentCardsPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const cardsOnPage = filteredCards.slice(startIndex, endIndex);
+    const cardsOnPage = filteredCards.slice(startIndex, startIndex + itemsPerPage);
 
     const tbody = cardsTable.querySelector('tbody');
     if (tbody) {
         tbody.innerHTML = '';
         cardsOnPage.forEach(card => {
             const row = tbody.insertRow();
-            const badgeCode = card.codigo ? `<span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; font-family: monospace; color: #475569; border: 1px solid #cbd5e1;">${card.codigo}</span>` : '<span style="color:#a0aec0; font-size: 0.85rem;">N/A</span>';
-            
             row.innerHTML = `
                 <td>${card.id}</td>
                 <td><img src="${card.imagen_url}" alt="${card.nombre}" onerror="this.src='https://placehold.co/50x50/2d3748/a0aec0?text=No+Img'"></td>
                 <td><strong>${card.nombre}</strong></td>
-                <td>${badgeCode}</td>
+                <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${card.codigo}</span></td>
                 <td>${card.expansion || ''}</td>
                 <td>$${card.precio.toFixed(2)}</td>
                 <td>${card.stock}</td>
                 <td>${card.categoria}</td>
                 <td class="action-buttons">
-                    <button class="action-btn edit edit-card-btn" data-id="${card.id}"><i class="fas fa-edit" data-id="${card.id}"></i></button>
-                    <button class="action-btn delete delete-card-btn" data-id="${card.id}"><i class="fas fa-trash" data-id="${card.id}"></i></button>
+                    <button class="action-btn edit edit-card-btn" data-id="${card.id}"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete delete-card-btn" data-id="${card.id}"><i class="fas fa-trash"></i></button>
                 </td>
             `;
         });
     }
 
     if (adminPageInfo) adminPageInfo.textContent = `Página ${currentCardsPage} de ${totalPages || 1}`;
-    if (adminPrevPageBtn) adminPrevPageBtn.disabled = currentCardsPage <= 1;
-    if (adminNextPageBtn) adminNextPageBtn.disabled = currentCardsPage >= totalPages;
 }
 
 function renderSealedProductsTable() {
     if (!sealedProductsTable) return;
-    const searchQuery = adminSealedSearchInput.value.toLowerCase();
-    const categoryFilter = adminSealedCategoryFilter.value;
-
-    const filteredSealedProducts = allSealedProducts.filter(product => {
-        const matchesSearch = product.nombre?.toLowerCase().includes(searchQuery) || product.id?.toLowerCase().includes(searchQuery);
-        const matchesCategory = categoryFilter === "" || product.categoria === categoryFilter;
-        return matchesSearch && matchesCategory;
-    });
-
-    const totalPages = Math.ceil(filteredSealedProducts.length / itemsPerPage);
-    currentSealedProductsPage = Math.min(Math.max(currentSealedProductsPage, 1), totalPages || 1);
-    const startIndex = (currentSealedProductsPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const productsOnPage = filteredSealedProducts.slice(startIndex, endIndex);
-
     const tbody = sealedProductsTable.querySelector('tbody');
     if (tbody) {
         tbody.innerHTML = '';
-        productsOnPage.forEach(product => {
+        allSealedProducts.forEach(product => {
             const row = tbody.insertRow();
             row.innerHTML = `
                 <td>${product.id}</td>
@@ -618,16 +555,12 @@ function renderSealedProductsTable() {
                 <td>$${product.precio.toFixed(2)}</td>
                 <td>${product.stock}</td>
                 <td class="action-buttons">
-                    <button class="action-btn edit edit-sealed-product-button" data-id="${product.id}"><i class="fas fa-edit" data-id="${product.id}"></i></button>
-                    <button class="action-btn delete delete-sealed-product-button" data-id="${product.id}"><i class="fas fa-trash" data-id="${product.id}"></i></button>
+                    <button class="action-btn edit edit-sealed-product-button" data-id="${product.id}"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete delete-sealed-product-button" data-id="${product.id}"><i class="fas fa-trash"></i></button>
                 </td>
             `;
         });
     }
-
-    if (adminSealedPageInfo) adminSealedPageInfo.textContent = `Página ${currentSealedProductsPage} de ${totalPages || 1}`;
-    if (adminSealedPrevPageBtn) adminSealedPrevPageBtn.disabled = currentSealedProductsPage <= 1;
-    if (adminSealedNextPageBtn) adminSealedNextPageBtn.disabled = currentSealedProductsPage >= totalPages;
 }
 
 function renderCategoriesTable() {
@@ -640,8 +573,8 @@ function renderCategoriesTable() {
             row.innerHTML = `
                 <td><strong>${category.name}</strong></td>
                 <td class="action-buttons">
-                    <button class="action-btn edit edit-category-button" data-id="${category.id}"><i class="fas fa-edit" data-id="${category.id}"></i></button>
-                    <button class="action-btn delete delete-category-button" data-id="${category.id}"><i class="fas fa-trash" data-id="${category.id}"></i></button>
+                    <button class="action-btn edit edit-category-button" data-id="${category.id}"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete delete-category-button" data-id="${category.id}"><i class="fas fa-trash"></i></button>
                 </td>
             `;
         });
@@ -658,93 +591,15 @@ function updateDashboardStats() {
 // ==========================================================================
 // CRUD OPERATIONS
 // ==========================================================================
-function showOrderDetails(orderId) {
-    const order = allOrders.find(o => o.id === orderId);
-    if (!order) return;
-
-    let itemsHtml = '';
-    const cart = JSON.parse(order.cart);
-    for (const itemId in cart) {
-        const item = cart[itemId];
-        let productData = item.type === 'card' ? allCards.find(c => c.id === itemId) : allSealedProducts.find(p => p.id === itemId);
-
-        if (productData) {
-            itemsHtml += `
-                <div class="order-item">
-                    <img src="${productData.imagen_url}" alt="${productData.nombre}" onerror="this.src='https://placehold.co/50x50/2d3748/a0aec0?text=No+Img'" style="width: 40px; height: 40px; border-radius: 4px;">
-                    <div class="order-item-info" style="display:inline-block; margin-left: 10px; vertical-align: top;">
-                        <strong>${productData.nombre} ${productData.codigo ? `(${productData.codigo})` : ''}</strong><br>
-                        <span>Cant: ${item.quantity}</span> |
-                        <span>Precio: $${parseFloat(productData.precio).toFixed(2)}</span>
-                    </div>
-                </div>
-                <hr style="border:0; border-top:1px solid #e2e8f0; margin: 10px 0;">
-            `;
-        }
-    }
-
-    orderDetailsContent.innerHTML = `
-        <div class="customer-details" style="background:#f8fafc; padding: 15px; border-radius:8px; margin-bottom:15px;">
-            <h4>Datos del Cliente</h4>
-            <p><strong>Nombre:</strong> ${order.customerName}</p>
-            <p><strong>Teléfono:</strong> ${order.customerPhone}</p>
-            <p><strong>Dirección:</strong> ${order.customerAddress}</p>
-        </div>
-        <div class="order-items">
-            <h4>Productos</h4>
-            <div class="order-items-list" style="max-height: 250px; overflow-y: auto; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;">${itemsHtml}</div>
-        </div>
-        <div class="order-summary" style="margin-top: 15px; text-align: right; font-size: 1.2rem;">
-            <p><strong>Total:</strong> <span style="color:#10b981;">$${parseFloat(order.total).toFixed(2)}</span></p>
-        </div>
-    `;
-
-    orderStatusSelect.value = order.status;
-    updateOrderStatusBtn.dataset.orderId = orderId;
-    openModal(orderDetailsModal);
-}
-
-async function handleUpdateOrderStatus() {
-    const orderId = updateOrderStatusBtn.dataset.orderId;
-    const newStatus = orderStatusSelect.value;
-    const orderToUpdate = allOrders.find(o => o.id === orderId);
-    if (!orderToUpdate || orderToUpdate.status === newStatus) return closeModal(orderDetailsModal);
-
-    try {
-        await runTransaction(db, async (transaction) => {
-            const orderDocRef = doc(db, `artifacts/${appId}/public/data/orders`, orderId);
-            if (newStatus === 'cancelled' && orderToUpdate.status !== 'cancelled') {
-                const cart = JSON.parse(orderToUpdate.cart);
-                for (const itemId in cart) {
-                    const cartItem = cart[itemId];
-                    const colName = cartItem.type === 'card' ? 'cards' : 'sealed_products';
-                    const itemRef = doc(db, `artifacts/${appId}/public/data/${colName}`, itemId);
-                    const itemDoc = await transaction.get(itemRef);
-                    if (itemDoc.exists()) {
-                        transaction.update(itemRef, { stock: itemDoc.data().stock + cartItem.quantity });
-                    }
-                }
-            }
-            transaction.update(orderDocRef, { status: newStatus });
-        });
-        showMessageModal("Éxito", "Estado del pedido actualizado.");
-        closeModal(orderDetailsModal);
-        await loadAllData();
-    } catch (error) {
-        showMessageModal("Error", "No se pudo actualizar el estado.");
-    }
-}
 
 async function handleSaveCard(event) {
     event.preventDefault();
     const id = cardId.value;
-    
-    // GUARDA EL CÓDIGO Y LA EXPANSIÓN
     const data = {
         nombre: cardName.value,
         codigo: cardCode.value, 
         expansion: cardExpansion.value,
-        imagen_url: cardImage.value || '',
+        imagen_url: cardImage.value,
         precio: parseFloat(cardPrice.value).toFixed(2),
         stock: parseInt(cardStock.value),
         categoria: cardCategory.value
@@ -769,7 +624,7 @@ async function handleSaveSealedProduct(event) {
     const id = sealedProductId.value;
     const data = {
         nombre: sealedProductName.value,
-        imagen_url: sealedProductImage.value || '',
+        imagen_url: sealedProductImage.value,
         categoria: sealedProductCategory.value,
         precio: parseFloat(sealedProductPrice.value).toFixed(2),
         stock: parseInt(sealedProductStock.value)
@@ -821,7 +676,7 @@ async function handleDeleteConfirmed() {
 }
 
 // ==========================================================================
-// EVENT LISTENERS Y CONFIGURACIÓN INICIAL
+// EVENT LISTENERS
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     
@@ -833,19 +688,14 @@ document.addEventListener('DOMContentLoaded', () => {
             .sidebar.show { left: 0; }
             .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 45; }
             .main-content { width: 100%; margin-left: 0; }
-            .desktop-only-title { display: none; }
-            .sidebar-toggle-btn { display: block !important; margin-right: 15px; font-size: 1.5rem; }
-            .close-sidebar-btn { display: block !important; }
-            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            .action-btn { padding: 12px; margin-right: 5px; font-size: 1.2rem; }
-            .add-button { width: 55px; height: 55px; font-size: 2.2rem; }
-            .admin-modal-content { width: 95%; max-height: 90vh; overflow-y: auto; padding: 20px; }
-            .dashboard-stats { grid-template-columns: 1fr 1fr; }
+            .sidebar-toggle-btn { display: block !important; margin-right: 15px; }
+            .action-btn { padding: 12px; margin-right: 5px; }
+            .admin-modal-content { width: 95%; max-height: 90vh; overflow-y: auto; }
         }
     `;
     document.head.appendChild(mobileStyles);
 
-    // ================= DOM =================
+    // ASIGNACIÓN DOM
     sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
     closeSidebarBtn = document.getElementById('closeSidebarBtn');
     sidebarMenu = document.getElementById('sidebar-menu');
@@ -918,28 +768,10 @@ document.addEventListener('DOMContentLoaded', () => {
     adminNextPageBtn = document.getElementById('adminNextPageBtn');
     adminPageInfo = document.getElementById('adminPageInfo');
 
-    adminSealedSearchInput = document.getElementById('adminSealedSearchInput');
-    adminSealedCategoryFilter = document.getElementById('adminSealedCategoryFilter');
-    adminSealedPrevPageBtn = document.getElementById('adminSealedPrevPageBtn');
-    adminSealedNextPageBtn = document.getElementById('adminSealedNextPageBtn');
-    adminSealedPageInfo = document.getElementById('adminSealedPageInfo');
-
     totalCardsCount = document.getElementById('totalCardsCount');
     totalSealedProductsCount = document.getElementById('totalSealedProductsCount');
     outOfStockCount = document.getElementById('outOfStockCount');
     uniqueCategoriesCount = document.getElementById('uniqueCategoriesCount');
-
-    messageModal = document.getElementById('messageModal');
-    closeMessageModalBtn = document.getElementById('closeMessageModal');
-    messageModalTitle = document.getElementById('messageModalTitle');
-    messageModalText = document.getElementById('messageModalText');
-    okMessageModalBtn = document.getElementById('okMessageModal');
-
-    orderDetailsModal = document.getElementById('orderDetailsModal');
-    closeOrderDetailsModalBtn = document.getElementById('closeOrderDetailsModal');
-    orderDetailsContent = document.getElementById('orderDetailsContent');
-    orderStatusSelect = document.getElementById('orderStatusSelect');
-    updateOrderStatusBtn = document.getElementById('updateOrderStatusBtn');
 
     scannerModal = document.getElementById('scannerModal');
     openScannerBtn = document.getElementById('openScannerBtn');
@@ -949,63 +781,11 @@ document.addEventListener('DOMContentLoaded', () => {
     scannerStatusMessage = document.getElementById('scannerStatusMessage');
 
     openModal(loginModal);
-    hideAllSections();
 
-    // ================= EVENTOS DEL MENÚ MÓVIL =================
-    if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', () => { 
-        sidebarMenu.classList.add('show'); 
-        if(sidebarOverlay) sidebarOverlay.style.display = 'block'; 
-    });
+    // EVENTOS BÁSICOS
+    if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', () => { sidebarMenu.classList.add('show'); sidebarOverlay.style.display = 'block'; });
+    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', () => { sidebarMenu.classList.remove('show'); sidebarOverlay.style.display = 'none'; });
     
-    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', () => { 
-        sidebarMenu.classList.remove('show'); 
-        if(sidebarOverlay) sidebarOverlay.style.display = 'none'; 
-    });
-    
-    if (sidebarOverlay) sidebarOverlay.addEventListener('click', () => { 
-        sidebarMenu.classList.remove('show'); 
-        sidebarOverlay.style.display = 'none'; 
-    });
-
-    const navs = [{btn: navDashboard, sec: dashboardSection}, {btn: navCards, sec: cardsSection}, {btn: navSealedProducts, sec: sealedProductsSection}, {btn: navCategories, sec: categoriesSection}, {btn: navOrders, sec: ordersSection}];
-    navs.forEach(nav => {
-        if(nav.btn) nav.btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            showSection(nav.sec);
-            navs.forEach(n => { if(n.btn) n.btn.classList.remove('active'); });
-            nav.btn.classList.add('active');
-            
-            // Cierra el menú en móviles automáticamente
-            if (window.innerWidth <= 768) {
-                sidebarMenu.classList.remove('show');
-                if(sidebarOverlay) sidebarOverlay.style.display = 'none';
-            }
-        });
-    });
-
-    if (navLogout) navLogout.addEventListener('click', handleLogout);
-
-    // Eventos de Modales
-    document.querySelectorAll('.close-button').forEach(btn => {
-        btn.addEventListener('click', () => {
-            closeModal(cardModal);
-            closeModal(sealedProductModal);
-            closeModal(categoryModal);
-            closeModal(confirmModal);
-            closeModal(loginModal);
-            closeModal(messageModal);
-            closeModal(orderDetailsModal);
-            if (scannerModal && scannerModal.style.display === 'flex') {
-                stopCamera();
-                closeModal(scannerModal);
-            }
-        });
-    });
-
-    if (closeMessageModalBtn) closeMessageModalBtn.addEventListener('click', () => closeModal(messageModal));
-    if (okMessageModalBtn) okMessageModalBtn.addEventListener('click', () => closeModal(messageModal));
-
-    // EVENTOS DEL ESCÁNER
     if (openScannerBtn) {
         openScannerBtn.addEventListener('click', () => {
             openModal(scannerModal);
@@ -1013,105 +793,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Formularios CRUD
-    if (addCardBtn) addCardBtn.addEventListener('click', () => { cardForm.reset(); cardId.value = ''; openModal(cardModal); });
     if (cardForm) cardForm.addEventListener('submit', handleSaveCard);
-    
-    if (addSealedProductBtn) addSealedProductBtn.addEventListener('click', () => { sealedProductForm.reset(); sealedProductId.value = ''; openModal(sealedProductModal); });
     if (sealedProductForm) sealedProductForm.addEventListener('submit', handleSaveSealedProduct);
-
-    if (addCategoryBtn) addCategoryBtn.addEventListener('click', () => { categoryForm.reset(); categoryId.value = ''; openModal(categoryModal); });
     if (categoryForm) categoryForm.addEventListener('submit', handleSaveCategory);
 
-    // Tablas CRUD
-    if (cardsTable) cardsTable.addEventListener('click', (e) => {
-        const btn = e.target.closest('button');
-        if(!btn) return;
-
-        if (btn.classList.contains('edit-card-btn')) {
-            const card = allCards.find(c => c.id === btn.dataset.id);
-            if (card) {
-                cardId.value = card.id; 
-                cardName.value = card.nombre; 
-                cardCode.value = card.codigo || ''; 
-                cardExpansion.value = card.expansion || ''; 
-                cardImage.value = card.imagen_url || '';
-                cardPrice.value = card.precio; 
-                cardStock.value = card.stock; 
-                cardCategory.value = card.categoria;
-                openModal(cardModal);
-            }
-        }
-        if (btn.classList.contains('delete-card-btn')) {
-            currentDeleteTarget = { type: 'card', id: btn.dataset.id };
-            openModal(confirmModal);
-        }
-    });
-
-    if (sealedProductsTable) sealedProductsTable.addEventListener('click', (e) => {
-        const btn = e.target.closest('button');
-        if(!btn) return;
-
-        if (btn.classList.contains('edit-sealed-product-button')) {
-            const prod = allSealedProducts.find(p => p.id === btn.dataset.id);
-            if (prod) {
-                sealedProductId.value = prod.id; sealedProductName.value = prod.nombre; sealedProductImage.value = prod.imagen_url || '';
-                sealedProductCategory.value = prod.categoria; sealedProductPrice.value = prod.precio; sealedProductStock.value = prod.stock;
-                openModal(sealedProductModal);
-            }
-        }
-        if (btn.classList.contains('delete-sealed-product-button')) {
-            currentDeleteTarget = { type: 'sealedProduct', id: btn.dataset.id };
-            openModal(confirmModal);
-        }
-    });
-
-    if (categoriesTable) categoriesTable.addEventListener('click', (e) => {
-        const btn = e.target.closest('button');
-        if(!btn) return;
-
-        if (btn.classList.contains('edit-category-button')) {
-            const cat = allCategories.find(c => c.id === btn.dataset.id);
-            if (cat) { categoryId.value = cat.id; categoryName.value = cat.name; openModal(categoryModal); }
-        }
-        if (btn.classList.contains('delete-category-button')) {
-            currentDeleteTarget = { type: 'category', id: btn.dataset.id };
-            openModal(confirmModal);
-        }
-    });
-
-    if (ordersTable) ordersTable.addEventListener('click', (e) => {
-        if (e.target.classList.contains('view-order-details-btn')) showOrderDetails(e.target.dataset.id);
-    });
-
-    if (updateOrderStatusBtn) updateOrderStatusBtn.addEventListener('click', handleUpdateOrderStatus);
-
-    if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', () => closeModal(confirmModal));
-    if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', handleDeleteConfirmed);
-
-    // Filtros y Paginación
-    if (adminSearchInput) adminSearchInput.addEventListener('input', () => { currentCardsPage = 1; renderCardsTable(); });
-    if (adminCategoryFilter) adminCategoryFilter.addEventListener('change', () => { currentCardsPage = 1; renderCardsTable(); });
-    if (adminPrevPageBtn) adminPrevPageBtn.addEventListener('click', () => { if (currentCardsPage > 1) { currentCardsPage--; renderCardsTable(); } });
-    if (adminNextPageBtn) adminNextPageBtn.addEventListener('click', () => { currentCardsPage++; renderCardsTable(); });
-
-    if (adminSealedSearchInput) adminSealedSearchInput.addEventListener('input', () => { currentSealedProductsPage = 1; renderSealedProductsTable(); });
-    if (adminSealedCategoryFilter) adminSealedCategoryFilter.addEventListener('change', () => { currentSealedProductsPage = 1; renderSealedProductsTable(); });
-    if (adminSealedPrevPageBtn) adminSealedPrevPageBtn.addEventListener('click', () => { if (currentSealedProductsPage > 1) { currentSealedProductsPage--; renderSealedProductsTable(); } });
-    if (adminSealedNextPageBtn) adminSealedNextPageBtn.addEventListener('click', () => { currentSealedProductsPage++; renderSealedProductsTable(); });
-
-    document.getElementById('refreshAdminPageBtn')?.addEventListener('click', async () => {
-        await loadAllData();
-        showMessageModal("Datos Recargados", "Todos los datos han sido actualizados.");
+    // Navegación de secciones
+    const navs = [{btn: navDashboard, sec: dashboardSection}, {btn: navCards, sec: cardsSection}, {btn: navSealedProducts, sec: sealedProductsSection}, {btn: navCategories, sec: categoriesSection}, {btn: navOrders, sec: ordersSection}];
+    navs.forEach(nav => {
+        if(nav.btn) nav.btn.addEventListener('click', () => {
+            showSection(nav.sec);
+            if (window.innerWidth <= 768) { sidebarMenu.classList.remove('show'); sidebarOverlay.style.display = 'none'; }
+        });
     });
 
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
+    if (navLogout) navLogout.addEventListener('click', handleLogout);
     
-    if (togglePasswordVisibilityBtn && passwordInput) {
-        togglePasswordVisibilityBtn.addEventListener('click', function() {
-            passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
-            this.querySelector('i').classList.toggle('fa-eye');
-            this.querySelector('i').classList.toggle('fa-eye-slash');
+    // Cierre de modales
+    document.querySelectorAll('.close-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.admin-modal').forEach(m => closeModal(m));
+            stopCamera();
         });
-    }
+    });
+
+    // Paginación
+    if (adminPrevPageBtn) adminPrevPageBtn.addEventListener('click', () => { if (currentCardsPage > 1) { currentCardsPage--; renderCardsTable(); } });
+    if (adminNextPageBtn) adminNextPageBtn.addEventListener('click', () => { currentCardsPage++; renderCardsTable(); });
 });
