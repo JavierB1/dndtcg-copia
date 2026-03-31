@@ -80,7 +80,25 @@
             <!-- Sección de Gestión de Cartas -->
             <section id="cards-section" class="admin-section">
                 <h2>Gestión de Cartas</h2>
-                <button id="addCardBtn" class="add-button">Añadir Nueva Carta</button>
+                <!-- ADICIÓN: Grupo de botones para incluir el Escáner -->
+                <div class="action-bar" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button id="addCardBtn" class="add-button">Añadir Nueva Carta</button>
+                    <button id="scanCardBtn" class="add-button" style="background-color: #3182ce;">
+                        <i class="fas fa-camera"></i> Escanear Carta (IA)
+                    </button>
+                </div>
+
+                <!-- ADICIÓN: Contenedor del Escáner (oculto por defecto) -->
+                <div id="scannerContainer" style="display: none; margin: 20px 0; background: #000; border-radius: 12px; position: relative; overflow: hidden; max-width: 500px;">
+                    <video id="scannerVideo" width="100%" height="auto" autoplay playsinline></video>
+                    <canvas id="scannerCanvas" style="display: none;"></canvas>
+                    <div class="scanner-overlay" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 2px solid rgba(255,255,255,0.5); width: 70%; height: 70%; pointer-events: none;"></div>
+                    <div style="position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px;">
+                        <button id="captureBtn" class="confirm-button">Capturar</button>
+                        <button id="closeScannerBtn" class="cancel-button">Cerrar</button>
+                    </div>
+                </div>
+
                 <div class="card-list-container">
                     <h3>Lista de Cartas</h3>
                     <input type="text" id="adminSearchInput" placeholder="Buscar carta por nombre o ID..." class="admin-search-input">
@@ -95,6 +113,8 @@
                                     <th>ID</th>
                                     <th>Imagen</th>
                                     <th>Nombre</th>
+                                    <!-- ADICIÓN: Columna de Código -->
+                                    <th>Código</th>
                                     <th>Precio</th>
                                     <th>Stock</th>
                                     <th>Categoría</th>
@@ -109,7 +129,7 @@
                     <div class="pagination-controls">
                         <button id="adminPrevPageBtn" class="pagination-btn">-</button>
                         <span id="adminPageInfo">Página 1 de 1</span>
-                        <button id="adminNextPageBtn">+</button>
+                        <button id="adminNextPageBtn" class="pagination-btn">+</button>
                     </div>
                 </div>
             </section>
@@ -144,9 +164,9 @@
                         </table>
                     </div>
                     <div class="pagination-controls">
-                        <button id="adminSealedPrevPageBtn">-</button>
+                        <button id="adminSealedPrevPageBtn" class="pagination-btn">-</button>
                         <span id="adminSealedPageInfo">Página 1 de 1</span>
-                        <button id="adminSealedNextPageBtn">+</button>
+                        <button id="adminSealedNextPageBtn" class="pagination-btn">+</button>
                     </div>
                 </div>
             </section>
@@ -173,7 +193,7 @@
                 </div>
             </section>
             
-            <!-- NUEVA SECCIÓN: Gestión de Pedidos -->
+            <!-- SECCIÓN: Gestión de Pedidos -->
             <section id="orders-section" class="admin-section">
                 <h2>Gestión de Pedidos</h2>
                 <div class="order-list-container">
@@ -208,6 +228,9 @@
                         <input type="hidden" id="cardId">
                         <label for="cardName">Nombre:</label>
                         <input type="text" id="cardName" required>
+                        <!-- ADICIÓN: Campo de Código (000/000) -->
+                        <label for="cardCode">Código (Ej: 001/102):</label>
+                        <input type="text" id="cardCode" placeholder="000/000">
                         <label for="cardImage">URL Imagen:</label>
                         <input type="url" id="cardImage" required>
                         <label for="cardPrice">Precio:</label>
@@ -299,7 +322,7 @@
                 </div>
             </div>
 
-            <!-- NUEVO: Modal para Ver Detalles del Pedido -->
+            <!-- Modal para Ver Detalles del Pedido -->
             <div id="orderDetailsModal" class="admin-modal">
                 <div class="admin-modal-content">
                     <span class="close-button" id="closeOrderDetailsModal">&times;</span>
@@ -321,7 +344,7 @@
             </div>
 
 
-            <!-- MODAL PARA MENSAJES (éxito/error) - AÑADIDO -->
+            <!-- MODAL PARA MENSAJES (éxito/error) -->
             <div id="messageModal" class="admin-modal">
                 <div class="admin-modal-content">
                     <span class="close-button" id="closeMessageModal">&times;</span>
