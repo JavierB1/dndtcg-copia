@@ -33,19 +33,17 @@ let allData = { cards: [], products: [], categories: [], orders: [] };
 // --- GESTIÓN DE ESTADO DE AUTENTICACIÓN ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        console.log("Sesion activa detectada:", user.email);
+        console.log("Sesión activa detectada:", user.email);
         try {
             await loadDashboardData();
-            // Mostramos el panel y ocultamos el login
             document.body.classList.remove('auth-loading', 'auth-guest');
             document.body.classList.add('auth-ready');
         } catch (err) {
-            console.error("Error critico de acceso:", err);
+            console.error("Error crítico de acceso:", err);
             handleLogout();
         }
     } else {
         console.log("No hay usuario autenticado.");
-        // Ocultamos el panel y mostramos el login
         document.body.classList.remove('auth-loading', 'auth-ready');
         document.body.classList.add('auth-guest');
         clearAllTables();
@@ -157,7 +155,7 @@ function renderOrdersTable() {
     tbody.innerHTML = allData.orders.map(o => `
         <tr>
             <td>#${o.id.substring(0, 8)}</td>
-            <td>${o.customer?.nombre || 'Anonimo'}</td>
+            <td>${o.customer?.nombre || 'Anónimo'}</td>
             <td>$${(o.total || 0).toFixed(2)}</td>
             <td><span class="status-badge status-${o.status || 'pending'}">${o.status || 'pendiente'}</span></td>
             <td><button class="btn-icon" title="Ver detalle"><i class="fas fa-eye"></i></button></td>
@@ -173,7 +171,7 @@ function populateFilters() {
     const select = document.getElementById('adminCategoryFilter');
     if (!select) return;
     const options = allData.categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    select.innerHTML = '<option value="">Todas las categorias</option>' + options;
+    select.innerHTML = '<option value="">Todas las categorías</option>' + options;
 }
 
 // --- ACCIONES DE USUARIO ---
@@ -181,11 +179,9 @@ function populateFilters() {
 async function handleLogout() {
     try {
         await signOut(auth);
-        // Al cerrar sesion forzamos la limpieza visual y recarga
-        document.body.className = 'auth-guest';
         window.location.reload();
     } catch (err) {
-        console.error("Error al cerrar sesion:", err);
+        console.error("Error al cerrar sesión:", err);
     }
 }
 
@@ -197,13 +193,13 @@ loginForm?.addEventListener('submit', async (e) => {
 
     try {
         if (btn) btn.disabled = true;
-        loginMessage.textContent = "Iniciando sesion...";
+        loginMessage.textContent = "Iniciando sesión temporal...";
         loginMessage.style.color = "var(--primary)";
         
-        // Configuramos persistencia de sesion (se borra al cerrar/recargar)
+        // 1. Configurar persistencia de sesión (se borra al cerrar/recargar)
         await setPersistence(auth, browserSessionPersistence);
         
-        // Iniciar sesion
+        // 2. Iniciar sesión normalmente
         await signInWithEmailAndPassword(auth, email, pass);
         
     } catch (err) {
