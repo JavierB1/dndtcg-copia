@@ -83,7 +83,6 @@
                 <section id="cards-section" class="admin-section">
                     <div class="section-header-actions">
                         <h2>Gestión de Cartas</h2>
-                        <!-- Definición: Botón de añadir cambiado por un icono "+" -->
                         <button id="addCardBtn" class="add-button"><i class="fas fa-plus"></i></button>
                     </div>
 
@@ -123,8 +122,86 @@
                     </div>
                 </section>
 
-                <!-- Otras secciones (Sealed Products, Categories, Orders) se mantienen igual internamente -->
-                <!-- ... -->
+                <!-- Sealed Products Section -->
+                <section id="sealed-products-section" class="admin-section">
+                    <div class="section-header-actions">
+                        <h2>Gestión de Productos Sellados</h2>
+                        <button id="addSealedProductBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                    </div>
+
+                    <div class="filter-bar">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="adminSealedSearchInput" placeholder="Buscar producto sellado...">
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="sealedProductsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Imagen</th>
+                                    <th>Nombre</th>
+                                    <th>Precio</th>
+                                    <th>Stock</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sealedProductsTableBody">
+                                <!-- Datos cargados por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Categories Section -->
+                <section id="categories-section" class="admin-section">
+                    <div class="section-header-actions">
+                        <h2>Gestión de Categorías</h2>
+                        <button id="addCategoryBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="categoriesTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoriesTableBody">
+                                <!-- Datos cargados por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Orders Section -->
+                <section id="orders-section" class="admin-section">
+                    <div class="section-header-actions">
+                        <h2>Gestión de Pedidos</h2>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="ordersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID Pedido</th>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody">
+                                <!-- Datos cargados por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
         </main>
     </div>
@@ -137,34 +214,107 @@
                 <h3 id="cardModalTitle">Añadir Nueva Carta</h3>
                 <span class="close-button">&times;</span>
             </div>
-            <form id="cardForm">
-                <input type="hidden" id="cardId">
-                <div class="form-group">
-                    <label for="cardName">Nombre de la Carta</label>
-                    <input type="text" id="cardName" required>
-                </div>
-                <div class="form-group">
-                    <label for="cardImage">URL de la Imagen</label>
-                    <input type="url" id="cardImage">
-                </div>
-                <div class="form-row">
+            <div class="modal-body">
+                <form id="cardForm">
+                    <input type="hidden" id="cardId">
                     <div class="form-group">
-                        <label for="cardPrice">Precio ($)</label>
-                        <input type="number" id="cardPrice" step="0.01" required>
+                        <label for="cardName">Nombre de la Carta</label>
+                        <input type="text" id="cardName" required>
                     </div>
                     <div class="form-group">
-                        <label for="cardStock">Stock</label>
-                        <input type="number" id="cardStock" required>
+                        <label for="cardImage">URL de la Imagen</label>
+                        <input type="url" id="cardImage">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="cardCategory">Categoría</label>
-                    <select id="cardCategory" required></select>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" id="saveCardBtn" class="btn-save">Guardar Carta</button>
-                </div>
-            </form>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cardPrice">Precio ($)</label>
+                            <input type="number" id="cardPrice" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cardStock">Stock</label>
+                            <input type="number" id="cardStock" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="cardCategory">Categoría</label>
+                        <select id="cardCategory" required></select>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" id="saveCardBtn" class="btn-save">Guardar Carta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sealed Product Modal -->
+    <div id="sealedProductModal" class="admin-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="sealedProductModalTitle">Añadir Producto Sellado</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="sealedProductForm">
+                    <input type="hidden" id="sealedProductId">
+                    <div class="form-group">
+                        <label for="sealedProductName">Nombre del Producto</label>
+                        <input type="text" id="sealedProductName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="sealedProductImage">URL de la Imagen</label>
+                        <input type="url" id="sealedProductImage">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sealedProductPrice">Precio ($)</label>
+                            <input type="number" id="sealedProductPrice" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sealedProductStock">Stock</label>
+                            <input type="number" id="sealedProductStock" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" id="saveSealedProductBtn" class="btn-save">Guardar Producto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div id="categoryModal" class="admin-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="categoryModalTitle">Añadir Categoría</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="categoryForm">
+                    <input type="hidden" id="categoryId">
+                    <div class="form-group">
+                        <label for="categoryName">Nombre de la Categoría</label>
+                        <input type="text" id="categoryName" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" id="saveCategoryBtn" class="btn-save">Guardar Categoría</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div id="orderDetailModal" class="admin-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Detalle del Pedido</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <div class="modal-body" id="orderDetailContent">
+                <!-- Se llena por JS -->
+            </div>
         </div>
     </div>
 
