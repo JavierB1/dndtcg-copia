@@ -472,8 +472,9 @@ form select:focus {
    ========================================================================== */
 .scanner-container {
     position: relative;
-    width: 100%;
-    height: 250px;
+    width: 240px;      /* Ancho ajustado a formato carta */
+    height: 336px;     /* Alto ajustado a formato carta (vertical) */
+    margin: 0 auto;    /* Centra el rectángulo en el modal */
     background-color: #000;
     border-radius: 12px;
     overflow: hidden;
