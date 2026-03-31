@@ -1,4 +1,4 @@
-// ==========================================================================
+ // ==========================================================================
 // GLOBAL VARIABLES (non-DOM related)
 // ==========================================================================
 
@@ -57,25 +57,13 @@ let cameraStream = null;
 // DOM ELEMENT REFERENCES
 // ==========================================================================
 let sidebarToggleBtn, closeSidebarBtn, sidebarMenu, sidebarOverlay, mainHeader;
-let loginModal, loginForm, loginMessage, usernameInput, passwordInput, togglePasswordVisibilityBtn;
+let loginModal, loginForm, loginMessage, usernameInput, passwordInput;
 
 let navDashboard, navCards, navSealedProducts, navCategories, navOrders, navLogout, navScanner;
 let dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection, scannerSection;
 
-let addCardBtn, addSealedProductBtn, addCategoryBtn;
-let cardModal, cardModalTitle, cardForm, cardId, cardName, cardImage, cardPrice, cardStock, cardCategory, cardSetCode, saveCardBtn;
-let sealedProductModal, sealedProductModalTitle, sealedProductForm, sealedProductId, sealedProductName, sealedProductImage, sealedProductCategory, sealedProductPrice, sealedProductStock, saveSealedProductBtn;
-let categoryModal, categoryModalTitle, categoryForm, categoryId, categoryName, saveCategoryBtn;
-
-let confirmModal, confirmMessage, cancelDeleteBtn, confirmDeleteBtn;
-let cardsTable, sealedProductsTable, categoriesTable, ordersTable;
-
-let adminSearchInput, adminCategoryFilter, adminPrevPageBtn, adminNextPageBtn, adminPageInfo;
-let adminSealedSearchInput, adminSealedCategoryFilter, adminSealedPrevPageBtn, adminSealedNextPageBtn, adminSealedPageInfo;
-
-let totalCardsCount, totalSealedProductsCount, outOfStockCount, uniqueCategoriesCount;
-let messageModal, closeMessageModalBtn, messageModalTitle, messageModalText, okMessageModalBtn;
-let orderDetailsModal, closeOrderDetailsModalBtn, orderDetailsContent, orderStatusSelect, updateOrderStatusBtn;
+let addCardBtn, cardModal, cardModalTitle, cardForm, cardId, cardName, cardImage, cardPrice, cardStock, cardCategory, cardSetCode, saveCardBtn;
+let cardsTable, messageModal, messageModalTitle, messageModalText;
 
 // --- NUEVAS REFERENCIAS ESCÁNER ---
 let videoPreview, startScanBtn, navScannerQuick;
@@ -85,14 +73,23 @@ let videoPreview, startScanBtn, navScannerQuick;
 // ==========================================================================
 
 function showSection(sectionToShow) {
+    // Si no hay usuario y no es el login, no mostrar nada
+    if (!currentAdminUser) {
+        hideAllSections();
+        openModal(loginModal);
+        return;
+    }
+
     const sections = [dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection, scannerSection];
     sections.forEach(section => {
         if (section) section.classList.remove('active');
     });
+    
     if (sectionToShow) {
         sectionToShow.classList.add('active');
     }
-    // Si salimos del escáner, apagamos la cámara para ahorrar recursos
+
+    // Si salimos del escáner, apagamos la cámara
     if (sectionToShow !== scannerSection) {
         stopCamera();
     }
@@ -144,8 +141,9 @@ function showMessageModal(title, text) {
 // ==========================================================================
 
 async function startCamera() {
+    if (!currentAdminUser) return openModal(loginModal);
+
     try {
-        // Intentar obtener acceso a la cámara trasera primero
         const constraints = { 
             video: { 
                 facingMode: { ideal: "environment" },
@@ -159,11 +157,10 @@ async function startCamera() {
         if (videoPreview) {
             videoPreview.srcObject = cameraStream;
             showSection(scannerSection);
-            console.log("Cámara iniciada correctamente");
         }
     } catch (err) {
         console.error("Error al acceder a la cámara:", err);
-        showMessageModal("Error de Cámara", "No se pudo acceder a la cámara. Por favor, verifica los permisos de tu navegador o usa una conexión HTTPS.");
+        showMessageModal("Error de Cámara", "No se pudo acceder a la cámara. Verifica los permisos.");
     }
 }
 
@@ -176,24 +173,18 @@ function stopCamera() {
 }
 
 async function handleScanAndIdentify() {
-    if (!videoPreview || !cameraStream) {
-        console.error("Video preview no disponible o stream no iniciado");
-        return;
-    }
+    if (!videoPreview || !cameraStream) return;
 
-    // Crear canvas para capturar el frame actual del video
     const canvas = document.createElement('canvas');
     canvas.width = videoPreview.videoWidth;
     canvas.height = videoPreview.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(videoPreview, 0, 0);
     
-    // Convertir a base64 para la API
     const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
-    // UI Feedback
     startScanBtn.disabled = true;
-    startScanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando carta...';
+    startScanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando...';
 
     try {
         const result = await analyzeCardWithIA(base64Image);
@@ -202,32 +193,24 @@ async function handleScanAndIdentify() {
             stopCamera();
             showSection(cardsSection);
             
-            // Limpiar y preparar modal
             cardId.value = ''; 
             cardForm.reset();
-            cardModalTitle.textContent = "Añadir Carta (Detectada por IA)";
+            cardModalTitle.textContent = "Añadir Carta (IA)";
             
-            // Mapear campos (soporta inglés/español de la IA)
             cardName.value = result.nombre || result.name || '';
-            const code = result.codigo_set || result.set_code || '';
-            if (cardSetCode) cardSetCode.value = code;
+            if (cardSetCode) cardSetCode.value = result.codigo_set || result.set_code || '';
             
-            // Selección de categoría inteligente
             if (result.categoria || result.category) {
                 const cat = (result.categoria || result.category).toLowerCase();
                 const options = Array.from(cardCategory.options);
-                const found = options.find(o => cat.includes(o.value.toLowerCase()) || o.value.toLowerCase().includes(cat));
+                const found = options.find(o => o.value.toLowerCase().includes(cat));
                 if (found) cardCategory.value = found.value;
             }
             
             openModal(cardModal);
-            showMessageModal("¡Identificada!", `Carta: ${result.nombre || result.name}. Completa los detalles de precio y stock.`);
-        } else {
-            throw new Error("Respuesta incompleta de la IA");
         }
     } catch (error) {
-        console.error("Error en identificación IA:", error);
-        showMessageModal("Aviso", "No pudimos identificar la carta con claridad. Asegúrate de que la carta sea legible y esté centrada.");
+        showMessageModal("Aviso", "No se pudo identificar. Intenta de nuevo.");
     } finally {
         startScanBtn.disabled = false;
         startScanBtn.innerHTML = '<i class="fas fa-bullseye"></i> Capturar e Identificar';
@@ -235,46 +218,25 @@ async function handleScanAndIdentify() {
 }
 
 async function analyzeCardWithIA(base64Data) {
-    const prompt = "Actúa como un experto en TCG. Identifica esta carta de Pokémon, Yu-Gi-Oh o Magic. Devuelve UNICAMENTE un objeto JSON con: 'nombre' (nombre exacto), 'codigo_set' (ej: 054/073) y 'categoria' (Pokémon, Magic, Yu-Gi-Oh).";
+    const prompt = "Identifica esta carta de TCG. Devuelve JSON: {nombre, codigo_set, categoria}.";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
     
-    // Implementación con Retries (Exponencial Backoff) para estabilidad
-    let retries = 0;
-    const maxRetries = 3;
-    
-    const callApi = async () => {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [
-                        { text: prompt },
-                        { inlineData: { mimeType: "image/jpeg", data: base64Data } }
-                    ]
-                }],
-                generationConfig: { 
-                    responseMimeType: "application/json",
-                    temperature: 0.1 
-                }
-            })
-        });
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{
+                parts: [
+                    { text: prompt },
+                    { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+                ]
+            }],
+            generationConfig: { responseMimeType: "application/json" }
+        })
+    });
 
-        if (!response.ok) throw new Error("Error API Gemini");
-        const data = await response.json();
-        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        return JSON.parse(rawText);
-    };
-
-    while (retries < maxRetries) {
-        try {
-            return await callApi();
-        } catch (e) {
-            retries++;
-            if (retries === maxRetries) throw e;
-            await new Promise(r => setTimeout(r, Math.pow(2, retries) * 1000));
-        }
-    }
+    const data = await response.json();
+    return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text);
 }
 
 // ==========================================================================
@@ -283,237 +245,151 @@ async function analyzeCardWithIA(base64Data) {
 
 async function handleLogin(event) {
     event.preventDefault();
-    const email = usernameInput ? usernameInput.value : '';
-    const password = passwordInput ? passwordInput.value : '';
+    const email = usernameInput.value;
+    const password = passwordInput.value;
     clearLoginError();
 
     try {
         await signInWithEmailAndPassword(auth, email, password);
-        closeModal(loginModal);
-        showSection(dashboardSection);
-        await loadAllData();
+        // El onAuthStateChanged se encargará del resto
     } catch (error) {
-        console.error('Error al iniciar sesión:', error);
-        showLoginError('Credenciales incorrectas o error de conexión.');
+        showLoginError('Usuario o contraseña incorrectos.');
     }
 }
 
 async function handleLogout() {
     try {
         await signOut(auth);
-        userId = null;
-        currentAdminUser = null;
-        hideAllSections();
-        openModal(loginModal);
+        window.location.reload(); // Recarga para limpiar todo el estado
     } catch (error) {
-        console.error('Error al cerrar sesión:', error);
+        console.error('Error logout:', error);
     }
 }
-
-onAuthStateChanged(auth, (user) => {
-    currentAdminUser = user;
-    userId = user ? user.uid : null;
-});
 
 // ==========================================================================
 // DATA LOADING FUNCTIONS
 // ==========================================================================
 
 async function loadAllData() {
-    await loadCategories();
-    await loadCardsData();
-    await loadSealedProductsData();
-    await loadOrdersData();
-}
-
-async function loadOrdersData() {
     if (!db) return;
     try {
-        const ordersCol = collection(db, `artifacts/${appId}/public/data/orders`);
-        const ordersSnapshot = await getDocs(ordersCol);
-        allOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        allOrders.sort((a, b) => new Promise((resolve) => resolve(new Date(b.timestamp) - new Date(a.timestamp))));
-        renderOrdersTable();
-    } catch (error) { console.error('Error al cargar pedidos:', error); }
-}
+        // Cargar Categorías
+        const catCol = collection(db, `artifacts/${appId}/public/data/categories`);
+        const catSnap = await getDocs(catCol);
+        allCategories = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Poblar selects
+        if (cardCategory) {
+            cardCategory.innerHTML = '<option value="" disabled selected>Seleccionar...</option>';
+            allCategories.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                opt.textContent = c.name;
+                cardCategory.appendChild(opt);
+            });
+        }
 
-async function loadCategories() {
-    if (!db) return;
-    try {
-        const categoriesCol = collection(db, `artifacts/${appId}/public/data/categories`);
-        const categorySnapshot = await getDocs(categoriesCol);
-        allCategories = categorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        populateCategoryFiltersAndSelects();
-        renderCategoriesTable();
-    } catch (error) { console.error('Error al cargar categorías:', error); }
-}
-
-async function loadCardsData() {
-    if (!db) return;
-    try {
+        // Cargar Cartas
         const cardsCol = collection(db, `artifacts/${appId}/public/data/cards`);
-        const cardsSnapshot = await getDocs(cardsCol);
-        allCards = cardsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            precio: parseFloat(doc.data().precio) || 0,
-            stock: parseInt(doc.data().stock) || 0
-        }));
+        const cardsSnap = await getDocs(cardsCol);
+        allCards = cardsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
         renderCardsTable();
         updateDashboardStats();
-    } catch (error) { console.error('Error al cargar cartas:', error); }
+    } catch (error) {
+        console.error("Error cargando datos:", error);
+    }
 }
-
-async function loadSealedProductsData() {
-    if (!db) return;
-    try {
-        const sealedProductsCol = collection(db, `artifacts/${appId}/public/data/sealed_products`);
-        const sealedProductsSnapshot = await getDocs(sealedProductsCol);
-        allSealedProducts = sealedProductsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            precio: parseFloat(doc.data().precio) || 0,
-            stock: parseInt(doc.data().stock) || 0
-        }));
-        renderSealedProductsTable();
-        updateDashboardStats();
-    } catch (error) { console.error('Error al cargar productos sellados:', error); }
-}
-
-// ==========================================================================
-// RENDER FUNCTIONS & TABLE UPDATES
-// ==========================================================================
 
 function renderCardsTable() {
     if (!cardsTable) return;
     const tbody = cardsTable.querySelector('tbody');
-    const filtered = allCards.filter(c => 
-        c.nombre.toLowerCase().includes((adminSearchInput?.value || '').toLowerCase())
-    );
+    const searchTerm = (adminSearchInput?.value || '').toLowerCase();
+    const filtered = allCards.filter(c => c.nombre.toLowerCase().includes(searchTerm));
     
     tbody.innerHTML = filtered.map(card => `
         <tr>
-            <td>${card.id}</td>
+            <td>${card.id.substring(0,5)}...</td>
             <td><img src="${card.imagen_url}" width="40" onerror="this.src='https://placehold.co/40x50'"></td>
             <td>${card.nombre}</td>
             <td>${card.codigo_set || 'N/A'}</td>
-            <td>$${card.precio.toFixed(2)}</td>
-            <td>${card.stock}</td>
-            <td class="action-buttons">
-                <button class="edit-button edit-card-btn" data-id="${card.id}"><i class="fas fa-edit"></i></button>
-                <button class="delete-button delete-card-btn" data-id="${card.id}"><i class="fas fa-trash"></i></button>
+            <td>$${parseFloat(card.precio || 0).toFixed(2)}</td>
+            <td>${card.stock || 0}</td>
+            <td>
+                <button class="edit-button"><i class="fas fa-edit"></i></button>
             </td>
         </tr>
     `).join('');
 }
 
-function renderOrdersTable() {
-    // Implementación básica de renderizado de pedidos
-}
-
-function renderCategoriesTable() {
-    // Implementación básica de renderizado de categorías
-}
-
-function renderSealedProductsTable() {
-    // Implementación básica de renderizado de productos sellados
-}
-
 function updateDashboardStats() {
     if (totalCardsCount) totalCardsCount.textContent = allCards.length;
-    if (totalSealedProductsCount) totalSealedProductsCount.textContent = allSealedProducts.length;
     if (uniqueCategoriesCount) uniqueCategoriesCount.textContent = allCategories.length;
-    const lowStock = allCards.filter(c => c.stock <= 0).length + allSealedProducts.filter(p => p.stock <= 0).length;
-    if (outOfStockCount) outOfStockCount.textContent = lowStock;
-}
-
-function populateCategoryFiltersAndSelects() {
-    if (!cardCategory) return;
-    const categoryNames = allCategories.map(cat => cat.name);
-    cardCategory.innerHTML = '<option value="" disabled selected>Selecciona una categoría</option>';
-    categoryNames.forEach(category => {
-        const opt = document.createElement('option');
-        opt.value = category;
-        opt.textContent = category;
-        cardCategory.appendChild(opt);
-    });
 }
 
 // ==========================================================================
-// INITIALIZATION & EVENT LISTENERS
+// INITIALIZATION
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Referencias DOM Generales
+    // Referencias
     loginModal = document.getElementById('loginModal');
     loginForm = document.getElementById('loginForm');
     usernameInput = document.getElementById('username');
     passwordInput = document.getElementById('password');
-    
-    // Navegación
+    loginMessage = document.getElementById('loginMessage');
+
     navDashboard = document.getElementById('nav-dashboard');
     navCards = document.getElementById('nav-cards');
     navScanner = document.getElementById('nav-scanner');
     navScannerQuick = document.getElementById('nav-scanner-quick');
-    navOrders = document.getElementById('nav-orders');
     navLogout = document.getElementById('nav-logout');
 
-    // Secciones
     dashboardSection = document.getElementById('dashboard-section');
     cardsSection = document.getElementById('cards-section');
     scannerSection = document.getElementById('scanner-section');
-    ordersSection = document.getElementById('orders-section');
-    sealedProductsSection = document.getElementById('sealed-products-section');
-    categoriesSection = document.getElementById('categories-section');
 
-    // Tablas y Modales
-    cardsTable = document.getElementById('cardsTable');
+    videoPreview = document.getElementById('video-preview');
+    startScanBtn = document.getElementById('startScanBtn');
+    
     cardModal = document.getElementById('cardModal');
     cardForm = document.getElementById('cardForm');
     cardName = document.getElementById('cardName');
     cardId = document.getElementById('cardId');
     cardCategory = document.getElementById('cardCategory');
     cardSetCode = document.getElementById('cardSetCode');
-    messageModal = document.getElementById('messageModal'); // Asegurar existencia
-    messageModalTitle = document.getElementById('messageModalTitle');
-    messageModalText = document.getElementById('messageModalText');
 
-    // Referencias Escáner
-    videoPreview = document.getElementById('video-preview');
-    startScanBtn = document.getElementById('startScanBtn');
-
-    // Stats
     totalCardsCount = document.getElementById('totalCardsCount');
-    totalSealedProductsCount = document.getElementById('totalSealedProductsCount');
-    outOfStockCount = document.getElementById('outOfStockCount');
     uniqueCategoriesCount = document.getElementById('uniqueCategoriesCount');
 
-    // --- EVENT LISTENERS NAVEGACIÓN ---
+    // Botones de cierre de modales
+    document.querySelectorAll('.close-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            closeModal(cardModal);
+            closeModal(loginModal);
+        });
+    });
+
+    // Listeners Navegación
     navDashboard?.addEventListener('click', (e) => { e.preventDefault(); showSection(dashboardSection); });
     navCards?.addEventListener('click', (e) => { e.preventDefault(); showSection(cardsSection); });
     navScanner?.addEventListener('click', (e) => { e.preventDefault(); startCamera(); });
     navScannerQuick?.addEventListener('click', (e) => { e.preventDefault(); startCamera(); });
     navLogout?.addEventListener('click', (e) => { e.preventDefault(); handleLogout(); });
 
-    // --- EVENT LISTENERS OPERATIVOS ---
     loginForm?.addEventListener('submit', handleLogin);
     startScanBtn?.addEventListener('click', handleScanAndIdentify);
-    
-    // Búsqueda en vivo
-    adminSearchInput = document.getElementById('adminSearchInput');
-    adminSearchInput?.addEventListener('input', renderCardsTable);
 
-    // Control de autenticación inicial
+    // Auth Observer
     onAuthStateChanged(auth, (user) => {
+        currentAdminUser = user;
         if (user) {
-            if (loginModal) closeModal(loginModal);
+            closeModal(loginModal);
             showSection(dashboardSection);
             loadAllData();
         } else {
-            if (loginModal) openModal(loginModal);
+            hideAllSections();
+            openModal(loginModal);
         }
     });
 });
-
-// Nota del Desarrollador: Las funciones de guardado, edición y eliminación (CRUD)
-// siguen operando sobre las mismas colecciones de Firestore que ya tenías configuradas.
