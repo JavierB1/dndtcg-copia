@@ -39,7 +39,7 @@
     <div id="loginModal" class="admin-login-full-screen">
         <div class="login-content">
             <div class="login-branding">
-                <!-- ÍCONO CAMBIADO A ESCUDO PARA EL LOGIN -->
+                <!-- ÍCONO ESCUDO PARA EL LOGIN -->
                 <i class="fas fa-shield-halved" style="font-size: 4rem; color: #6366f1; margin-bottom: 1rem;"></i>
                 <h1>Acceso Admin</h1>
                 <p>DnD TCG Gestión Interna</p>
@@ -48,19 +48,16 @@
             <form id="loginForm" class="login-form-clean">
                 <div class="form-input-wrapper">
                     <label>CORREO ELECTRÓNICO</label>
-                    <!-- ID CORREGIDO PARA COINCIDIR CON JS -->
                     <input type="email" id="username" placeholder="admin@dndtcg.com" required>
                 </div>
                 <div class="form-input-wrapper">
                     <label>CONTRASEÑA</label>
-                    <!-- ID CORREGIDO PARA COINCIDIR CON JS -->
                     <input type="password" id="password" placeholder="••••••••" required>
                 </div>
                 <button type="submit" id="btnLoginSubmit" class="login-action-btn">
                     Iniciar Sesión
                 </button>
                 <p id="loginMessage" class="login-feedback"></p>
-            </div>
             </form>
         </div>
     </div>
@@ -70,7 +67,7 @@
         <!-- Barra Lateral (Sidebar) -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <!-- ÍCONO CAMBIADO A DRAGÓN PARA EL PANEL -->
+                <!-- ÍCONO DRAGÓN PARA EL PANEL -->
                 <i class="fas fa-dragon" style="color: #6366f1; font-size: 1.5rem;"></i>
                 <span>DnD Admin</span>
             </div>
@@ -140,9 +137,9 @@
 
             <!-- Cartas Section -->
             <section id="cards-section" class="admin-section">
-                <header class="content-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <header class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Catálogo de Cartas</h2>
-                    <button class="login-action-btn" style="width: auto; padding: 10px 20px;">
+                    <button id="btnAddCard" class="login-action-btn" style="width: auto; padding: 10px 20px;">
                         <i class="fas fa-plus"></i> Nueva Carta
                     </button>
                 </header>
@@ -162,20 +159,70 @@
                 </div>
             </section>
 
-            <!-- Otras secciones -->
+            <!-- Productos Sellados Section -->
             <section id="sealed-products-section" class="admin-section">
-                <header class="content-header"><h2>Productos Sellados</h2></header>
-                <div class="table-container"><table id="sealedProductsTable"><thead><tr><th>Nombre</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+                <header class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Productos Sellados</h2>
+                    <button id="btnAddSealed" class="login-action-btn" style="width: auto; padding: 10px 20px;">
+                        <i class="fas fa-plus"></i> Nuevo Producto
+                    </button>
+                </header>
+                <div class="table-container">
+                    <table id="sealedProductsTable">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Precio</th>
+                                <th>Stock</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </section>
             
+            <!-- Categorías Section -->
             <section id="categories-section" class="admin-section">
-                <header class="content-header"><h2>Categorías</h2></header>
-                <div class="table-container"><table id="categoriesTable"><thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+                <header class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Categorías</h2>
+                    <button id="btnAddCategory" class="login-action-btn" style="width: auto; padding: 10px 20px;">
+                        <i class="fas fa-plus"></i> Nueva Categoría
+                    </button>
+                </header>
+                <div class="table-container">
+                    <table id="categoriesTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </section>
             
+            <!-- Pedidos Section (Sin botón de agregar, solo vista) -->
             <section id="orders-section" class="admin-section">
-                <header class="content-header"><h2>Pedidos</h2></header>
-                <div class="table-container"><table id="ordersTable"><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+                <header class="content-header">
+                    <h2>Pedidos</h2>
+                </header>
+                <div class="table-container">
+                    <table id="ordersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Cliente</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </section>
 
         </main>
