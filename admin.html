@@ -4,71 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración DND TCG</title>
-    <!-- Incluir CSS del panel de administración -->
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        /* Estilos específicos para los nuevos botones cuadrados */
-        .btn-square {
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1.2rem;
-            transition: all 0.2s ease;
-            color: white;
-        }
-        .btn-green { background-color: #28a745; }
-        .btn-green:hover { background-color: #218838; }
-        .btn-blue { background-color: #007bff; }
-        .btn-blue:hover { background-color: #0069d9; }
-
-        /* Estilos del escáner */
-        .scanner-container {
-            position: relative;
-            max-width: 500px;
-            margin: 20px auto;
-            border-radius: 15px;
-            overflow: hidden;
-            background: #000;
-            aspect-ratio: 3/4;
-        }
-        #video-preview {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .scanner-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            height: 70%;
-            border: 2px solid #ed1c24;
-            border-radius: 10px;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-            pointer-events: none;
-        }
-        .scanner-line {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: #ed1c24;
-            box-shadow: 0 0 15px #ed1c24;
-            animation: scan-anim 2s infinite linear;
-        }
-        @keyframes scan-anim {
-            0% { top: 0; }
-            100% { top: 100%; }
-        }
-    </style>
 </head>
 <body>
     <div class="admin-container">
@@ -81,10 +18,10 @@
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="#" id="nav-dashboard"><i class="fas fa-tachometer-alt"></i>&nbsp;Dashboard</a></li>
-                    <li><a href="#" id="nav-scanner"><i class="fas fa-camera"></i>&nbsp;Escanear Carta</a></li>
+                    <li><a href="#" id="nav-scanner"><i class="fas fa-camera"></i>&nbsp;Escáner de Cartas</a></li>
                     <li><a href="#" id="nav-cards"><i class="fas fa-file-alt"></i>&nbsp;Gestión de Cartas</a></li>
-                    <li><a href="#" id="nav-sealed-products"><i class="fas fa-box-open"></i>&nbsp;Gestión Productos Sellados</a></li>
-                    <li><a href="#" id="nav-categories"><i class="fas fa-tags"></i>&nbsp;Gestión de Categorías</a></li>
+                    <li><a href="#" id="nav-sealed-products"><i class="fas fa-box-open"></i>&nbsp;Gestión Productos</a></li>
+                    <li><a href="#" id="nav-categories"><i class="fas fa-tags"></i>&nbsp;Categorías</a></li>
                     <li><a href="#" id="nav-orders"><i class="fas fa-shopping-cart"></i>&nbsp;Pedidos</a></li>
                     <li><a href="#" id="nav-logout"><i class="fas fa-sign-out-alt"></i>&nbsp;Cerrar Sesión</a></li>
                 </ul>
@@ -100,56 +37,68 @@
                 </button>
                 <h1>Admin Panel</h1>
                 <div class="header-right-controls">
+                    <!-- Botón de acceso rápido al escáner -->
+                    <button id="nav-scanner-quick" class="refresh-button" title="Escanear Carta" style="background: var(--primary-color); color: white;">
+                        <i class="fas fa-qrcode"></i>
+                    </button>
                     <button id="refreshAdminPageBtn" class="refresh-button">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                     <div class="user-info">
-                        <span>Admin User</span>
+                        <span>Administrador</span>
                     </div>
                 </div>
             </header>
 
-            <!-- SECCIÓN DASHBOARD -->
+            <!-- Dashboard -->
             <section id="dashboard-section" class="admin-section active">
                 <h2>Dashboard</h2>
                 <div class="dashboard-stats">
-                    <div class="stat-card"><h3>Total Cartas</h3><p id="totalCardsCount">0</p></div>
-                    <div class="stat-card"><h3>Productos Sellados</h3><p id="totalSealedProductsCount">0</p></div>
-                    <div class="stat-card"><h3>Sin Stock</h3><p id="outOfStockCount">0</p></div>
-                    <div class="stat-card"><h3>Categorías</h3><p id="uniqueCategoriesCount">0</p></div>
+                    <div class="stat-card">
+                        <h3>Total de Cartas</h3>
+                        <p id="totalCardsCount">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>En Stock</h3>
+                        <p id="inStockCount">0</p>
+                    </div>
                 </div>
             </section>
 
-            <!-- SECCIÓN ESCÁNER -->
-            <section id="scanner-section" class="admin-section">
+            <!-- NUEVA SECCIÓN: Escáner de Cartas -->
+            <section id="scanner-section" class="admin-section" style="display: none;">
                 <h2>Escáner Inteligente</h2>
-                <div class="scanner-container">
-                    <video id="video-preview" autoplay playsinline></video>
-                    <div class="scanner-overlay"><div class="scanner-line"></div></div>
+                <p>Apunta la cámara a una carta para identificarla automáticamente.</p>
+                
+                <div class="scanner-container" style="max-width: 600px; margin: 20px auto; position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 4/3;">
+                    <video id="video-preview" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                    
+                    <!-- Guía visual para la carta -->
+                    <div class="scanner-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 2px solid rgba(255,255,255,0.2); pointer-events: none; display: flex; align-items: center; justify-content: center;">
+                        <div style="width: 70%; height: 80%; border: 2px solid var(--primary-color); border-radius: 10px; box-shadow: 0 0 0 1000px rgba(0,0,0,0.4);"></div>
+                    </div>
+
+                    <div id="processing-indicator" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 8px; text-align: center; z-index: 10;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                        <p>Analizando carta...</p>
+                    </div>
                 </div>
-                <div style="text-align:center; margin-top:20px;">
-                    <button id="startScanBtn" class="btn-capture" style="background:#ed1c24; color:white; border:none; padding:15px 30px; border-radius:50px; cursor:pointer;">
-                        <i class="fas fa-bullseye"></i> Capturar e Identificar
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <button id="startScanBtn" class="add-button" style="padding: 15px 40px; font-size: 1.1rem;">
+                        <i class="fas fa-search"></i> Identificar Carta
                     </button>
                 </div>
             </section>
 
-            <!-- SECCIÓN GESTIÓN DE CARTAS -->
-            <section id="cards-section" class="admin-section">
-                <div style="display: flex; justify-content:建设-between; align-items: center; margin-bottom: 20px;">
+            <!-- Gestión de Cartas -->
+            <section id="cards-section" class="admin-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Gestión de Cartas</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <button id="addCardBtn" class="btn-square btn-green" title="Añadir Nueva Carta">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                        <button id="nav-scanner-quick" class="btn-square btn-blue" title="Escanear Carta">
-                            <i class="fas fa-expand"></i>
-                        </button>
-                    </div>
+                    <button id="addCardBtn" class="add-button" style="background-color: #28a745;"><i class="fas fa-plus"></i></button>
                 </div>
                 
                 <div class="card-list-container">
-                    <input type="text" id="adminSearchInput" placeholder="Buscar carta..." class="admin-search-input">
                     <div class="table-responsive">
                         <table id="cardsTable">
                             <thead>
@@ -169,38 +118,74 @@
                 </div>
             </section>
 
-            <!-- MODAL AÑADIR/EDITAR -->
+            <!-- Modal para Añadir/Editar Carta -->
             <div id="cardModal" class="admin-modal">
                 <div class="admin-modal-content">
-                    <span class="close-button">&times;</span>
-                    <h3 id="cardModalTitle">Añadir/Editar Carta</h3>
+                    <span class="close-button" onclick="closeModal(document.getElementById('cardModal'))">&times;</span>
+                    <h3 id="cardModalTitle">Detalles de la Carta</h3>
                     <form id="cardForm">
                         <input type="hidden" id="cardId">
                         
-                        <label for="cardName">Nombre:</label>
+                        <label for="cardName">Nombre de la Carta:</label>
                         <input type="text" id="cardName" required>
-                        
-                        <label for="cardSetCode">Código del Set:</label>
-                        <input type="text" id="cardSetCode" placeholder="Ej: 151/165">
 
-                        <label for="cardImage">URL Imagen:</label>
+                        <!-- NUEVO CAMPO: Código del Set -->
+                        <label for="cardSetCode">Código del Set (ej: SWSH12):</label>
+                        <input type="text" id="cardSetCode" placeholder="P. ej. GG44/GG70">
+                        
+                        <label for="cardImage">URL de la Imagen:</label>
                         <input type="url" id="cardImage" required>
                         
-                        <label for="cardPrice">Precio:</label>
-                        <input type="number" id="cardPrice" step="0.01" required>
-                        
-                        <label for="cardStock">Stock:</label>
-                        <input type="number" id="cardStock" required>
-                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label for="cardPrice">Precio ($):</label>
+                                <input type="number" id="cardPrice" step="0.01" required>
+                            </div>
+                            <div>
+                                <label for="cardStock">Stock:</label>
+                                <input type="number" id="cardStock" required>
+                            </div>
+                        </div>
+
                         <label for="cardCategory">Categoría:</label>
                         <select id="cardCategory" required></select>
                         
-                        <button type="submit" id="saveCardBtn">Guardar Carta</button>
+                        <button type="submit" id="saveCardBtn" style="margin-top: 20px;">Guardar Cambios</button>
                     </form>
                 </div>
             </div>
+
+            <!-- Modal de Inicio de Sesión -->
+            <div id="loginModal" class="admin-modal" style="display: flex;">
+                <div class="admin-modal-content login-container">
+                    <h3 style="text-align: center; margin-bottom: 20px;">Acceso Administrativo</h3>
+                    <p id="loginMessage" class="error-message" style="display: none; color: red; text-align: center;"></p>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label for="username">Correo Electrónico:</label>
+                            <input type="email" id="username" required placeholder="admin@dndtcg.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Contraseña:</label>
+                            <input type="password" id="password" required>
+                        </div>
+                        <button type="submit" id="loginBtn" class="login-button" style="width: 100%; margin-top: 10px;">Entrar</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal de Mensajes -->
+            <div id="messageModal" class="admin-modal">
+                <div class="admin-modal-content" style="max-width: 400px; text-align: center;">
+                    <h3 id="messageModalTitle"></h3>
+                    <p id="messageModalText" style="margin: 20px 0;"></p>
+                    <button onclick="closeModal(document.getElementById('messageModal'))" class="confirm-button">Aceptar</button>
+                </div>
+            </div>
+
         </main>
     </div>
+
     <script type="module" src="js/admin.js"></script>
 </body>
 </html>
