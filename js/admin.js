@@ -3,7 +3,9 @@ import {
     getAuth, 
     onAuthStateChanged, 
     signInWithEmailAndPassword, 
-    signOut 
+    signOut,
+    setPersistence,
+    browserSessionPersistence 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { 
     getFirestore, 
@@ -37,10 +39,6 @@ const elements = {
     loginMessage: document.getElementById('loginMessage'),
     navLinks: document.querySelectorAll('.nav-link'),
     sections: document.querySelectorAll('.admin-section'),
-    // Botones de Agregar
-    btnAddCard: document.getElementById('btnAddCard'),
-    btnAddSealed: document.getElementById('btnAddSealed'),
-    btnAddCategory: document.getElementById('btnAddCategory'),
     // Estadísticas
     statCards: document.getElementById('stat-total-cards'),
     statOrders: document.getElementById('stat-total-orders'),
@@ -52,21 +50,29 @@ const elements = {
     ordersTableBody: document.querySelector('#ordersTable tbody')
 };
 
-// --- GESTIÓN DE SESIÓN ---
+// --- CONFIGURACIÓN DE SEGURIDAD (LOGIN OBLIGATORIO) ---
 
-// Estado inicial: Cargando
+// Forzamos a que la sesión SOLO dure mientras la pestaña esté abierta y no se recargue
+setPersistence(auth, browserSessionPersistence)
+    .then(() => {
+        console.log("Persistencia configurada: Solo sesión actual.");
+    })
+    .catch((error) => {
+        console.error("Error configurando persistencia:", error);
+    });
+
+// Al cargar la página, ponemos el estado en "loading"
 document.body.className = 'auth-loading';
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        console.log("Sesión iniciada:", user.email);
+        // Usuario autenticado
         document.body.classList.replace('auth-loading', 'auth-ready');
-        // Aseguramos visibilidad manual por si el CSS falla
         if (elements.loginModal) elements.loginModal.style.display = 'none';
         if (elements.adminPanelContainer) elements.adminPanelContainer.style.display = 'flex';
         await loadData();
     } else {
-        console.log("No hay sesión activa");
+        // No hay usuario o se cerró la sesión
         document.body.classList.remove('auth-loading', 'auth-ready');
         document.body.classList.add('auth-guest');
         if (elements.loginModal) elements.loginModal.style.display = 'flex';
@@ -83,32 +89,29 @@ if (elements.loginForm) {
         const btn = document.getElementById('btnLoginSubmit');
 
         try {
-            if (btn) { btn.disabled = true; btn.innerText = "Validando..."; }
+            if (btn) { btn.disabled = true; btn.innerText = "Verificando..."; }
+            // Al hacer login con setPersistence activo, se aplicará la regla de sesión corta
             await signInWithEmailAndPassword(auth, email, pass);
         } catch (err) {
             console.error("Error en login:", err);
             if (elements.loginMessage) {
-                elements.loginMessage.textContent = "Credenciales incorrectas.";
+                elements.loginMessage.textContent = "Acceso denegado. Intente de nuevo.";
             }
             if (btn) { btn.disabled = false; btn.innerText = "Entrar al Panel"; }
         }
     });
 }
 
-// Lógica de Logout
+// Lógica de Logout explícito
 if (elements.btnLogout) {
     elements.btnLogout.addEventListener('click', async (e) => {
         e.preventDefault();
-        try {
-            await signOut(auth);
-            window.location.reload();
-        } catch (err) {
-            console.error("Error al cerrar sesión", err);
-        }
+        await signOut(auth);
+        window.location.reload();
     });
 }
 
-// --- CARGA DE DATOS ---
+// --- CARGA Y RENDERIZADO ---
 
 async function loadData() {
     const getC = (n) => collection(db, 'artifacts', appId, 'public', 'data', n);
@@ -126,7 +129,6 @@ async function loadData() {
         const orders = oSnap.docs.map(d => ({id: d.id, ...d.data()}));
         const categories = catSnap.docs.map(d => ({id: d.id, ...d.data()}));
 
-        // Actualizar Estadísticas con comprobación de existencia (Evita el error TypeError)
         if (elements.statCards) elements.statCards.textContent = cards.length;
         if (elements.statOrders) elements.statOrders.textContent = orders.length;
         if (elements.statStock) {
@@ -137,7 +139,7 @@ async function loadData() {
 
         renderAllTables(cards, sealed, orders, categories);
     } catch (err) {
-        console.error("Error cargando datos de Firestore:", err);
+        console.error("Error cargando Firestore:", err);
     }
 }
 
@@ -149,7 +151,7 @@ function renderAllTables(cards, sealed, orders, categories) {
                 <td>${c.nombre || 'N/A'}</td>
                 <td>$${Number(c.precio || 0).toFixed(2)}</td>
                 <td>${c.stock || 0}</td>
-                <td>${c.categoria || 'Sin categoría'}</td>
+                <td>${c.categoria || 'General'}</td>
                 <td>
                     <button class="row-action-btn"><i class="fas fa-edit"></i></button>
                     <button class="row-action-btn delete"><i class="fas fa-trash"></i></button>
@@ -175,7 +177,7 @@ function renderAllTables(cards, sealed, orders, categories) {
     if (elements.categoriesTableBody) {
         elements.categoriesTableBody.innerHTML = categories.map(cat => `
             <tr>
-                <td style="font-family:monospace; color:#6366f1;">${cat.id.substring(0,8)}...</td>
+                <td style="font-family:monospace; font-size:0.8rem;">${cat.id.substring(0,8)}</td>
                 <td>${cat.nombre || 'Sin nombre'}</td>
                 <td><button class="row-action-btn delete"><i class="fas fa-trash"></i></button></td>
             </tr>
@@ -186,125 +188,100 @@ function renderAllTables(cards, sealed, orders, categories) {
         elements.ordersTableBody.innerHTML = orders.map(o => `
             <tr>
                 <td>#${o.id.substring(0,6)}</td>
-                <td>${o.cliente_nombre || 'Anónimo'}</td>
+                <td>${o.cliente_nombre || 'Cliente'}</td>
                 <td>$${Number(o.total || 0).toFixed(2)}</td>
-                <td><span class="status-tag">${o.estado || 'Pendiente'}</span></td>
+                <td><span class="status-tag">${o.estado || 'Recibido'}</span></td>
                 <td><button class="row-action-btn"><i class="fas fa-eye"></i></button></td>
             </tr>
         `).join('');
     }
 }
 
-// --- LÓGICA DE AGREGAR (MODALES DINÁMICOS) ---
+// --- MODALES DE AGREGAR ---
 
 const showAddModal = (type) => {
     let title = "";
     let fields = [];
-    let collectionName = "";
+    let colName = "";
 
-    switch(type) {
-        case 'card':
-            title = "Nueva Carta";
-            collectionName = "cards";
-            fields = [
-                { id: 'nombre', label: 'Nombre de la Carta', type: 'text' },
-                { id: 'precio', label: 'Precio ($)', type: 'number' },
-                { id: 'stock', label: 'Cantidad en Stock', type: 'number' },
-                { id: 'categoria', label: 'Categoría', type: 'text' },
-                { id: 'imagen_url', label: 'URL de la Imagen', type: 'text' }
-            ];
-            break;
-        case 'sealed':
-            title = "Nuevo Producto Sellado";
-            collectionName = "sealed_products";
-            fields = [
-                { id: 'nombre', label: 'Nombre del Producto', type: 'text' },
-                { id: 'precio', label: 'Precio ($)', type: 'number' },
-                { id: 'stock', label: 'Cantidad en Stock', type: 'number' }
-            ];
-            break;
-        case 'category':
-            title = "Nueva Categoría";
-            collectionName = "categories";
-            fields = [
-                { id: 'nombre', label: 'Nombre de la Categoría', type: 'text' }
-            ];
-            break;
+    if (type === 'card') {
+        title = "Nueva Carta"; colName = "cards";
+        fields = [
+            {id: 'nombre', label: 'Nombre', type: 'text'},
+            {id: 'precio', label: 'Precio', type: 'number'},
+            {id: 'stock', label: 'Stock', type: 'number'},
+            {id: 'categoria', label: 'Categoría', type: 'text'},
+            {id: 'imagen_url', label: 'URL Imagen', type: 'text'}
+        ];
+    } else if (type === 'sealed') {
+        title = "Nuevo Producto"; colName = "sealed_products";
+        fields = [
+            {id: 'nombre', label: 'Nombre', type: 'text'},
+            {id: 'precio', label: 'Precio', type: 'number'},
+            {id: 'stock', label: 'Stock', type: 'number'}
+        ];
+    } else {
+        title = "Nueva Categoría"; colName = "categories";
+        fields = [{id: 'nombre', label: 'Nombre', type: 'text'}];
     }
 
-    const modalOverlay = document.createElement('div');
-    modalOverlay.style = "position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10000; padding:20px; backdrop-filter: blur(4px);";
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay-custom';
+    overlay.style = "position:fixed; inset:0; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px; backdrop-filter:blur(5px);";
     
-    const modalContent = document.createElement('div');
-    modalContent.style = "background:#1e293b; padding:2.5rem; border-radius:1rem; border:1px solid rgba(255,255,255,0.1); width:100%; max-width:450px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);";
-    
-    let fieldsHtml = fields.map(f => `
-        <div style="margin-bottom: 1.2rem;">
-            <label style="display:block; color:#94a3b8; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem; letter-spacing:0.05em;">${f.label.toUpperCase()}</label>
-            <input type="${f.type}" id="modal-${f.id}" step="0.01" style="width:100%; background:#0f172a; border:1px solid #334155; color:white; padding:0.8rem; border-radius:0.5rem; outline:none;" required>
+    overlay.innerHTML = `
+        <div style="background:#1e293b; padding:2rem; border-radius:1rem; width:100%; max-width:400px; border:1px solid #334155;">
+            <h2 style="color:white; margin-bottom:1.5rem; font-size:1.25rem;">${title}</h2>
+            <form id="formAdd">
+                ${fields.map(f => `
+                    <div style="margin-bottom:1rem;">
+                        <label style="display:block; color:#94a3b8; font-size:0.7rem; margin-bottom:0.4rem;">${f.label.toUpperCase()}</label>
+                        <input type="${f.type}" id="f-${f.id}" step="0.01" style="width:100%; background:#0f172a; border:1px solid #334155; color:white; padding:0.6rem; border-radius:0.4rem;" required>
+                    </div>
+                `).join('')}
+                <div style="display:flex; gap:10px; margin-top:1.5rem;">
+                    <button type="button" id="closeM" style="flex:1; background:#334155; color:white; border-radius:0.4rem; padding:0.6rem;">Cancelar</button>
+                    <button type="submit" style="flex:1; background:#6366f1; color:white; border-radius:0.4rem; padding:0.6rem; font-weight:bold;">Guardar</button>
+                </div>
+            </form>
         </div>
-    `).join('');
-
-    modalContent.innerHTML = `
-        <h2 style="font-size:1.5rem; font-weight:800; margin-bottom:1.8rem; color:white; display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-plus-circle" style="color:#6366f1;"></i> ${title}
-        </h2>
-        <form id="dynamicAddForm">
-            ${fieldsHtml}
-            <div style="display:flex; gap:12px; margin-top:2.5rem;">
-                <button type="button" id="btnCancelModal" style="flex:1; background:#334155; color:white; padding:0.8rem; border-radius:0.5rem; font-weight:600; cursor:pointer;">Cancelar</button>
-                <button type="submit" style="flex:1; background:#6366f1; color:white; padding:0.8rem; border-radius:0.5rem; font-weight:700; cursor:pointer;">Guardar Registro</button>
-            </div>
-        </form>
     `;
 
-    modalOverlay.appendChild(modalContent);
-    document.body.appendChild(modalOverlay);
-
-    document.getElementById('btnCancelModal').onclick = () => modalOverlay.remove();
-    
-    document.getElementById('dynamicAddForm').onsubmit = async (e) => {
+    document.body.appendChild(overlay);
+    document.getElementById('closeM').onclick = () => overlay.remove();
+    document.getElementById('formAdd').onsubmit = async (e) => {
         e.preventDefault();
         const data = { createdAt: serverTimestamp() };
         fields.forEach(f => {
-            const val = document.getElementById(`modal-${f.id}`).value;
+            const val = document.getElementById(`f-${f.id}`).value;
             data[f.id] = f.type === 'number' ? Number(val) : val;
         });
-
         try {
-            const docRef = collection(db, 'artifacts', appId, 'public', 'data', collectionName);
-            await addDoc(docRef, data);
-            modalOverlay.remove();
-            await loadData();
-        } catch (err) {
-            console.error("Error al guardar en Firestore:", err);
-            alert("Error de permisos o conexión al guardar.");
-        }
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', colName), data);
+            overlay.remove();
+            loadData();
+        } catch (err) { alert("Error al guardar."); }
     };
 };
 
-// Asignar eventos a botones de cabecera (usando delegación o verificación)
+// Eventos globales para botones "+"
 document.addEventListener('click', (e) => {
     if (e.target.closest('#btnAddCard')) showAddModal('card');
     if (e.target.closest('#btnAddSealed')) showAddModal('sealed');
     if (e.target.closest('#btnAddCategory')) showAddModal('category');
 });
 
-// --- NAVEGACIÓN ---
-
+// Navegación
 elements.navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
         const href = link.getAttribute('href');
         if (!href || href === '#') return;
         e.preventDefault();
-        const targetId = href.replace('#', '');
-
         elements.navLinks.forEach(l => l.classList.remove('active'));
         link.classList.add('active');
-
         elements.sections.forEach(s => {
             s.classList.remove('active');
-            if (s.id === targetId) s.classList.add('active');
+            if (s.id === href.replace('#', '')) s.classList.add('active');
         });
     });
 });
