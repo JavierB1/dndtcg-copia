@@ -11,7 +11,8 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background-color: #f1f5f9; color: #334155; overflow-x: hidden; }
 
-        .admin-container { display: none; min-height: 100vh; }
+        /* Estilos de Contenedor */
+        .admin-container { display: none; min-height: 100vh; flex-direction: row; }
         
         #loginModal { 
             display: flex; position: fixed; top: 0; left: 0; 
@@ -19,133 +20,160 @@
             z-index: 99999; align-items: center; justify-content: center;
         }
 
-        /* Sidebar */
-        .sidebar { width: 260px; background: #1e293b; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; }
-        .sidebar-header { padding: 25px; border-bottom: 1px solid #334155; }
+        /* Sidebar Responsivo */
+        .sidebar { 
+            width: 260px; background: #1e293b; color: white; display: flex; 
+            flex-direction: column; height: 100vh; position: sticky; top: 0;
+            transition: transform 0.3s ease; z-index: 1001;
+        }
+        
+        .sidebar-header { padding: 25px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
         .sidebar-nav { flex: 1; padding: 20px 0; }
         .nav-link { display: flex; align-items: center; gap: 12px; padding: 15px 25px; color: #94a3b8; text-decoration: none; transition: 0.3s; }
         .nav-link:hover, .nav-link.active { background: #334155; color: white; border-left: 4px solid #3b82f6; }
 
-        /* Contenido */
-        .main-content { flex: 1; padding: 30px; }
-        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        /* Overlay para móvil */
+        .sidebar-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; backdrop-filter: blur(2px);
+        }
+
+        /* Contenido Principal */
+        .main-content { flex: 1; padding: 20px; width: 100%; max-width: 100vw; overflow-x: hidden; }
+        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 10px; }
+        
+        .menu-toggle { display: none; background: white; border: none; padding: 10px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
         .admin-section { display: none; animation: fadeIn 0.3s ease; }
         .admin-section.active { display: block; }
 
-        /* Tablas */
-        .table-responsive { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { background: #f8fafc; padding: 15px; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 700; }
-        td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
-        
-        /* Dashboard */
-        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .stat-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .stat-card h3 { font-size: 0.8rem; color: #64748b; text-transform: uppercase; margin-bottom: 10px; }
-        .stat-card p { font-size: 2.2rem; font-weight: 700; color: #1e293b; }
+        /* Dashboard Stats */
+        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .stat-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .stat-card h3 { font-size: 0.75rem; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-card p { font-size: 1.8rem; font-weight: 700; color: #1e293b; }
+
+        /* Tablas Responsivas */
+        .table-responsive { 
+            background: white; border-radius: 16px; overflow-x: auto; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-top: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th { background: #f8fafc; padding: 12px 15px; font-size: 0.7rem; text-transform: uppercase; color: #64748b; font-weight: 700; }
+        td { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
 
         /* Modales */
-        .admin-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .admin-modal-content { background: white; padding: 30px; border-radius: 24px; position: relative; width: 90%; max-width: 500px; }
+        .admin-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 15px; }
+        .admin-modal-content { background: white; padding: 25px; border-radius: 24px; position: relative; width: 100%; max-width: 500px; max-height: 95vh; overflow-y: auto; }
         .admin-modal-content.wide { max-width: 850px; }
 
-        /* Estilos Comunes para Modales de Mensaje (Eliminar y Alerta) */
-        .message-modal-content { text-align: center; padding: 40px 30px; }
-        .message-icon { width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 20px; }
-        
-        /* Rojo para Eliminación */
+        /* Modal Mensajes */
+        .message-modal-content { text-align: center; padding: 30px 20px; }
+        .message-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 15px; }
         .icon-danger { background: #fee2e2; color: #ef4444; }
-        /* Amarillo para Alerta/Advertencia */
         .icon-warning { background: #fef3c7; color: #d97706; }
-
-        .message-title { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 10px; }
-        .message-text { color: #64748b; margin-bottom: 30px; line-height: 1.5; }
-        .message-actions { display: flex; gap: 15px; }
-        
-        .btn-modal { flex: 1; padding: 14px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .message-title { font-size: 1.2rem; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+        .message-text { color: #64748b; margin-bottom: 25px; line-height: 1.4; font-size: 0.9rem; }
+        .message-actions { display: flex; gap: 10px; }
+        .btn-modal { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
         .btn-cancel { border: 1.5px solid #e2e8f0; background: white; color: #64748b; }
-        .btn-delete { background: #ef4444; color: white; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
-        .btn-accept { background: #f59e0b; color: white; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2); }
-        .btn-modal:hover { transform: translateY(-2px); opacity: 0.9; }
+        .btn-delete { background: #ef4444; color: white; }
+        .btn-accept { background: #f59e0b; color: white; }
 
-        /* Layout con Vista Previa */
-        .modal-body-layout { display: flex; gap: 30px; margin-top: 20px; }
+        /* Modal Vista Previa (Adaptable) */
+        .modal-body-layout { display: flex; gap: 20px; margin-top: 15px; }
         .form-side { flex: 1.5; }
-        .preview-side { flex: 1; background: #f8fafc; padding: 20px; border-radius: 18px; border: 1.5px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; }
-        .image-preview-container { width: 100%; aspect-ratio: 2.5/3.5; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #e2e8f0; }
+        .preview-side { flex: 1; background: #f8fafc; padding: 15px; border-radius: 18px; border: 1.5px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; }
+        .image-preview-container { width: 100%; aspect-ratio: 2.5/3.5; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #e2e8f0; max-width: 200px; }
         .image-preview-container img { width: 100%; height: 100%; object-fit: contain; display: none; }
         .image-preview-container.active img { display: block; }
-        .image-preview-container .placeholder-icon { font-size: 3rem; color: #cbd5e1; }
-        .image-preview-container.active .placeholder-icon { display: none; }
+        .image-preview-container .placeholder-icon { font-size: 2.5rem; color: #cbd5e1; }
 
         /* Formularios */
-        .form-row { display: flex; gap: 15px; }
-        .form-group { flex: 1; display: flex; flex-direction: column; margin-bottom: 15px; text-align: left; }
-        .form-group label { font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 5px; text-transform: uppercase; }
-        .form-group input, .form-group select { padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 0.9rem; outline: none; }
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 140px; display: flex; flex-direction: column; margin-bottom: 12px; text-align: left; }
+        .form-group label { font-size: 0.7rem; font-weight: 700; color: #475569; margin-bottom: 4px; text-transform: uppercase; }
+        .form-group input, .form-group select { padding: 11px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 0.85rem; outline: none; width: 100%; }
         
-        .add-button { background: #3b82f6; color: white; width: 45px; height: 45px; border-radius: 12px; border: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .add-button:hover { background: #2563eb; transform: scale(1.05); }
-        .confirm-button { background: #3b82f6; color: white; border: none; padding: 12px 25px; border-radius: 12px; font-weight: 700; cursor: pointer; }
-        .action-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #64748b; padding: 5px; transition: 0.2s; }
-        .action-btn:hover { color: #3b82f6; }
-        .close-button { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #94a3b8; }
+        /* Botones Generales */
+        .add-button { background: #3b82f6; color: white; width: 42px; height: 42px; border-radius: 10px; border: none; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
+        .confirm-button { background: #3b82f6; color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+        .action-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #64748b; padding: 6px; }
+        .close-button { position: absolute; top: 15px; right: 15px; font-size: 1.3rem; cursor: pointer; color: #94a3b8; border: none; background: none; padding: 5px; }
+
+        /* Media Queries para Celular */
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; left: 0; transform: translateX(-100%); height: 100vh; }
+            .sidebar.show { transform: translateX(0); }
+            .sidebar-overlay.show { display: block; }
+            .menu-toggle { display: block; }
+            .main-content { padding: 15px; }
+            .main-header h2 { font-size: 1.2rem; }
+            .modal-body-layout { flex-direction: column-reverse; }
+            .preview-side { margin-bottom: 15px; }
+            .form-row .form-group { flex: 1 1 100%; }
+            .stat-card p { font-size: 1.5rem; }
+            .dashboard-stats { grid-template-columns: 1fr 1fr; }
+        }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        @media (max-width: 850px) {
-            .modal-body-layout { flex-direction: column-reverse; }
-            .sidebar { display: none; }
-        }
     </style>
 </head>
 <body>
 
+    <!-- OVERLAY MÓVIL -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- LOGIN -->
     <div id="loginModal">
-        <div style="background: white; padding: 40px; border-radius: 32px; width: 90%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); text-align: center;">
-            <div style="width: 60px; height: 60px; background: #eff6ff; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                <i class="fas fa-shield-alt" style="color: #3b82f6; font-size: 1.5rem;"></i>
+        <div style="background: white; padding: 30px; border-radius: 24px; width: 90%; max-width: 380px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); text-align: center;">
+            <div style="width: 50px; height: 50px; background: #eff6ff; border-radius: 15px; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                <i class="fas fa-shield-alt" style="color: #3b82f6; font-size: 1.3rem;"></i>
             </div>
-            <h2 style="font-weight: 800; color: #1e293b; margin-bottom: 5px;">DND TCG Admin</h2>
-            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 30px;">Ingresa para gestionar tu inventario</p>
+            <h2 style="font-weight: 800; color: #1e293b; margin-bottom: 4px; font-size: 1.4rem;">DND TCG Admin</h2>
+            <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 25px;">Ingresa para gestionar tu inventario</p>
             <form id="loginForm">
-                <div style="text-align: left; margin-bottom: 15px;">
-                    <label style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Email</label>
-                    <input type="email" id="username" placeholder="admin@dndtcg.com" style="width: 100%; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 15px; margin-top: 5px;" required>
+                <div style="text-align: left; margin-bottom: 12px;">
+                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Email</label>
+                    <input type="email" id="username" placeholder="admin@dndtcg.com" style="width: 100%; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; margin-top: 4px; font-size: 0.9rem;" required>
                 </div>
-                <div style="text-align: left; margin-bottom: 25px;">
-                    <label style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Contraseña</label>
-                    <input type="password" id="password" placeholder="••••••••" style="width: 100%; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 15px; margin-top: 5px;" required>
+                <div style="text-align: left; margin-bottom: 20px;">
+                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Contraseña</label>
+                    <input type="password" id="password" placeholder="••••••••" style="width: 100%; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; margin-top: 4px; font-size: 0.9rem;" required>
                 </div>
-                <button type="submit" id="loginBtnSubmit" class="confirm-button" style="width: 100%; padding: 16px; font-size: 1rem; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);">Acceder</button>
+                <button type="submit" id="loginBtnSubmit" class="confirm-button" style="width: 100%; padding: 14px; font-size: 0.95rem;">Acceder</button>
             </form>
-            <p id="loginMessage" style="color: #ef4444; margin-top: 20px; font-size: 0.85rem; display: none;"></p>
+            <p id="loginMessage" style="color: #ef4444; margin-top: 15px; font-size: 0.8rem; display: none;"></p>
         </div>
     </div>
 
     <!-- PANEL ADMIN -->
     <div class="admin-container" id="adminContainer">
-        <aside class="sidebar" id="sidebar-menu">
+        <aside class="sidebar" id="sidebarMenu">
             <div class="sidebar-header">
-                <h3 style="font-weight: 800; letter-spacing: -0.5px;">DND TCG Admin</h3>
+                <h3 style="font-weight: 800; font-size: 1.2rem;">DND TCG Admin</h3>
+                <button class="menu-toggle" id="closeSidebar" style="background: none; box-shadow: none; color: white;"><i class="fas fa-times"></i></button>
             </div>
             <nav class="sidebar-nav">
                 <a href="#" data-section="dashboard-section" class="nav-link active"><i class="fas fa-chart-line"></i> Dashboard</a>
-                <a href="#" data-section="cards-section" class="nav-link"><i class="fas fa-clone"></i> Gestión de Cartas</a>
-                <a href="#" data-section="sealed-products-section" class="nav-link"><i class="fas fa-box"></i> Productos Sellados</a>
+                <a href="#" data-section="cards-section" class="nav-link"><i class="fas fa-clone"></i> Cartas</a>
+                <a href="#" data-section="sealed-products-section" class="nav-link"><i class="fas fa-box"></i> Sellados</a>
                 <a href="#" data-section="categories-section" class="nav-link"><i class="fas fa-tags"></i> Categorías</a>
                 <a href="#" data-section="orders-section" class="nav-link"><i class="fas fa-shopping-cart"></i> Pedidos</a>
             </nav>
             <div style="padding: 20px; border-top: 1px solid #334155;">
-                <a href="#" id="nav-logout-btn" style="color: #f87171; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 0.9rem;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+                <a href="#" id="nav-logout-btn" style="color: #f87171; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 0.85rem;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
             </div>
         </aside>
 
         <main class="main-content">
             <header class="main-header">
-                <h2 id="main-title" style="font-weight: 800; color: #1e293b;">Panel de Control</h2>
-                <button id="refreshAdminPageBtn" class="action-btn" style="background: white; width: 40px; height: 40px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><i class="fas fa-sync-alt"></i></button>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="menu-toggle" id="openSidebar"><i class="fas fa-bars"></i></button>
+                    <h2 id="main-title" style="font-weight: 800; color: #1e293b;">Dashboard</h2>
+                </div>
+                <button id="refreshAdminPageBtn" class="action-btn" style="background: white; width: 38px; height: 38px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><i class="fas fa-sync-alt"></i></button>
             </header>
 
             <!-- SECCIONES -->
@@ -158,12 +186,11 @@
                 </div>
             </section>
 
-            <!-- SECCIONES TABLAS -->
             <section id="cards-section" class="admin-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                    <h3 style="font-weight: 700;">Cartas Pokémon</h3>
-                    <div style="display: flex; gap: 10px;">
-                        <button id="openScannerBtn" class="confirm-button" style="background: #10b981;"><i class="fas fa-search"></i> Buscador TCG</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px;">
+                    <h3 style="font-weight: 700; font-size: 1rem;">Cartas</h3>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="openScannerBtn" class="confirm-button" style="background: #10b981; padding: 10px 14px;"><i class="fas fa-search"></i></button>
                         <button id="addCardBtn" class="add-button">+</button>
                     </div>
                 </div>
@@ -171,63 +198,62 @@
             </section>
 
             <section id="sealed-products-section" class="admin-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                    <h3 style="font-weight: 700;">Productos Sellados</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="font-weight: 700; font-size: 1rem;">Productos Sellados</h3>
                     <button id="addSealedProductBtn" class="add-button">+</button>
                 </div>
                 <div class="table-responsive"><table id="sealedProductsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
 
             <section id="categories-section" class="admin-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                    <h3 style="font-weight: 700;">Gestión de Categorías</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="font-weight: 700; font-size: 1rem;">Categorías</h3>
                     <button id="addCategoryBtn" class="add-button">+</button>
                 </div>
                 <div class="table-responsive" style="max-width: 600px;"><table id="categoriesTable"><thead><tr><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
 
             <section id="orders-section" class="admin-section">
-                <h3 style="margin-bottom: 25px; font-weight: 700;">Pedidos Recientes</h3>
+                <h3 style="margin-bottom: 20px; font-weight: 700; font-size: 1rem;">Pedidos Recientes</h3>
                 <div class="table-responsive"><table id="ordersTable"><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
         </main>
     </div>
 
-    <!-- MODAL CONFIRMAR ELIMINACIÓN -->
+    <!-- MODALES DE MENSAJE -->
     <div id="confirmDeleteModal" class="admin-modal">
         <div class="admin-modal-content message-modal-content">
             <div class="message-icon icon-danger"><i class="fas fa-exclamation-triangle"></i></div>
-            <h3 class="message-title">¿Estás seguro?</h3>
-            <p class="message-text">Esta acción eliminará permanentemente el elemento de tu inventario. No podrás deshacer este cambio.</p>
+            <h3 class="message-title">¿Borrar elemento?</h3>
+            <p class="message-text">Esta acción es permanente y no se puede deshacer.</p>
             <div class="message-actions">
-                <button class="btn-modal btn-cancel" id="btnCancelDelete">Cancelar</button>
-                <button class="btn-modal btn-delete" id="btnConfirmDelete">Eliminar ahora</button>
+                <button class="btn-modal btn-cancel" id="btnCancelDelete">No, volver</button>
+                <button class="btn-modal btn-delete" id="btnConfirmDelete">Sí, borrar</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL ALERTA PERSONALIZADO (NUEVO) -->
     <div id="alertModal" class="admin-modal">
         <div class="admin-modal-content message-modal-content">
             <div class="message-icon icon-warning"><i class="fas fa-exclamation-circle"></i></div>
             <h3 class="message-title" id="alertTitle">Atención</h3>
-            <p class="message-text" id="alertText">Ha ocurrido un problema con el registro.</p>
+            <p class="message-text" id="alertText">El elemento ya existe.</p>
             <div class="message-actions">
-                <button class="btn-modal btn-accept" id="btnAlertAccept">Entendido</button>
+                <button class="btn-modal btn-accept" id="btnAlertAccept" style="width: 100%;">Entendido</button>
             </div>
         </div>
     </div>
 
-    <!-- OTROS MODALES DE GESTIÓN -->
+    <!-- MODALES DE FORMULARIO -->
     <div id="cardModal" class="admin-modal">
         <div class="admin-modal-content wide">
-            <span class="close-button">&times;</span>
-            <h3 id="cardModalTitle" style="font-weight: 800;">Gestionar Carta</h3>
+            <button class="close-button">&times;</button>
+            <h3 id="cardModalTitle" style="font-weight: 800; font-size: 1.1rem; margin-bottom: 10px;">Gestionar Carta</h3>
             <div class="modal-body-layout">
                 <div class="form-side">
                     <form id="cardForm">
                         <input type="hidden" id="cardId">
-                        <div class="form-group"><label>Nombre de la Carta</label><input type="text" id="cardName" required></div>
+                        <div class="form-group"><label>Nombre</label><input type="text" id="cardName" required></div>
                         <div class="form-row">
                             <div class="form-group"><label>Código</label><input type="text" id="cardCode" required></div>
                             <div class="form-group"><label>Expansión</label><input type="text" id="cardExpansion" required></div>
@@ -237,13 +263,13 @@
                             <div class="form-group"><label>Precio ($)</label><input type="number" step="0.01" id="cardPrice" required></div>
                             <div class="form-group"><label>Stock</label><input type="number" id="cardStock" required></div>
                         </div>
-                        <div class="form-group"><label>URL de Imagen</label><input type="url" id="cardImage" placeholder="https://..."></div>
-                        <button type="submit" class="confirm-button" style="width: 100%; margin-top: 10px;">Guardar Inventario</button>
+                        <div class="form-group"><label>URL Imagen</label><input type="url" id="cardImage"></div>
+                        <button type="submit" class="confirm-button" style="width: 100%; margin-top: 10px;">Guardar Cambios</button>
                     </form>
                 </div>
                 <div class="preview-side">
                     <div id="imagePreviewContainer" class="image-preview-container"><i class="fas fa-image placeholder-icon"></i><img id="cardImagePreview" src="" alt="Preview"></div>
-                    <p style="font-size: 0.7rem; color: #94a3b8; text-align: center; margin-top: 10px;">Vista Previa del Arte</p>
+                    <p style="font-size: 0.65rem; color: #94a3b8; margin-top: 8px;">Vista Previa</p>
                 </div>
             </div>
         </div>
@@ -251,27 +277,27 @@
 
     <div id="sealedProductModal" class="admin-modal">
         <div class="admin-modal-content">
-            <span class="close-button">&times;</span>
-            <h3 id="sealedProductModalTitle">Producto Sellado</h3>
-            <form id="sealedProductForm" style="margin-top: 20px;">
+            <button class="close-button">&times;</button>
+            <h3 id="sealedProductModalTitle" style="font-size: 1.1rem; margin-bottom: 15px;">Producto Sellado</h3>
+            <form id="sealedProductForm">
                 <input type="hidden" id="sealedProductId">
-                <div class="form-group"><label>Nombre del Producto</label><input type="text" id="sealedProductName" required></div>
+                <div class="form-group"><label>Nombre</label><input type="text" id="sealedProductName" required></div>
                 <div class="form-group"><label>Categoría</label><select id="sealedProductCategory" required></select></div>
                 <div class="form-row"><div class="form-group"><label>Precio</label><input type="number" step="0.01" id="sealedProductPrice" required></div><div class="form-group"><label>Stock</label><input type="number" id="sealedProductStock" required></div></div>
-                <div class="form-group"><label>Imagen URL</label><input type="url" id="sealedProductImage"></div>
-                <button type="submit" class="confirm-button" style="width: 100%;">Guardar Producto</button>
+                <div class="form-group"><label>URL Imagen</label><input type="url" id="sealedProductImage"></div>
+                <button type="submit" class="confirm-button" style="width: 100%; margin-top: 10px;">Guardar</button>
             </form>
         </div>
     </div>
 
     <div id="categoryModal" class="admin-modal">
         <div class="admin-modal-content">
-            <span class="close-button">&times;</span>
-            <h3 id="categoryModalTitle">Categoría</h3>
-            <form id="categoryForm" style="margin-top: 20px;">
+            <button class="close-button">&times;</button>
+            <h3 id="categoryModalTitle" style="font-size: 1.1rem; margin-bottom: 15px;">Categoría</h3>
+            <form id="categoryForm">
                 <input type="hidden" id="categoryId">
-                <div class="form-group"><label>Nombre de Categoría</label><input type="text" id="categoryName" required></div>
-                <button type="submit" class="confirm-button" style="width: 100%;">Guardar Categoría</button>
+                <div class="form-group"><label>Nombre</label><input type="text" id="categoryName" required></div>
+                <button type="submit" class="confirm-button" style="width: 100%; margin-top: 10px;">Guardar</button>
             </form>
         </div>
     </div>
