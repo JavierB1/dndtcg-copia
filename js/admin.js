@@ -119,10 +119,8 @@ function renderCardsTable() {
             <td>${c.stock || 0}</td>
             <td>${c.categoria || 'N/A'}</td>
             <td>
-                <div class="action-buttons-cell">
-                    <button class="btn-icon" onclick="console.log('Editar carta')" title="Editar"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon text-red" onclick="console.log('Eliminar carta')" title="Eliminar"><i class="fas fa-trash"></i></button>
-                </div>
+                <button class="btn-icon" title="Editar"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon text-red" title="Eliminar"><i class="fas fa-trash"></i></button>
             </td>
         </tr>
     `).join('');
@@ -135,11 +133,7 @@ function renderCategoriesTable() {
         <tr>
             <td>${c.id.substring(0, 6)}</td>
             <td>${c.name || 'Sin nombre'}</td>
-            <td>
-                <div class="action-buttons-cell">
-                    <button class="btn-icon text-red" title="Eliminar"><i class="fas fa-trash"></i></button>
-                </div>
-            </td>
+            <td><button class="btn-icon text-red" title="Eliminar"><i class="fas fa-trash"></i></button></td>
         </tr>
     `).join('');
 }
@@ -152,12 +146,7 @@ function renderProductsTable() {
             <td>${p.nombre || 'Sin nombre'}</td>
             <td>$${parseFloat(p.precio || 0).toFixed(2)}</td>
             <td>${p.stock || 0}</td>
-            <td>
-                <div class="action-buttons-cell">
-                    <button class="btn-icon" title="Editar"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon text-red" title="Eliminar"><i class="fas fa-trash"></i></button>
-                </div>
-            </td>
+            <td><button class="btn-icon" title="Editar"><i class="fas fa-edit"></i></button></td>
         </tr>
     `).join('');
 }
@@ -171,11 +160,7 @@ function renderOrdersTable() {
             <td>${o.customer?.nombre || 'Anonimo'}</td>
             <td>$${(o.total || 0).toFixed(2)}</td>
             <td><span class="status-badge status-${o.status || 'pending'}">${o.status || 'pendiente'}</span></td>
-            <td>
-                <div class="action-buttons-cell">
-                    <button class="btn-icon" title="Ver detalle"><i class="fas fa-eye"></i></button>
-                </div>
-            </td>
+            <td><button class="btn-icon" title="Ver detalle"><i class="fas fa-eye"></i></button></td>
         </tr>
     `).join('');
 }
