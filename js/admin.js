@@ -97,6 +97,7 @@ function showSection(sectionId) {
 // ==========================================================================
 
 async function handleQuickSearch() {
+    // Usamos el ID exclusivo para el buscador
     let rawInput = searchCardNumberInput.value.trim();
     const setIdInput = searchSetIdInput.value.trim().toLowerCase();
 
@@ -403,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Inyectar Buscador en el modal vacío del HTML
+    // Inyectar Buscador con ID único para evitar conflictos
     const modalContent = document.getElementById('quickSearchContent');
     if (modalContent) {
         modalContent.innerHTML = `
@@ -411,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <h2 style="margin-bottom: 20px;"><i class="fas fa-search"></i> Buscador TCG</h2>
             <div style="margin-bottom: 16px; text-align: left;">
                 <label>Número de Carta (ej: 028/151)</label>
-                <input type="text" id="searchCardNumber" placeholder="Número..." style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px;">
+                <input type="text" id="tcgSearchInput" placeholder="Número..." style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px;">
             </div>
             <div style="margin-bottom: 24px; text-align: left;">
                 <label>Expansión (opcional)</label>
@@ -422,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
             <p id="searchStatus" style="margin-top: 20px; font-size: 0.95rem;"></p>
         `;
-        searchCardNumberInput = document.getElementById('searchCardNumber');
+        searchCardNumberInput = document.getElementById('tcgSearchInput');
         searchSetIdInput = document.getElementById('searchSetId');
         submitSearchBtn = document.getElementById('submitSearch');
         searchStatusMessage = document.getElementById('searchStatus');
