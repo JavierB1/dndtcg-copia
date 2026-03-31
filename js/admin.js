@@ -22,147 +22,95 @@ const auth = getAuth(app);
 const appId = firebaseConfig.projectId;
 
 let allCards = [], allSealedProducts = [], allCategories = [], allOrders = [];
-let ocrWorker = null;
-let isScanning = false;
-let isProcessingFrame = false;
-let mediaStream = null;
 
 // ==========================================================================
 // DOM ELEMENTS
 // ==========================================================================
-let sidebarMenu, sidebarOverlay, loginModal, cardModal, scannerModal;
+let sidebarMenu, sidebarOverlay, loginModal, cardModal, quickSearchModal;
 let cardForm, cardId, cardName, cardCode, cardExpansion, cardImage, cardPrice, cardStock, cardCategory;
-let scannerStatusMessage, cameraStream, captureCanvas;
+let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBtn;
 
 // ==========================================================================
-// MOTOR DE ESCANEO AUTOMÁTICO (PERSISTENCIA)
+// LÓGICA DE BÚSQUEDA POR TEXTO (REEMPLAZA A LA CÁMARA)
 // ==========================================================================
 
-async function initOCR() {
-    if (!window.Tesseract) {
-        await new Promise(r => {
-            const s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-            s.onload = r;
-            document.head.appendChild(s);
-        });
-    }
-    if (!ocrWorker) {
-        ocrWorker = await Tesseract.createWorker('eng');
-    }
-}
+async function handleQuickSearch() {
+    const number = searchCardNumberInput.value.trim();
+    const setId = searchSetIdInput.value.trim().toLowerCase();
 
-async function startAutoScanner() {
-    try {
-        isScanning = true;
-        scannerStatusMessage.innerHTML = "Iniciando cámara...";
-        
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-        });
-        cameraStream.srcObject = mediaStream;
-        
-        await initOCR();
-        scannerStatusMessage.innerHTML = "<strong>BUSCANDO CARTA...</strong><br><small>Mantén el número de colección en el centro.</small>";
-        
-        // Iniciar el bucle de observación
-        requestAnimationFrame(autoScanLoop);
-    } catch (err) {
-        scannerStatusMessage.textContent = "Error de cámara. Verifica permisos en Safari.";
-    }
-}
-
-async function autoScanLoop() {
-    if (!isScanning) return;
-    if (isProcessingFrame) {
-        requestAnimationFrame(autoScanLoop);
+    if (!number) {
+        searchStatusMessage.textContent = "Por favor ingresa el número de la carta.";
+        searchStatusMessage.style.color = "#ef4444";
         return;
     }
 
-    isProcessingFrame = true;
+    searchStatusMessage.textContent = "Buscando en la base de datos oficial...";
+    searchStatusMessage.style.color = "#3b82f6";
+    submitSearchBtn.disabled = true;
 
     try {
-        const ctx = captureCanvas.getContext('2d');
-        const vW = cameraStream.videoWidth;
-        const vH = cameraStream.videoHeight;
-
-        // --- RECORTE INTELIGENTE (ZOOM DIGITAL) ---
-        // Tomamos el 40% central para que el usuario no tenga que acercar tanto el iPad
-        const cropW = vW * 0.4;
-        const cropH = vH * 0.4;
-        const sX = (vW - cropW) / 2;
-        const sY = (vH - cropH) / 2;
-
-        captureCanvas.width = 600; // Resolución fija para la IA
-        captureCanvas.height = 600;
-
-        // Filtro de pre-procesamiento para lectura nítida
-        ctx.filter = 'contrast(1.6) grayscale(1) brightness(1.1)';
-        ctx.drawImage(cameraStream, sX, sY, cropW, cropH, 0, 0, 600, 600);
-        ctx.filter = 'none';
-
-        const result = await ocrWorker.recognize(captureCanvas);
-        const text = result.data.text;
-
-        // Patrón Pokémon: Numero/Total (ej: 152/162)
-        const match = text.match(/([a-zA-Z0-9]{1,4})\s*\/\s*(\d{1,3})/);
-
-        if (match) {
-            const num = match[1].replace(/^0+/, '');
-            const total = match[2];
-            
-            scannerStatusMessage.innerHTML = `<span style="color:#3b82f6">¡Detectado ${match[0]}!</span><br>Validando...`;
-            
-            const resp = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:${num}`);
-            const json = await resp.json();
-
-            if (json.data && json.data.length > 0) {
-                // Buscamos la expansión correcta por el total de cartas impresas
-                const card = json.data.find(c => c.set.printedTotal == total) || json.data[0];
-                handleFoundCard(card, match[0]);
-                return; // Detener bucle
-            }
+        // Query básica por número
+        let query = `number:${number}`;
+        // Si el usuario provee las 3 letras de la expansión, filtramos por set.id o set.symbol
+        if (setId) {
+            query += ` (set.id:${setId}* OR set.symbol:${setId}*)`;
         }
-    } catch (e) {
-        console.error("Error en frame:", e);
-    }
 
-    isProcessingFrame = false;
-    // Esperar un poco antes del siguiente intento para no saturar el iPad
-    setTimeout(() => requestAnimationFrame(autoScanLoop), 400);
+        const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=${query}`);
+        const data = await response.json();
+
+        if (data.data && data.data.length > 0) {
+            let bestMatch = data.data[0];
+            
+            // Si hay varios resultados y pusimos expansión, intentamos ser más específicos
+            if (setId) {
+                const filtered = data.data.find(c => c.set.id.toLowerCase().includes(setId));
+                if (filtered) bestMatch = filtered;
+            }
+
+            fillFormWithAPIData(bestMatch, `${number}/${bestMatch.set.printedTotal}`);
+            closeModal(quickSearchModal);
+            
+            // Limpiar buscador
+            searchCardNumberInput.value = "";
+            searchSetIdInput.value = "";
+            searchStatusMessage.textContent = "";
+        } else {
+            searchStatusMessage.textContent = "No se encontró ninguna carta con esos datos.";
+            searchStatusMessage.style.color = "#ef4444";
+        }
+    } catch (error) {
+        console.error("Error en búsqueda:", error);
+        searchStatusMessage.textContent = "Error de conexión con la API.";
+        searchStatusMessage.style.color = "#ef4444";
+    } finally {
+        submitSearchBtn.disabled = false;
+    }
 }
 
-function handleFoundCard(card, code) {
-    isScanning = false;
-    stopCamera();
-    closeModal(scannerModal);
+function fillFormWithAPIData(card, displayCode) {
     openModal(cardModal);
     
     cardName.value = card.name;
-    cardCode.value = code;
+    cardCode.value = displayCode || card.number;
     cardExpansion.value = card.set.name;
     cardImage.value = card.images.large || card.images.small;
     
+    // Obtener precio de mercado sugerido
     let price = 0;
     if (card.tcgplayer?.prices) {
         const p = card.tcgplayer.prices;
-        price = p[Object.keys(p)[0]].market || 0;
+        const firstKey = Object.keys(p)[0];
+        price = p[firstKey].market || p[firstKey].mid || 0;
     }
     cardPrice.value = parseFloat(price).toFixed(2);
     cardCategory.value = 'Pokémon TCG';
 
+    // Animación visual de campos autocompletados
     [cardName, cardCode, cardExpansion, cardImage].forEach(f => {
         f.style.backgroundColor = '#ecfdf5';
         setTimeout(() => f.style.backgroundColor = '', 2000);
     });
-}
-
-function stopCamera() {
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(t => t.stop());
-        mediaStream = null;
-    }
-    isScanning = false;
 }
 
 // ==========================================================================
@@ -241,7 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sidebarOverlay = document.getElementById('sidebar-overlay');
     loginModal = document.getElementById('loginModal');
     cardModal = document.getElementById('cardModal');
-    scannerModal = document.getElementById('scannerModal');
+    quickSearchModal = document.getElementById('scannerModal'); // Reutilizamos el contenedor del modal
+    
     cardForm = document.getElementById('cardForm');
     cardId = document.getElementById('cardId');
     cardName = document.getElementById('cardName');
@@ -251,11 +200,46 @@ document.addEventListener('DOMContentLoaded', () => {
     cardPrice = document.getElementById('cardPrice');
     cardStock = document.getElementById('cardStock');
     cardCategory = document.getElementById('cardCategory');
-    cameraStream = document.getElementById('cameraStream');
-    captureCanvas = document.getElementById('captureCanvas');
-    scannerStatusMessage = document.getElementById('scannerStatusMessage');
 
-    // Eventos
+    // Estilos para el buscador manual
+    const style = document.createElement('style');
+    style.innerHTML = `
+        @media(max-width:768px){.sidebar{position:fixed;left:-260px;z-index:100;transition:0.3s}.sidebar.show{left:0}.main-content{margin-left:0}.admin-modal-content{width:95%}}
+        .search-group { margin-bottom: 15px; }
+        .search-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #4a5568; font-size: 0.85rem; }
+        .search-input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 1rem; }
+        .btn-search-submit { width: 100%; padding: 14px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-search-submit:disabled { background: #cbd5e0; }
+    `;
+    document.head.appendChild(style);
+
+    // Transformar el modal de "Escáner" en "Buscador de Texto"
+    const modalContent = quickSearchModal.querySelector('.admin-modal-content');
+    if (modalContent) {
+        modalContent.innerHTML = `
+            <span class="close-button">&times;</span>
+            <h2 style="margin-bottom: 20px;"><i class="fas fa-search"></i> Buscador de Cartas</h2>
+            <div class="search-group">
+                <label>Número de Carta (ej: 152)</label>
+                <input type="text" id="searchCardNumber" class="search-input" placeholder="Ej: 152">
+            </div>
+            <div class="search-group">
+                <label>Código Expansión (ej: sv1, pgo, swsh12)</label>
+                <input type="text" id="searchSetId" class="search-input" placeholder="Ej: sv1">
+            </div>
+            <button id="submitSearch" class="btn-search-submit">Buscar en API</button>
+            <p id="searchStatus" style="margin-top: 15px; text-align: center; font-size: 0.9rem;"></p>
+        `;
+        
+        searchCardNumberInput = document.getElementById('searchCardNumber');
+        searchSetIdInput = document.getElementById('searchSetId');
+        submitSearchBtn = document.getElementById('submitSearch');
+        searchStatusMessage = document.getElementById('searchStatus');
+        
+        submitSearchBtn.addEventListener('click', handleQuickSearch);
+    }
+
+    // Eventos de Navegación
     document.getElementById('sidebarToggleBtn')?.addEventListener('click', () => { sidebarMenu.classList.add('show'); sidebarOverlay.style.display='block'; });
     sidebarOverlay?.addEventListener('click', () => { sidebarMenu.classList.remove('show'); sidebarOverlay.style.display='none'; });
     
@@ -266,14 +250,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('openScannerBtn')?.addEventListener('click', () => {
-        openModal(scannerModal);
-        startAutoScanner();
+        openModal(quickSearchModal);
     });
 
     document.querySelectorAll('.close-button').forEach(b => b.addEventListener('click', () => {
         closeModal(cardModal);
-        closeModal(scannerModal);
-        stopCamera();
+        closeModal(quickSearchModal);
     }));
 
     cardForm?.addEventListener('submit', handleSaveCard);
