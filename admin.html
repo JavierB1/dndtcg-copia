@@ -83,13 +83,19 @@
                 <section id="cards-section" class="admin-section">
                     <div class="section-header-actions">
                         <h2>Gestión de Cartas</h2>
-                        <button id="addCardBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                        <div class="header-buttons">
+                            <!-- Botón de Escáner añadido -->
+                            <button id="scanCardBtn" class="scan-button" style="background-color: #4f46e5; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-right: 10px;">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <button id="addCardBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                        </div>
                     </div>
 
                     <div class="filter-bar">
                         <div class="search-box">
                             <i class="fas fa-search"></i>
-                            <input type="text" id="adminSearchInput" placeholder="Buscar por nombre o ID...">
+                            <input type="text" id="adminSearchInput" placeholder="Buscar por nombre, ID o código...">
                         </div>
                         <select id="adminCategoryFilter">
                             <option value="">Todas las categorías</option>
@@ -102,6 +108,7 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Imagen</th>
+                                    <th>Código</th> <!-- Columna añadida -->
                                     <th>Nombre</th>
                                     <th>Precio</th>
                                     <th>Stock</th>
@@ -207,6 +214,7 @@
     </div>
 
     <!-- Modals -->
+    
     <!-- Card Modal -->
     <div id="cardModal" class="admin-modal">
         <div class="modal-content">
@@ -220,6 +228,11 @@
                     <div class="form-group">
                         <label for="cardName">Nombre de la Carta</label>
                         <input type="text" id="cardName" required>
+                    </div>
+                    <!-- Campo de Código añadido -->
+                    <div class="form-group">
+                        <label for="cardCode">Código de Colección (Ej: 154/198)</label>
+                        <input type="text" id="cardCode" placeholder="000/000">
                     </div>
                     <div class="form-group">
                         <label for="cardImage">URL de la Imagen</label>
@@ -243,6 +256,25 @@
                         <button type="submit" id="saveCardBtn" class="btn-save">Guardar Carta</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Escáner añadido -->
+    <div id="scannerModal" class="admin-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Escáner de Cartas</h3>
+                <span class="close-button" id="closeScannerModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="camera-container" style="width: 100%; height: 300px; background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; position: relative; overflow: hidden;">
+                    <p>Cámara no activa</p>
+                    <video id="scannerVideo" style="display:none; width: 100%; height: 100%; object-fit: cover;"></video>
+                </div>
+                <div style="margin-top: 15px; text-align: center;">
+                    <button id="captureCardBtn" class="btn-save" style="background-color: #10b981;">Capturar y Buscar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -314,6 +346,19 @@
             </div>
             <div class="modal-body" id="orderDetailContent">
                 <!-- Se llena por JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensajes de Sistema añadido -->
+    <div id="messageModal" class="admin-modal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-body">
+                <h3 id="messageModalTitle"></h3>
+                <p id="messageModalText"></p>
+                <div style="margin-top: 20px;">
+                    <button id="okMessageModal" class="btn-save">Aceptar</button>
+                </div>
             </div>
         </div>
     </div>
