@@ -1,13 +1,15 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { 
     getAuth, 
-    signInWithEmailAndPassword, 
     onAuthStateChanged, 
-    signOut,
-    setPersistence,
-    browserSessionPersistence 
+    signInWithEmailAndPassword, 
+    signOut 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+import { 
+    getFirestore, 
+    collection, 
+    getDocs 
+} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
@@ -23,209 +25,92 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = firebaseConfig.projectId;
 
-// --- ELEMENTOS DEL DOM ---
+// Referencias a tu HTML exacto
 const loginForm = document.getElementById('loginForm');
-const loginMessage = document.getElementById('loginMessage');
 const btnLogout = document.getElementById('btnLogout');
+const navLinks = document.querySelectorAll('.nav-link');
+const sections = document.querySelectorAll('.admin-section');
 
-let allData = { cards: [], products: [], categories: [], orders: [] };
-
-// --- GESTIÓN DE ESTADO DE AUTENTICACIÓN ---
+// --- AUTENTICACIÓN ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        console.log("Sesión activa detectada:", user.email);
-        try {
-            await loadDashboardData();
-            document.body.classList.remove('auth-loading', 'auth-guest');
-            document.body.classList.add('auth-ready');
-        } catch (err) {
-            console.error("Error crítico de acceso:", err);
-            handleLogout();
-        }
+        document.body.className = 'auth-ready';
+        await loadData();
     } else {
-        console.log("No hay usuario autenticado.");
-        document.body.classList.remove('auth-loading', 'auth-ready');
-        document.body.classList.add('auth-guest');
-        clearAllTables();
+        document.body.className = 'auth-guest';
     }
 });
 
-// --- CARGA DE DATOS DESDE FIRESTORE ---
-async function loadDashboardData() {
-    const publicPath = (coll) => collection(db, 'artifacts', appId, 'public', 'data', coll);
-
-    try {
-        const [catSnap, cardSnap, prodSnap, orderSnap] = await Promise.all([
-            getDocs(publicPath('categories')),
-            getDocs(publicPath('cards')),
-            getDocs(publicPath('sealed_products')),
-            getDocs(publicPath('orders'))
-        ]);
-
-        allData.categories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        allData.cards = cardSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        allData.products = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        allData.orders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        renderAll();
-    } catch (err) {
-        throw err;
-    }
-}
-
-// --- RENDERIZADO DE INTERFAZ ---
-function renderAll() {
-    updateStats();
-    renderCardsTable();
-    renderCategoriesTable();
-    renderProductsTable();
-    renderOrdersTable();
-    populateFilters();
-}
-
-function updateStats() {
-    const cardEl = document.getElementById('stat-total-cards');
-    const stockEl = document.getElementById('stat-total-stock');
-    const orderEl = document.getElementById('stat-total-orders');
-
-    if (cardEl) cardEl.textContent = allData.cards.length;
-    if (stockEl) {
-        const totalStock = allData.cards.reduce((acc, c) => acc + (parseInt(c.stock) || 0), 0);
-        stockEl.textContent = totalStock;
-    }
-    if (orderEl) orderEl.textContent = allData.orders.length;
-}
-
-function renderCardsTable() {
-    const tbody = document.querySelector('#cardsTable tbody');
-    if (!tbody) return;
-
-    const placeholder = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E`;
-
-    tbody.innerHTML = allData.cards.map(c => `
-        <tr>
-            <td>
-                <div class="img-wrapper" style="width: 40px; height: 40px; overflow: hidden; border-radius: 4px; background: #334155;">
-                    <img src="${c.imagen_url || placeholder}" 
-                         width="40" 
-                         style="object-fit: cover; display: block;"
-                         onerror="this.onerror=null;this.src='${placeholder}';">
-                </div>
-            </td>
-            <td>${c.nombre || 'Sin nombre'}</td>
-            <td>$${parseFloat(c.precio || 0).toFixed(2)}</td>
-            <td>${c.stock || 0}</td>
-            <td>${c.categoria || 'N/A'}</td>
-            <td>
-                <button class="btn-icon" title="Editar"><i class="fas fa-edit"></i></button>
-                <button class="btn-icon text-red" title="Eliminar"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-function renderCategoriesTable() {
-    const tbody = document.querySelector('#categoriesTable tbody');
-    if (!tbody) return;
-    tbody.innerHTML = allData.categories.map(c => `
-        <tr>
-            <td>${c.id.substring(0, 6)}</td>
-            <td>${c.name || 'Sin nombre'}</td>
-            <td><button class="btn-icon text-red" title="Eliminar"><i class="fas fa-trash"></i></button></td>
-        </tr>
-    `).join('');
-}
-
-function renderProductsTable() {
-    const tbody = document.querySelector('#sealedProductsTable tbody');
-    if (!tbody) return;
-    tbody.innerHTML = allData.products.map(p => `
-        <tr>
-            <td>${p.nombre || 'Sin nombre'}</td>
-            <td>$${parseFloat(p.precio || 0).toFixed(2)}</td>
-            <td>${p.stock || 0}</td>
-            <td><button class="btn-icon" title="Editar"><i class="fas fa-edit"></i></button></td>
-        </tr>
-    `).join('');
-}
-
-function renderOrdersTable() {
-    const tbody = document.querySelector('#ordersTable tbody');
-    if (!tbody) return;
-    tbody.innerHTML = allData.orders.map(o => `
-        <tr>
-            <td>#${o.id.substring(0, 8)}</td>
-            <td>${o.customer?.nombre || 'Anónimo'}</td>
-            <td>$${(o.total || 0).toFixed(2)}</td>
-            <td><span class="status-badge status-${o.status || 'pending'}">${o.status || 'pendiente'}</span></td>
-            <td><button class="btn-icon" title="Ver detalle"><i class="fas fa-eye"></i></button></td>
-        </tr>
-    `).join('');
-}
-
-function clearAllTables() {
-    document.querySelectorAll('table tbody').forEach(tb => tb.innerHTML = '');
-}
-
-function populateFilters() {
-    const select = document.getElementById('adminCategoryFilter');
-    if (!select) return;
-    const options = allData.categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    select.innerHTML = '<option value="">Todas las categorías</option>' + options;
-}
-
-// --- ACCIONES DE USUARIO ---
-
-async function handleLogout() {
-    try {
-        await signOut(auth);
-        window.location.reload();
-    } catch (err) {
-        console.error("Error al cerrar sesión:", err);
-    }
-}
-
-loginForm?.addEventListener('submit', async (e) => {
+loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btn = document.getElementById('btnLoginSubmit');
     const email = document.getElementById('username').value;
     const pass = document.getElementById('password').value;
+    const msg = document.getElementById('loginMessage');
 
     try {
-        if (btn) btn.disabled = true;
-        loginMessage.textContent = "Iniciando sesión temporal...";
-        loginMessage.style.color = "var(--primary)";
-        
-        // 1. Configurar persistencia de sesión (se borra al cerrar/recargar)
-        await setPersistence(auth, browserSessionPersistence);
-        
-        // 2. Iniciar sesión normalmente
         await signInWithEmailAndPassword(auth, email, pass);
-        
     } catch (err) {
-        if (btn) btn.disabled = false;
-        loginMessage.textContent = "Error: Usuario o contraseña incorrectos.";
-        loginMessage.style.color = "var(--red)";
-        console.error("Error de login:", err);
+        msg.textContent = "Acceso incorrecto.";
     }
 });
 
-btnLogout?.addEventListener('click', (e) => {
+btnLogout.addEventListener('click', (e) => {
     e.preventDefault();
-    handleLogout();
+    signOut(auth).then(() => window.location.reload());
 });
 
+// --- CARGA DE DATOS ---
+async function loadData() {
+    const getC = (n) => collection(db, 'artifacts', appId, 'public', 'data', n);
+    
+    const [cSnap, sSnap, oSnap] = await Promise.all([
+        getDocs(getC('cards')),
+        getDocs(getC('sealed_products')),
+        getDocs(getC('orders'))
+    ]);
+
+    const cards = cSnap.docs.map(d => ({id: d.id, ...d.data()}));
+    const sealed = sSnap.docs.map(d => ({id: d.id, ...d.data()}));
+    const orders = oSnap.docs.map(d => ({id: d.id, ...d.data()}));
+
+    // Dashboard
+    document.getElementById('stat-total-cards').textContent = cards.length;
+    document.getElementById('stat-total-orders').textContent = orders.length;
+    document.getElementById('stat-total-stock').textContent = cards.reduce((acc, c) => acc + (parseInt(c.stock) || 0), 0);
+
+    renderTables(cards, sealed, orders);
+}
+
+function renderTables(cards, sealed, orders) {
+    // Render Cartas
+    const cardsT = document.querySelector('#cardsTable tbody');
+    cardsT.innerHTML = cards.map(c => `
+        <tr>
+            <td><img src="${c.imagen_url}" style="width:40px; border-radius:4px;"></td>
+            <td>${c.nombre}</td>
+            <td>$${c.precio}</td>
+            <td>${c.stock}</td>
+            <td>${c.categoria || '-'}</td>
+            <td>
+                <button class="row-action-btn"><i class="fas fa-edit"></i></button>
+                <button class="row-action-btn delete"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+}
+
 // --- NAVEGACIÓN ---
-document.querySelectorAll('.nav-link').forEach(link => {
+navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
-        const targetId = link.getAttribute('href')?.substring(1);
-        if (targetId && targetId !== '#' && targetId !== '') {
-            e.preventDefault();
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-            const targetSection = document.getElementById(targetId);
-            if (targetSection) targetSection.classList.add('active');
-        }
+        const targetId = link.getAttribute('href').replace('#', '');
+        if (targetId === '#') return;
+
+        navLinks.forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+
+        sections.forEach(s => {
+            s.classList.remove('active');
+            if (s.id === targetId) s.classList.add('active');
+        });
     });
 });
