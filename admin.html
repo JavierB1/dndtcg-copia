@@ -7,37 +7,37 @@
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="login-state"> <!-- Clase inicial para control de estado -->
+<body class="auth-loading"> <!-- Clase inicial para evitar parpadeos -->
 
     <!-- PANTALLA DE LOGIN (BLOQUEO TOTAL) -->
     <div id="loginModal" class="admin-login-full-screen">
         <div class="login-content">
             <div class="login-branding">
                 <i class="fas fa-user-shield"></i>
-                <h1>D&D TCG</h1>
-                <p>Panel de Control Administrativo</p>
+                <h1>D&D TCG Admin</h1>
+                <p>Introduzca sus credenciales para acceder</p>
             </div>
             <form id="loginForm" class="login-form-clean">
                 <div class="form-input-wrapper">
                     <label>Correo Electrónico</label>
-                    <input type="email" id="username" placeholder="ejemplo@dndtcg.com" required>
+                    <input type="email" id="username" placeholder="admin@dndtcg.com" required>
                 </div>
                 <div class="form-input-wrapper">
                     <label>Contraseña</label>
                     <input type="password" id="password" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="login-action-btn">Iniciar Sesión</button>
+                <button type="submit" id="btnLoginSubmit" class="login-action-btn">Entrar al Panel</button>
                 <p id="loginMessage" class="login-feedback"></p>
             </form>
         </div>
     </div>
 
-    <!-- CONTENEDOR DEL PANEL (OCULTO HASTA EL LOGIN) -->
-    <div class="admin-container">
+    <!-- CONTENEDOR DEL PANEL (SÓLO VISIBLE TRAS AUTH) -->
+    <div id="adminPanelContainer" class="admin-container">
         <aside class="sidebar">
             <div class="sidebar-header">
                 <img src="img/logo.png" alt="Logo" onerror="this.src='https://via.placeholder.com/40'">
-                <span>Admin Panel</span>
+                <span>D&D TCG</span>
             </div>
             <nav class="sidebar-nav">
                 <a href="#dashboard-section" class="nav-link active"><i class="fas fa-th-large"></i> Dashboard</a>
@@ -45,29 +45,30 @@
                 <a href="#sealed-products-section" class="nav-link"><i class="fas fa-box-open"></i> Productos</a>
                 <a href="#categories-section" class="nav-link"><i class="fas fa-tags"></i> Categorías</a>
                 <a href="#orders-section" class="nav-link"><i class="fas fa-shopping-cart"></i> Pedidos</a>
-                <a href="#" id="btnLogout" class="nav-link logout-link"><i class="fas fa-sign-out-alt"></i> Salir</a>
+                <div class="sidebar-divider"></div>
+                <a href="#" id="btnLogout" class="nav-link logout-link"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
             </nav>
         </aside>
 
         <main class="main-content">
-            <!-- SECCIONES ADMINISTRATIVAS -->
+            <!-- DASHBOARD -->
             <section id="dashboard-section" class="admin-section active">
-                <header class="content-header">
-                    <h1>Dashboard</h1>
-                </header>
+                <div class="content-header">
+                    <h1>Resumen General</h1>
+                </div>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-clone"></i></div>
                         <div class="stat-info">
                             <h3 id="stat-total-cards">0</h3>
-                            <p>Cartas</p>
+                            <p>Cartas en Base</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-boxes"></i></div>
                         <div class="stat-info">
                             <h3 id="stat-total-stock">0</h3>
-                            <p>Stock</p>
+                            <p>Stock Total</p>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -80,21 +81,89 @@
                 </div>
             </section>
 
-            <!-- RESTO DE SECCIONES (CARTAS, PRODUCTOS, ETC) -->
+            <!-- SECCIÓN CARTAS -->
             <section id="cards-section" class="admin-section">
-                <header class="content-header">
-                    <h2>Gestión de Inventario</h2>
-                    <button class="btn-primary">Añadir Nueva Carta</button>
-                </header>
+                <div class="content-header">
+                    <h2>Gestión de Cartas</h2>
+                    <button class="btn-primary" onclick="window.openAddModal()">+ Nueva Carta</button>
+                </div>
+                <div class="filter-controls">
+                    <input type="text" id="adminSearchInput" placeholder="Buscar por nombre...">
+                    <select id="adminCategoryFilter">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                </div>
                 <div class="table-container">
                     <table id="cardsTable">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Imagen</th>
                                 <th>Nombre</th>
                                 <th>Precio</th>
                                 <th>Stock</th>
+                                <th>Categoría</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECCIÓN PRODUCTOS SELLADOS -->
+            <section id="sealed-products-section" class="admin-section">
+                <div class="content-header">
+                    <h2>Productos Sellados</h2>
+                    <button class="btn-primary">+ Nuevo Producto</button>
+                </div>
+                <div class="table-container">
+                    <table id="sealedProductsTable">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Precio</th>
+                                <th>Stock</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECCIÓN CATEGORÍAS -->
+            <section id="categories-section" class="admin-section">
+                <div class="content-header">
+                    <h2>Categorías</h2>
+                    <button class="btn-primary">+ Nueva Categoría</button>
+                </div>
+                <div class="table-container">
+                    <table id="categoriesTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- SECCIÓN PEDIDOS -->
+            <section id="orders-section" class="admin-section">
+                <div class="content-header">
+                    <h2>Gestión de Pedidos</h2>
+                </div>
+                <div class="table-container">
+                    <table id="ordersTable">
+                        <thead>
+                            <tr>
+                                <th>Pedido</th>
+                                <th>Cliente</th>
+                                <th>Total</th>
+                                <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
