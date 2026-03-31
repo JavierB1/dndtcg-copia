@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - DND TCG</title>
+    <title>Admin TCG - DND</title>
     <link rel="stylesheet" href="css/admin.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- ESTILO CRÍTICO: Oculta el panel por defecto para evitar el parpadeo -->
+    <!-- ESTILO CRÍTICO: Oculta el panel por defecto y define el Login Fullscreen -->
     <style>
+        /* Evita el flash del panel administrativo */
         .admin-container { display: none !important; }
         
-        /* Pantalla de Login a pantalla completa */
         #loginModal { 
             display: flex !important; 
             position: fixed; 
@@ -34,30 +34,23 @@
             text-align: center;
         }
 
-        .svg-header { margin-bottom: 24px; display: flex; justify-content: center; gap: 20px; }
-        .icon-svg { width: 56px; height: 56px; fill: #3182ce; }
+        .svg-header { margin-bottom: 24px; display: flex; justify-content: center; }
+        .icon-svg { width: 64px; height: 64px; fill: #3182ce; }
     </style>
 </head>
 <body>
 
-    <!-- PANTALLA DE LOGIN (Visible por defecto) -->
+    <!-- PANTALLA DE LOGIN EXCLUSIVA TCG -->
     <div id="loginModal">
         <div class="login-card">
             <div class="svg-header">
-                <!-- Pokébola -->
+                <!-- Pokébola Minimalista -->
                 <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="10" stroke="#3182ce" stroke-width="2" fill="none"/>
-                    <line x1="2" y1="12" x2="22" y2="12" stroke="#3182ce" stroke-width="2"/>
-                    <circle cx="12" cy="12" r="3" stroke="#3182ce" stroke-width="2" fill="white"/>
-                </svg>
-                <!-- Perfume -->
-                <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M7 21h10a2 2 0 002-2V9H5v10a2 2 0 002 2zM9 5h6v4H9V5z" stroke="#3182ce" stroke-width="2" fill="none"/>
-                    <path d="M12 12v4" stroke="#3182ce" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.44.04-.87.11-1.29H8.5c.34.78 1.11 1.33 2.01 1.33.9 0 1.67-.55 2.01-1.33h4.39c.07.42.11.85.11 1.29 0 4.41-3.59 8-8 8zm8.39-9.29h-4.39c-.34-.78-1.11-1.33-2.01-1.33-.9 0-1.67.55-2.01 1.33H3.61c.42-3.1 2.67-5.63 5.63-6.61.16-.06.32-.1.48-.15.42-.12.86-.21 1.31-.26.31-.03.63-.04.97-.04.34 0 .66.01.97.04.45.05.89.14 1.31.26.16.05.32.09.48.15 2.96.98 5.21 3.51 5.63 6.61z"/>
                 </svg>
             </div>
             <h2 style="font-weight: 700; color: #1a202c; margin-bottom: 8px;">DND TCG Panel</h2>
-            <p style="color: #718096; margin-bottom: 32px; font-size: 0.95rem;">Acceso Administrativo & Nevada</p>
+            <p style="color: #718096; margin-bottom: 32px; font-size: 0.95rem;">Acceso Administrativo de Inventario</p>
             
             <form id="loginForm">
                 <div style="text-align: left; margin-bottom: 16px;">
@@ -76,7 +69,7 @@
         </div>
     </div>
 
-    <!-- CONTENEDOR ADMINISTRATIVO (Oculto por defecto) -->
+    <!-- PANEL ADMINISTRATIVO -->
     <div class="admin-container">
         <aside class="sidebar" id="sidebar-menu">
             <div class="sidebar-header">
@@ -99,30 +92,29 @@
             <header class="main-header">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <button id="sidebarToggleBtn" class="sidebar-toggle-btn"><i class="fas fa-bars"></i></button>
-                    <h1 class="desktop-only-title">Panel de Control</h1>
+                    <h1>Panel de Control</h1>
                 </div>
                 <div class="header-right-controls">
-                    <button id="refreshAdminPageBtn" class="refresh-button"><i class="fas fa-sync-alt"></i> Recargar</button>
-                    <div class="user-info">Administrador</div>
+                    <button id="refreshAdminPageBtn" class="refresh-button"><i class="fas fa-sync-alt"></i></button>
+                    <div class="user-info">Admin TCG</div>
                 </div>
             </header>
 
             <section id="dashboard-section" class="admin-section active">
-                <h2>Resumen del Negocio</h2>
                 <div class="dashboard-stats">
                     <div class="stat-card"><h3>Total Cartas</h3><p id="totalCardsCount">0</p></div>
-                    <div class="stat-card"><h3>Prod. Sellados</h3><p id="totalSealedProductsCount">0</p></div>
+                    <div class="stat-card"><h3>Sellados</h3><p id="totalSealedProductsCount">0</p></div>
                     <div class="stat-card"><h3>Categorías</h3><p id="uniqueCategoriesCount">0</p></div>
                     <div class="stat-card"><h3>Sin Stock</h3><p id="outOfStockCount" style="color: #e53e3e;">0</p></div>
                 </div>
             </section>
 
             <section id="cards-section" class="admin-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Inventario de Cartas</h2>
                     <div style="display: flex; gap: 10px;">
-                        <button id="openScannerBtn" class="confirm-button" style="background-color: #10b981; border-radius: 50px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-barcode"></i> Buscar por Código
+                        <button id="openScannerBtn" class="confirm-button" style="background-color: #10b981; border-radius: 50px;">
+                            <i class="fas fa-search"></i> Buscar Código
                         </button>
                         <button id="addCardBtn" class="add-button">+</button>
                     </div>
@@ -130,17 +122,15 @@
                 <div class="table-responsive">
                     <table id="cardsTable">
                         <thead>
-                            <tr><th>ID</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>
+                            <tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>
                         </thead>
                         <tbody></tbody>
                     </table>
                 </div>
             </section>
-            <!-- Otras secciones se cargan dinámicamente -->
         </main>
     </div>
 
-    <!-- MODALES DE APOYO -->
     <div id="cardModal" class="admin-modal">
         <div class="admin-modal-content">
             <span class="close-button">&times;</span>
@@ -148,21 +138,19 @@
             <form id="cardForm">
                 <input type="hidden" id="cardId">
                 <label>Nombre</label><input type="text" id="cardName" required>
-                <label>Código</label><input type="text" id="cardCode" required>
+                <label>Código</label><input type="text" id="cardCode" required placeholder="Ej: 028/151">
                 <label>Expansión</label><input type="text" id="cardExpansion" required>
                 <label>Categoría</label><select id="cardCategory" required></select>
                 <label>Precio</label><input type="number" step="0.01" id="cardPrice" required>
                 <label>Stock</label><input type="number" id="cardStock" required>
                 <label>Imagen URL</label><input type="url" id="cardImage">
-                <button type="submit" class="confirm-button" style="width: 100%;">Guardar</button>
+                <button type="submit" class="confirm-button" style="width: 100%; margin-top: 15px;">Guardar</button>
             </form>
         </div>
     </div>
 
     <div id="scannerModal" class="admin-modal">
-        <div class="admin-modal-content" id="quickSearchContent">
-            <!-- Se llena desde JS -->
-        </div>
+        <div class="admin-modal-content" id="quickSearchContent"></div>
     </div>
 
     <script type="module" src="js/admin.js"></script>
