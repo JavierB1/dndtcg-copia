@@ -11,6 +11,7 @@ import {
     getDocs 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
+// Configuración de Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
     authDomain: "dndtcgadmin.firebaseapp.com",
@@ -25,90 +26,183 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = firebaseConfig.projectId;
 
-// Referencias a tu HTML exacto
-const loginForm = document.getElementById('loginForm');
-const btnLogout = document.getElementById('btnLogout');
-const navLinks = document.querySelectorAll('.nav-link');
-const sections = document.querySelectorAll('.admin-section');
+// Referencias a los elementos del DOM (IDs extraídos de tu HTML)
+const elements = {
+    loginForm: document.getElementById('loginForm'),
+    btnLogout: document.getElementById('btnLogout'),
+    loginMessage: document.getElementById('loginMessage'),
+    navLinks: document.querySelectorAll('.nav-link'),
+    sections: document.querySelectorAll('.admin-section'),
+    // Estadísticas
+    statCards: document.getElementById('stat-total-cards'),
+    statOrders: document.getElementById('stat-total-orders'),
+    statStock: document.getElementById('stat-total-stock'),
+    // Tablas
+    cardsTableBody: document.querySelector('#cardsTable tbody'),
+    sealedTableBody: document.querySelector('#sealedProductsTable tbody'),
+    categoriesTableBody: document.querySelector('#categoriesTable tbody'),
+    ordersTableBody: document.querySelector('#ordersTable tbody')
+};
 
-// --- AUTENTICACIÓN ---
+// --- GESTIÓN DE SESIÓN ---
+
 onAuthStateChanged(auth, async (user) => {
     if (user) {
+        console.log("Sesión iniciada:", user.email);
         document.body.className = 'auth-ready';
         await loadData();
     } else {
+        console.log("No hay sesión activa");
         document.body.className = 'auth-guest';
     }
 });
 
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('username').value;
-    const pass = document.getElementById('password').value;
-    const msg = document.getElementById('loginMessage');
+// Login
+if (elements.loginForm) {
+    elements.loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        const btn = document.getElementById('btnLoginSubmit');
 
-    try {
-        await signInWithEmailAndPassword(auth, email, pass);
-    } catch (err) {
-        msg.textContent = "Acceso incorrecto.";
-    }
-});
-
-btnLogout.addEventListener('click', (e) => {
-    e.preventDefault();
-    signOut(auth).then(() => window.location.reload());
-});
-
-// --- CARGA DE DATOS ---
-async function loadData() {
-    const getC = (n) => collection(db, 'artifacts', appId, 'public', 'data', n);
-    
-    const [cSnap, sSnap, oSnap] = await Promise.all([
-        getDocs(getC('cards')),
-        getDocs(getC('sealed_products')),
-        getDocs(getC('orders'))
-    ]);
-
-    const cards = cSnap.docs.map(d => ({id: d.id, ...d.data()}));
-    const sealed = sSnap.docs.map(d => ({id: d.id, ...d.data()}));
-    const orders = oSnap.docs.map(d => ({id: d.id, ...d.data()}));
-
-    // Dashboard
-    document.getElementById('stat-total-cards').textContent = cards.length;
-    document.getElementById('stat-total-orders').textContent = orders.length;
-    document.getElementById('stat-total-stock').textContent = cards.reduce((acc, c) => acc + (parseInt(c.stock) || 0), 0);
-
-    renderTables(cards, sealed, orders);
+        try {
+            if (btn) btn.innerText = "Cargando...";
+            await signInWithEmailAndPassword(auth, email, pass);
+        } catch (err) {
+            console.error("Error de login:", err);
+            if (elements.loginMessage) {
+                elements.loginMessage.textContent = "Error: Credenciales incorrectas.";
+            }
+            if (btn) btn.innerText = "Entrar al Panel";
+        }
+    });
 }
 
-function renderTables(cards, sealed, orders) {
-    // Render Cartas
-    const cardsT = document.querySelector('#cardsTable tbody');
-    cardsT.innerHTML = cards.map(c => `
-        <tr>
-            <td><img src="${c.imagen_url}" style="width:40px; border-radius:4px;"></td>
-            <td>${c.nombre}</td>
-            <td>$${c.precio}</td>
-            <td>${c.stock}</td>
-            <td>${c.categoria || '-'}</td>
-            <td>
-                <button class="row-action-btn"><i class="fas fa-edit"></i></button>
-                <button class="row-action-btn delete"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>
-    `).join('');
+// Logout
+if (elements.btnLogout) {
+    elements.btnLogout.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            await signOut(auth);
+            window.location.reload();
+        } catch (err) {
+            console.error("Error al cerrar sesión", err);
+        }
+    });
+}
+
+// --- CARGA DE DATOS ---
+
+async function loadData() {
+    console.log("Cargando datos desde Firestore...");
+    const getC = (n) => collection(db, 'artifacts', appId, 'public', 'data', n);
+    
+    try {
+        const [cSnap, sSnap, oSnap, catSnap] = await Promise.all([
+            getDocs(getC('cards')),
+            getDocs(getC('sealed_products')),
+            getDocs(getC('orders')),
+            getDocs(getC('categories'))
+        ]);
+
+        const cards = cSnap.docs.map(d => ({id: d.id, ...d.data()}));
+        const sealed = sSnap.docs.map(d => ({id: d.id, ...d.data()}));
+        const orders = oSnap.docs.map(d => ({id: d.id, ...d.data()}));
+        const categories = catSnap.docs.map(d => ({id: d.id, ...d.data()}));
+
+        // Actualizar Estadísticas (Solo si los elementos existen en el HTML)
+        if (elements.statCards) elements.statCards.textContent = cards.length;
+        if (elements.statOrders) elements.statOrders.textContent = orders.length;
+        if (elements.statStock) {
+            const totalStock = cards.reduce((acc, c) => acc + (Number(c.stock) || 0), 0);
+            elements.statStock.textContent = totalStock;
+        }
+
+        renderAllTables(cards, sealed, orders, categories);
+
+    } catch (err) {
+        console.error("Error en loadData:", err);
+    }
+}
+
+function renderAllTables(cards, sealed, orders, categories) {
+    // Tabla Cartas
+    if (elements.cardsTableBody) {
+        elements.cardsTableBody.innerHTML = cards.map(c => `
+            <tr>
+                <td><img src="${c.imagen_url || ''}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;" onerror="this.src='https://via.placeholder.com/40'"></td>
+                <td>${c.nombre || 'Sin nombre'}</td>
+                <td>$${Number(c.precio || 0).toFixed(2)}</td>
+                <td>${c.stock || 0}</td>
+                <td>${c.categoria || '-'}</td>
+                <td>
+                    <button class="row-action-btn"><i class="fas fa-edit"></i></button>
+                    <button class="row-action-btn delete"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Tabla Productos Sellados
+    if (elements.sealedTableBody) {
+        elements.sealedTableBody.innerHTML = sealed.map(p => `
+            <tr>
+                <td>${p.nombre || 'Sin nombre'}</td>
+                <td>$${Number(p.precio || 0).toFixed(2)}</td>
+                <td>${p.stock || 0}</td>
+                <td>
+                    <button class="row-action-btn"><i class="fas fa-edit"></i></button>
+                    <button class="row-action-btn delete"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Tabla Categorías
+    if (elements.categoriesTableBody) {
+        elements.categoriesTableBody.innerHTML = categories.map(cat => `
+            <tr>
+                <td style="font-family:monospace; font-size:0.8rem;">${cat.id}</td>
+                <td>${cat.nombre || 'Sin nombre'}</td>
+                <td>
+                    <button class="row-action-btn delete"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Tabla Pedidos
+    if (elements.ordersTableBody) {
+        elements.ordersTableBody.innerHTML = orders.map(o => `
+            <tr>
+                <td style="font-family:monospace; font-size:0.8rem;">${o.id.substring(0,8)}...</td>
+                <td>${o.cliente_nombre || 'Usuario'}</td>
+                <td>$${Number(o.total || 0).toFixed(2)}</td>
+                <td><span style="background:rgba(99,102,241,0.2); padding:2px 8px; border-radius:4px; font-size:0.8rem;">${o.estado || 'pendiente'}</span></td>
+                <td>
+                    <button class="row-action-btn"><i class="fas fa-eye"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
 }
 
 // --- NAVEGACIÓN ---
-navLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
-        const targetId = link.getAttribute('href').replace('#', '');
-        if (targetId === '#') return;
 
-        navLinks.forEach(l => l.classList.remove('active'));
+elements.navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        if (!href || href === '#') return;
+        
+        e.preventDefault();
+        const targetId = href.replace('#', '');
+
+        // Activar link
+        elements.navLinks.forEach(l => l.classList.remove('active'));
         link.classList.add('active');
 
-        sections.forEach(s => {
+        // Mostrar sección
+        elements.sections.forEach(s => {
             s.classList.remove('active');
             if (s.id === targetId) s.classList.add('active');
         });
