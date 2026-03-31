@@ -46,119 +46,29 @@ let currentCardsPage = 1;
 let currentSealedProductsPage = 1;
 
 let currentDeleteTarget = null;
-let ocrWorker = null; // NUEVA VARIABLE PARA LA IA
+let ocrWorker = null; 
 
 // ==========================================================================
 // DOM ELEMENT REFERENCES
 // ==========================================================================
-let sidebarToggleBtn;
-let closeSidebarBtn; 
-let sidebarMenu;
-let sidebarOverlay;
-let mainHeader;
-let loginModal;
-let loginForm;
-let loginMessage;
-let usernameInput;
-let passwordInput;
-let togglePasswordVisibilityBtn; 
-
-let navDashboard;
-let navCards;
-let navSealedProducts;
-let navCategories;
-let navOrders;
-let navLogout;
-
-let dashboardSection;
-let cardsSection;
-let sealedProductsSection;
-let categoriesSection;
-let ordersSection; 
-
-let addCardBtn;
-let addSealedProductBtn;
-let addCategoryBtn;
-
-let cardModal;
-let cardModalTitle;
-let cardForm;
-let cardId;
-let cardName;
-let cardCode; 
-let cardExpansion;
-let cardImage;
-let cardPrice;
-let cardStock;
-let cardCategory;
-let saveCardBtn;
-
-let sealedProductModal;
-let sealedProductModalTitle;
-let sealedProductForm;
-let sealedProductId;
-let sealedProductName;
-let sealedProductImage;
-let sealedProductCategory;
-let sealedProductPrice;
-let sealedProductStock;
-let saveSealedProductBtn;
-
-let categoryModal;
-let categoryModalTitle;
-let categoryForm;
-let categoryId;
-let categoryName;
-let saveCategoryBtn;
-
-let confirmModal;
-let confirmMessage;
-let cancelDeleteBtn;
-let confirmDeleteBtn;
-
-let cardsTable;
-let sealedProductsTable;
-let categoriesTable;
-let ordersTable; 
-
-let adminSearchInput;
-let adminCategoryFilter;
-let adminPrevPageBtn;
-let adminNextPageBtn;
-let adminPageInfo;
-
-let adminSealedSearchInput;
-let adminSealedCategoryFilter;
-let adminSealedPrevPageBtn;
-let adminSealedNextPageBtn;
-let adminSealedPageInfo;
-
-let totalCardsCount;
-let totalSealedProductsCount;
-let outOfStockCount;
-let uniqueCategoriesCount;
-
-let messageModal;
-let closeMessageModalBtn;
-let messageModalTitle;
-let messageModalText;
-let okMessageModalBtn;
-
-let orderDetailsModal;
-let closeOrderDetailsModalBtn;
-let orderDetailsContent;
-let orderStatusSelect;
-let updateOrderStatusBtn;
+let sidebarToggleBtn, closeSidebarBtn, sidebarMenu, sidebarOverlay;
+let loginModal, loginForm, loginMessage, usernameInput, passwordInput, togglePasswordVisibilityBtn; 
+let navDashboard, navCards, navSealedProducts, navCategories, navOrders, navLogout;
+let dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection; 
+let addCardBtn, addSealedProductBtn, addCategoryBtn;
+let cardModal, cardModalTitle, cardForm, cardId, cardName, cardCode, cardExpansion, cardImage, cardPrice, cardStock, cardCategory, saveCardBtn;
+let sealedProductModal, sealedProductModalTitle, sealedProductForm, sealedProductId, sealedProductName, sealedProductImage, sealedProductCategory, sealedProductPrice, sealedProductStock, saveSealedProductBtn;
+let categoryModal, categoryModalTitle, categoryForm, categoryId, categoryName, saveCategoryBtn;
+let confirmModal, confirmMessage, cancelDeleteBtn, confirmDeleteBtn;
+let cardsTable, sealedProductsTable, categoriesTable, ordersTable; 
+let adminSearchInput, adminCategoryFilter, adminPrevPageBtn, adminNextPageBtn, adminPageInfo;
+let totalCardsCount, totalSealedProductsCount, outOfStockCount, uniqueCategoriesCount;
+let messageModal, closeMessageModalBtn, messageModalTitle, messageModalText, okMessageModalBtn;
+let orderDetailsModal, closeOrderDetailsModalBtn, orderDetailsContent, orderStatusSelect, updateOrderStatusBtn;
 
 // REFERENCIAS DEL ESCÁNER DE CÁMARA
-let scannerModal;
-let openScannerBtn;
-let closeScannerBtn;
-let cameraStream;
-let captureCanvas;
-let scannerStatusMessage;
-let mediaStream = null;
-let scanTimeout = null;
+let scannerModal, openScannerBtn, closeScannerBtn, cameraStream, captureCanvas, scannerStatusMessage;
+let mediaStream = null, scanTimeout = null;
 
 // ==========================================================================
 // UTILITY FUNCTIONS
@@ -166,19 +76,8 @@ let scanTimeout = null;
 
 function showSection(sectionToShow) {
     const sections = [dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection];
-    sections.forEach(section => {
-        if (section) section.classList.remove('active');
-    });
-    if (sectionToShow) {
-        sectionToShow.classList.add('active');
-    }
-}
-
-function hideAllSections() {
-    const sections = [dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection];
-    sections.forEach(section => {
-        if (section) section.classList.remove('active');
-    });
+    sections.forEach(section => section?.classList.remove('active'));
+    sectionToShow?.classList.add('active');
 }
 
 function openModal(modalElement) {
@@ -216,7 +115,7 @@ function showMessageModal(title, text) {
 }
 
 // ==========================================================================
-// FUNCIÓN DE CÁMARA Y ESCÁNER REAL (OBTENCIÓN DE URL OFICIAL)
+// FUNCIÓN DE ESCÁNER MEJORADO (NOMBRE + CÓDIGO + TOTAL)
 // ==========================================================================
 
 async function initTesseractAPI() {
@@ -228,22 +127,14 @@ async function initTesseractAPI() {
             document.head.appendChild(script);
         });
     }
-    
-    // Si el worker ya existe, no lo volvemos a crear (ESTO ARREGLA EL CONGELAMIENTO EN IPAD)
     if (!ocrWorker) {
-        try {
-            ocrWorker = await Tesseract.createWorker('eng');
-        } catch (e) {
-            console.error("Error iniciando IA:", e);
-        }
+        ocrWorker = await Tesseract.createWorker('eng');
     }
 }
 
 async function startCamera() {
     try {
-        scannerStatusMessage.textContent = "Iniciando cámara y motor de IA...";
-        
-        // Iniciamos la cámara
+        scannerStatusMessage.textContent = "Iniciando cámara...";
         mediaStream = await navigator.mediaDevices.getUserMedia({
             video: { 
                 facingMode: 'environment',
@@ -252,14 +143,10 @@ async function startCamera() {
             }
         });
         cameraStream.srcObject = mediaStream;
-        
-        // Iniciamos el motor de IA de fondo
         await initTesseractAPI();
-        
         startScanningProcess();
     } catch (err) {
-        console.error("Error al acceder a la cámara:", err);
-        scannerStatusMessage.textContent = "Error: Por favor permite el acceso a la cámara en Safari.";
+        scannerStatusMessage.textContent = "Error: Acceso a cámara denegado.";
         scannerStatusMessage.style.color = "#ef4444";
     }
 }
@@ -269,103 +156,86 @@ function stopCamera() {
         mediaStream.getTracks().forEach(track => track.stop());
         mediaStream = null;
     }
-    if (scanTimeout) {
-        clearTimeout(scanTimeout);
-        scanTimeout = null;
-    }
-    // No destruimos ocrWorker aquí para que escaneos futuros sean rápidos
+    if (scanTimeout) clearTimeout(scanTimeout);
 }
 
 async function startScanningProcess() {
-    // MENSAJE ACTUALIZADO PARA DAR MEJORES INSTRUCCIONES
-    scannerStatusMessage.innerHTML = "<strong>NO LA ACERQUES DEMASIADO</strong><br><small>Mantenla a 15cm para que enfoque. El sistema hará zoom automático en el número.</small>";
+    scannerStatusMessage.innerHTML = "<strong>ENFOCA LA CARTA</strong><br><small>Alinea el nombre arriba y el código abajo en el centro.</small>";
     scannerStatusMessage.style.color = "#10b981";
-    scanTimeout = setTimeout(processScannedFrame, 2000); // 2 segundos iniciales
+    scanTimeout = setTimeout(processScannedFrame, 2000); 
 }
 
 async function processScannedFrame() {
     if (!mediaStream || !ocrWorker) return;
 
     try {
-        scannerStatusMessage.innerHTML = "Analizando texto...";
+        scannerStatusMessage.innerHTML = "Identificando carta...";
         scannerStatusMessage.style.color = "#f59e0b";
 
         const context = captureCanvas.getContext('2d');
-        
-        // --- ZOOM DIGITAL Y FILTRO ---
-        const videoWidth = cameraStream.videoWidth;
-        const videoHeight = cameraStream.videoHeight;
+        const vW = cameraStream.videoWidth;
+        const vH = cameraStream.videoHeight;
 
-        // Recortamos el 50% central de la imagen de la cámara
-        const cropWidth = videoWidth * 0.5;
-        const cropHeight = videoHeight * 0.5;
-        const startX = (videoWidth - cropWidth) / 2;
-        const startY = (videoHeight - cropHeight) / 2;
+        // Capturamos un área central más amplia para leer nombre (arriba) y número (abajo)
+        const cropW = vW * 0.7;
+        const cropH = vH * 0.8;
+        const startX = (vW - cropW) / 2;
+        const startY = (vH - cropH) / 2;
 
-        // Ampliamos el recorte x2 para ayudar a la IA a leerlo (Zoom Digital)
-        captureCanvas.width = cropWidth * 2;
-        captureCanvas.height = cropHeight * 2;
+        captureCanvas.width = cropW * 1.5;
+        captureCanvas.height = cropH * 1.5;
 
-        // Aplicamos un filtro de alto contraste y escala de grises para eliminar brillos holográficos
-        context.filter = 'contrast(1.5) grayscale(1)';
-
-        context.drawImage(
-            cameraStream,
-            startX, startY, cropWidth, cropHeight,        // Origen (Recorte)
-            0, 0, captureCanvas.width, captureCanvas.height // Destino (Ampliación)
-        );
-        
-        // Restauramos el filtro por precaución
+        context.filter = 'contrast(1.4) grayscale(0.8)';
+        context.drawImage(cameraStream, startX, startY, cropW, cropH, 0, 0, captureCanvas.width, captureCanvas.height);
         context.filter = 'none';
-        // ------------------------------
 
-        // USAMOS EL WORKER YA CREADO (Mucho más rápido)
         const result = await ocrWorker.recognize(captureCanvas);
         const text = result.data.text;
         
-        console.log("IA vio el siguiente texto: ", text);
+        console.log("IA leyó lo siguiente:\n", text);
 
-        // Buscamos el patrón Number/Total
+        // BUSCAMOS PATRONES
         const numberMatch = text.match(/([a-zA-Z0-9]{1,4})\s*\/\s*(\d{1,3})/);
+        // El nombre suele estar al principio de las líneas y en mayúsculas/títulos
+        const words = text.split(/\n|\s/).filter(w => w.length > 3 && /^[A-Z]/.test(w));
+        const possibleName = words.length > 0 ? words[0] : "";
 
         if (numberMatch) {
-            let cardNumber = numberMatch[1].replace(/^0+/, ''); // Limpiar ceros iniciales
-            let setTotal = numberMatch[2]; // Total de cartas de la expansión (ej. 162)
+            let cardNumber = numberMatch[1].replace(/^0+/, ''); 
+            let setTotal = numberMatch[2]; 
 
-            scannerStatusMessage.innerHTML = `¡Código detectado: <strong>${numberMatch[0]}</strong>!<br><small>Validando expansión exacta...</small>`;
+            scannerStatusMessage.innerHTML = `Detectado: <strong>${numberMatch[0]}</strong><br><small>Buscando coincidencias...</small>`;
             scannerStatusMessage.style.color = "#3b82f6";
 
-            // CONEXIÓN A POKÉMON TCG API: Buscamos todas las cartas con ese número
             const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:${cardNumber}`);
             const data = await response.json();
 
             if (data.data && data.data.length > 0) {
-                // FILTRO INTELIGENTE: Buscamos la carta cuya expansión tenga exactamente ese total de cartas
-                const exactMatch = data.data.find(c => c.set.printedTotal == setTotal);
+                // PRIORIDAD 1: Coincidencia de nombre + número
+                let bestMatch = data.data.find(c => 
+                    c.name.toLowerCase().includes(possibleName.toLowerCase()) || 
+                    possibleName.toLowerCase().includes(c.name.toLowerCase())
+                );
 
-                if (exactMatch) {
-                    fillFormWithAPIData(exactMatch, numberMatch[0]);
-                } else if (data.data.length === 1) {
-                    // Si solo existe una carta con ese número en la historia, la tomamos
-                    fillFormWithAPIData(data.data[0], numberMatch[0]);
-                } else {
-                    scannerStatusMessage.innerHTML = `Número ${cardNumber} encontrado, pero la expansión no coincide.<br><small>Sigue enfocando.</small>`;
-                    scannerStatusMessage.style.color = "#f59e0b";
-                    scanTimeout = setTimeout(processScannedFrame, 1500);
+                // PRIORIDAD 2: Coincidencia de total impreso
+                if (!bestMatch) {
+                    bestMatch = data.data.find(c => c.set.printedTotal == setTotal);
                 }
+
+                // PRIORIDAD 3: La primera opción de la API
+                if (!bestMatch) bestMatch = data.data[0];
+
+                fillFormWithAPIData(bestMatch, numberMatch[0]);
             } else {
-                scannerStatusMessage.innerHTML = `No encontré el ${numberMatch[0]}.<br><small>Asegúrate de no tapar la letra (ej. SWSH01)</small>`;
-                scannerStatusMessage.style.color = "#ef4444";
-                scanTimeout = setTimeout(processScannedFrame, 2500);
+                scannerStatusMessage.innerHTML = "Código no hallado. Reintentando...";
+                scanTimeout = setTimeout(processScannedFrame, 1500);
             }
         } else {
-            scannerStatusMessage.innerHTML = "Buscando código...<br><small>Centra el número (Ej: 152/162) bajo el láser.</small>";
-            scannerStatusMessage.style.color = "#ef4444";
-            scanTimeout = setTimeout(processScannedFrame, 1500); // Reintento más rápido
+            scannerStatusMessage.innerHTML = "No veo el código...<br><small>Ajusta la distancia (aprox 15cm).</small>";
+            scanTimeout = setTimeout(processScannedFrame, 1500); 
         }
     } catch (error) {
-        console.error("Error en lectura:", error);
-        scannerStatusMessage.textContent = "Error de lectura. Reintentando...";
+        console.error(error);
         scanTimeout = setTimeout(processScannedFrame, 1500);
     }
 }
@@ -374,154 +244,55 @@ function fillFormWithAPIData(card, originalCode) {
     stopCamera();
     closeModal(scannerModal);
     openModal(cardModal);
-    cardModalTitle.textContent = 'Carta Identificada Automáticamente';
+    cardModalTitle.textContent = '¡Carta Identificada!';
 
-    // Rellenamos los campos
     cardName.value = card.name;
     cardCode.value = originalCode || card.number;
     cardExpansion.value = card.set.name;
-    
-    // EXTRACCIÓN DE URL (Usa la versión Large si existe, si no la Small)
     cardImage.value = card.images.large || card.images.small || '';
 
-    // Autocalcular precio de mercado
-    let marketPrice = 0;
-    if (card.tcgplayer && card.tcgplayer.prices) {
+    let price = 0;
+    if (card.tcgplayer?.prices) {
         const p = card.tcgplayer.prices;
-        const key = Object.keys(p)[0];
-        marketPrice = p[key].market || 0;
+        price = p[Object.keys(p)[0]].market || 0;
     }
-    cardPrice.value = parseFloat(marketPrice).toFixed(2);
-    
-    // Categoría predeterminada
-    if(cardCategory.options.length === 0) cardCategory.appendChild(new Option('Pokémon TCG', 'Pokémon TCG'));
+    cardPrice.value = parseFloat(price).toFixed(2);
     cardCategory.value = 'Pokémon TCG';
 
-    // Brillo de éxito
     [cardName, cardCode, cardExpansion, cardImage].forEach(f => {
         f.style.backgroundColor = '#ecfdf5';
         setTimeout(() => f.style.backgroundColor = '', 2000);
     });
 }
 
+// ==========================================================================
+// FIREBASE AUTH & DATA (Igual que antes)
+// ==========================================================================
 
-// ==========================================================================
-// FIREBASE AUTHENTICATION FUNCTIONS
-// ==========================================================================
 async function handleLogin(event) {
     event.preventDefault();
-    // EL TRUCO PARA EL IPAD: .trim() quita los espacios en blanco invisibles
-    const email = usernameInput ? usernameInput.value.trim() : '';
-    const password = passwordInput ? passwordInput.value : '';
+    const email = usernameInput?.value.trim() || '';
+    const password = passwordInput?.value || '';
     clearLoginError();
-
     try {
         await signInWithEmailAndPassword(auth, email, password);
         closeModal(loginModal);
         showSection(dashboardSection);
         await loadAllData();
-    } catch (error) {
-        console.error('Error detallado de Firebase Auth:', error);
-        // Mostrar errores específicos para que sepas exactamente qué bloquea Safari
-        let errorMessage = 'Error al iniciar sesión. Revisa tus credenciales.';
-        
-        if (error.code === 'auth/invalid-email') {
-            errorMessage = 'El formato del correo electrónico no es válido.';
-        } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-            errorMessage = 'Correo electrónico o contraseña incorrectos.';
-        } else if (error.code === 'auth/network-request-failed') {
-            errorMessage = 'Error de red o Safari está bloqueando la conexión (Cookies).';
-        } else {
-            errorMessage = `Safari reporta: ${error.message}`;
-        }
-        
-        showLoginError(errorMessage);
+    } catch (e) {
+        showLoginError('Credenciales inválidas.');
     }
 }
 
 async function handleLogout() {
-    try {
-        await signOut(auth);
-        userId = null;
-        currentAdminUser = null;
-        hideAllSections();
-        openModal(loginModal);
-    } catch (error) {
-        showMessageModal("Error", 'No se pudo cerrar sesión.');
-    }
+    await signOut(auth);
+    hideAllSections();
+    openModal(loginModal);
 }
 
 onAuthStateChanged(auth, (user) => {
-    currentAdminUser = user;
     userId = user ? user.uid : null;
 });
-
-// ==========================================================================
-// DATA LOADING FUNCTIONS
-// ==========================================================================
-async function loadOrdersData() {
-    if (!db) return;
-    try {
-        const ordersCol = collection(db, `artifacts/${appId}/public/data/orders`);
-        const ordersSnapshot = await getDocs(ordersCol);
-        allOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        allOrders.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        renderOrdersTable();
-    } catch (error) {
-        console.error('Error al cargar pedidos:', error);
-    }
-}
-
-async function loadCategories() {
-    if (!db) return;
-    try {
-        const categoriesCol = collection(db, `artifacts/${appId}/public/data/categories`);
-        const categorySnapshot = await getDocs(categoriesCol);
-        allCategories = categorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        populateCategoryFiltersAndSelects();
-        renderCategoriesTable();
-    } catch (error) {
-        console.error('Error al cargar categorías:', error);
-    }
-}
-
-async function loadCardsData() {
-    if (!db) return;
-    try {
-        const cardsCol = collection(db, `artifacts/${appId}/public/data/cards`);
-        const cardsSnapshot = await getDocs(cardsCol);
-        allCards = cardsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        allCards = allCards.map(card => ({
-            ...card,
-            precio: parseFloat(card.precio) || 0,
-            stock: parseInt(card.stock) || 0,
-            codigo: card.codigo || '',
-            expansion: card.expansion || ''
-        }));
-        renderCardsTable();
-        updateDashboardStats();
-    } catch (error) {
-        console.error('Error al cargar datos de cartas:', error);
-    }
-}
-
-async function loadSealedProductsData() {
-    if (!db) return;
-    try {
-        const sealedProductsCol = collection(db, `artifacts/${appId}/public/data/sealed_products`);
-        const sealedProductsSnapshot = await getDocs(sealedProductsCol);
-        allSealedProducts = sealedProductsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        allSealedProducts = allSealedProducts.map(product => ({
-            ...product,
-            precio: parseFloat(product.precio) || 0,
-            stock: parseInt(product.stock) || 0
-        }));
-        renderSealedProductsTable();
-        updateDashboardStats();
-    } catch (error) {
-        console.error('Error al cargar datos de productos sellados:', error);
-    }
-}
 
 async function loadAllData() {
     await loadCategories();
@@ -530,244 +301,121 @@ async function loadAllData() {
     await loadOrdersData();
 }
 
-function populateCategoryFiltersAndSelects() {
-    if (!adminCategoryFilter || !adminSealedCategoryFilter || !cardCategory || !sealedProductCategory) return;
-    const categoryNames = allCategories.map(cat => cat.name);
+async function loadCategories() {
+    const snap = await getDocs(collection(db, `artifacts/${appId}/public/data/categories`));
+    allCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    populateFilters();
+    renderCategoriesTable();
+}
 
+function populateFilters() {
+    const names = allCategories.map(c => c.name);
     adminCategoryFilter.innerHTML = '<option value="">Todas las categorías</option>';
-    adminSealedCategoryFilter.innerHTML = '<option value="">Todos los tipos</option>';
     cardCategory.innerHTML = '<option value="" disabled selected>Selecciona un Juego</option>';
-    sealedProductCategory.innerHTML = '<option value="" disabled selected>Selecciona un tipo</option>';
-
-    categoryNames.forEach(category => {
-        adminCategoryFilter.appendChild(new Option(category, category));
-        adminSealedCategoryFilter.appendChild(new Option(category, category));
-        cardCategory.appendChild(new Option(category, category));
-        sealedProductCategory.appendChild(new Option(category, category));
+    names.forEach(n => {
+        adminCategoryFilter.appendChild(new Option(n, n));
+        cardCategory.appendChild(new Option(n, n));
     });
 }
 
-// ==========================================================================
-// TABLE RENDERING FUNCTIONS
-// ==========================================================================
-function renderOrdersTable() {
-    if (!ordersTable) return;
-    const tbody = ordersTable.querySelector('tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+async function loadCardsData() {
+    const snap = await getDocs(collection(db, `artifacts/${appId}/public/data/cards`));
+    allCards = snap.docs.map(d => ({ id: d.id, ...d.data(), precio: parseFloat(d.data().precio) || 0, stock: parseInt(d.data().stock) || 0 }));
+    renderCardsTable();
+    updateStats();
+}
 
-    allOrders.forEach(order => {
+async function loadSealedProductsData() {
+    const snap = await getDocs(collection(db, `artifacts/${appId}/public/data/sealed_products`));
+    allSealedProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderSealedProductsTable();
+}
+
+async function loadOrdersData() {
+    const snap = await getDocs(collection(db, `artifacts/${appId}/public/data/orders`));
+    allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.timestamp - a.timestamp);
+    renderOrdersTable();
+}
+
+function renderCardsTable() {
+    const tbody = cardsTable.querySelector('tbody');
+    tbody.innerHTML = '';
+    allCards.forEach(c => {
         const row = tbody.insertRow();
         row.innerHTML = `
-            <td>${order.id}</td>
-            <td>${new Date(order.timestamp).toLocaleString()}</td>
-            <td>${order.customerName}</td>
-            <td>$${parseFloat(order.total).toFixed(2)}</td>
-            <td>${order.status}</td>
+            <td>${c.id}</td>
+            <td><img src="${c.imagen_url}" width="40"></td>
+            <td>${c.nombre}</td>
+            <td>${c.codigo}</td>
+            <td>${c.expansion || ''}</td>
+            <td>$${c.precio.toFixed(2)}</td>
+            <td>${c.stock}</td>
+            <td>${c.categoria}</td>
             <td class="action-buttons">
-                <button class="edit-button view-order-details-btn" data-id="${order.id}">Ver Detalles</button>
+                <button class="action-btn edit edit-card-btn" data-id="${c.id}"><i class="fas fa-edit"></i></button>
+                <button class="action-btn delete delete-card-btn" data-id="${c.id}"><i class="fas fa-trash"></i></button>
             </td>
         `;
     });
 }
 
-function renderCardsTable() {
-    if (!cardsTable) return;
-    const searchQuery = adminSearchInput.value.toLowerCase();
-    const categoryFilter = adminCategoryFilter.value;
-
-    const filteredCards = allCards.filter(card => {
-        const matchesSearch = card.nombre?.toLowerCase().includes(searchQuery) || 
-                              card.codigo?.toLowerCase().includes(searchQuery);
-        const matchesCategory = categoryFilter === "" || card.categoria === categoryFilter;
-        return matchesSearch && matchesCategory;
-    });
-
-    const totalPages = Math.ceil(filteredCards.length / itemsPerPage);
-    const startIndex = (currentCardsPage - 1) * itemsPerPage;
-    const cardsOnPage = filteredCards.slice(startIndex, startIndex + itemsPerPage);
-
-    const tbody = cardsTable.querySelector('tbody');
-    if (tbody) {
-        tbody.innerHTML = '';
-        cardsOnPage.forEach(card => {
-            const row = tbody.insertRow();
-            row.innerHTML = `
-                <td>${card.id}</td>
-                <td><img src="${card.imagen_url}" alt="${card.nombre}" onerror="this.src='https://placehold.co/50x50/2d3748/a0aec0?text=No+Img'"></td>
-                <td><strong>${card.nombre}</strong></td>
-                <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${card.codigo}</span></td>
-                <td>${card.expansion || ''}</td>
-                <td>$${card.precio.toFixed(2)}</td>
-                <td>${card.stock}</td>
-                <td>${card.categoria}</td>
-                <td class="action-buttons">
-                    <button class="action-btn edit edit-card-btn" data-id="${card.id}"><i class="fas fa-edit"></i></button>
-                    <button class="action-btn delete delete-card-btn" data-id="${card.id}"><i class="fas fa-trash"></i></button>
-                </td>
-            `;
-        });
-    }
-
-    if (adminPageInfo) adminPageInfo.textContent = `Página ${currentCardsPage} de ${totalPages || 1}`;
-}
-
 function renderSealedProductsTable() {
-    if (!sealedProductsTable) return;
     const tbody = sealedProductsTable.querySelector('tbody');
-    if (tbody) {
-        tbody.innerHTML = '';
-        allSealedProducts.forEach(product => {
-            const row = tbody.insertRow();
-            row.innerHTML = `
-                <td>${product.id}</td>
-                <td><img src="${product.imagen_url}" alt="${product.nombre}" onerror="this.src='https://placehold.co/50x50/2d3748/a0aec0?text=No+Img'"></td>
-                <td><strong>${product.nombre}</strong></td>
-                <td>${product.categoria}</td>
-                <td>$${product.precio.toFixed(2)}</td>
-                <td>${product.stock}</td>
-                <td class="action-buttons">
-                    <button class="action-btn edit edit-sealed-product-button" data-id="${product.id}"><i class="fas fa-edit"></i></button>
-                    <button class="action-btn delete delete-sealed-product-button" data-id="${product.id}"><i class="fas fa-trash"></i></button>
-                </td>
-            `;
-        });
-    }
+    tbody.innerHTML = '';
+    allSealedProducts.forEach(p => {
+        const row = tbody.insertRow();
+        row.innerHTML = `<td>${p.id}</td><td><img src="${p.imagen_url}" width="40"></td><td>${p.nombre}</td><td>${p.categoria}</td><td>$${parseFloat(p.precio).toFixed(2)}</td><td>${p.stock}</td><td>Acciones</td>`;
+    });
 }
 
 function renderCategoriesTable() {
-    if (!categoriesTable) return;
     const tbody = categoriesTable.querySelector('tbody');
-    if (tbody) {
-        tbody.innerHTML = '';
-        allCategories.forEach(category => {
-            const row = tbody.insertRow();
-            row.innerHTML = `
-                <td><strong>${category.name}</strong></td>
-                <td class="action-buttons">
-                    <button class="action-btn edit edit-category-button" data-id="${category.id}"><i class="fas fa-edit"></i></button>
-                    <button class="action-btn delete delete-category-button" data-id="${category.id}"><i class="fas fa-trash"></i></button>
-                </td>
-            `;
-        });
-    }
+    tbody.innerHTML = '';
+    allCategories.forEach(c => {
+        const row = tbody.insertRow();
+        row.innerHTML = `<td>${c.name}</td><td>Acciones</td>`;
+    });
 }
 
-function updateDashboardStats() {
+function renderOrdersTable() {
+    const tbody = ordersTable.querySelector('tbody');
+    tbody.innerHTML = '';
+    allOrders.forEach(o => {
+        const row = tbody.insertRow();
+        row.innerHTML = `<td>${o.id}</td><td>${new Date(o.timestamp).toLocaleString()}</td><td>${o.customerName}</td><td>$${parseFloat(o.total).toFixed(2)}</td><td>${o.status}</td><td>Acciones</td>`;
+    });
+}
+
+function updateStats() {
     if (totalCardsCount) totalCardsCount.textContent = allCards.length;
-    if (totalSealedProductsCount) totalSealedProductsCount.textContent = allSealedProducts.length;
-    if (outOfStockCount) outOfStockCount.textContent = allCards.filter(c => c.stock === 0).length;
     if (uniqueCategoriesCount) uniqueCategoriesCount.textContent = allCategories.length;
 }
 
-// ==========================================================================
-// CRUD OPERATIONS
-// ==========================================================================
+function hideAllSections() {
+    [dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection].forEach(s => s?.classList.remove('active'));
+}
 
-async function handleSaveCard(event) {
-    event.preventDefault();
-    const id = cardId.value;
+async function handleSaveCard(e) {
+    e.preventDefault();
     const data = {
-        nombre: cardName.value,
-        codigo: cardCode.value, 
-        expansion: cardExpansion.value,
-        imagen_url: cardImage.value,
-        precio: parseFloat(cardPrice.value).toFixed(2),
-        stock: parseInt(cardStock.value),
-        categoria: cardCategory.value
+        nombre: cardName.value, codigo: cardCode.value, expansion: cardExpansion.value,
+        imagen_url: cardImage.value, precio: cardPrice.value, stock: cardStock.value, categoria: cardCategory.value
     };
-
-    try {
-        if (id) {
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/cards`, id), data);
-        } else {
-            await addDoc(collection(db, `artifacts/${appId}/public/data/cards`), data);
-        }
-        cardForm.reset();
-        closeModal(cardModal);
-        await loadCardsData();
-    } catch (error) {
-        console.error('Error:', error);
-    }
-}
-
-async function handleSaveSealedProduct(event) {
-    event.preventDefault();
-    const id = sealedProductId.value;
-    const data = {
-        nombre: sealedProductName.value,
-        imagen_url: sealedProductImage.value,
-        categoria: sealedProductCategory.value,
-        precio: parseFloat(sealedProductPrice.value).toFixed(2),
-        stock: parseInt(sealedProductStock.value)
-    };
-
-    try {
-        if (id) {
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/sealed_products`, id), data);
-        } else {
-            await addDoc(collection(db, `artifacts/${appId}/public/data/sealed_products`), data);
-        }
-        sealedProductForm.reset();
-        closeModal(sealedProductModal);
-        await loadSealedProductsData();
-    } catch (error) {
-        console.error('Error:', error);
-    }
-}
-
-async function handleSaveCategory(event) {
-    event.preventDefault();
-    const id = categoryId.value;
-    try {
-        if (id) {
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/categories`, id), { name: categoryName.value });
-        } else {
-            await addDoc(collection(db, `artifacts/${appId}/public/data/categories`), { name: categoryName.value });
-        }
-        categoryForm.reset();
-        closeModal(categoryModal);
-        await loadCategories();
-    } catch (error) {
-        console.error('Error:', error);
-    }
-}
-
-async function handleDeleteConfirmed() {
-    const { type, id } = currentDeleteTarget;
-    try {
-        const path = type === 'card' ? 'cards' : (type === 'sealedProduct' ? 'sealed_products' : 'categories');
-        await deleteDoc(doc(db, `artifacts/${appId}/public/data/${path}`, id));
-        closeModal(confirmModal);
-        if(type === 'card') await loadCardsData();
-        if(type === 'sealedProduct') await loadSealedProductsData();
-        if(type === 'category') { await loadCategories(); await loadCardsData(); }
-    } catch (error) {
-        console.error('Error:', error);
-    }
+    if (cardId.value) await updateDoc(doc(db, `artifacts/${appId}/public/data/cards`, cardId.value), data);
+    else await addDoc(collection(db, `artifacts/${appId}/public/data/cards`), data);
+    cardForm.reset(); closeModal(cardModal); await loadCardsData();
 }
 
 // ==========================================================================
-// EVENT LISTENERS
+// DOM LOAD & EVENTS
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // INYECCIÓN DE ESTILOS MÓVILES
-    const mobileStyles = document.createElement('style');
-    mobileStyles.innerHTML = `
-        @media (max-width: 768px) {
-            .sidebar { position: fixed; left: -260px; height: 100%; z-index: 50; transition: left 0.3s ease; }
-            .sidebar.show { left: 0; }
-            .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 45; }
-            .main-content { width: 100%; margin-left: 0; }
-            .sidebar-toggle-btn { display: block !important; margin-right: 15px; }
-            .action-btn { padding: 12px; margin-right: 5px; }
-            .admin-modal-content { width: 95%; max-height: 90vh; overflow-y: auto; }
-        }
-    `;
-    document.head.appendChild(mobileStyles);
+    // Inyección de estilos para iPad/Móvil
+    const style = document.createElement('style');
+    style.innerHTML = `@media(max-width:768px){.sidebar{position:fixed;left:-260px;z-index:100;transition:0.3s}.sidebar.show{left:0}.main-content{margin-left:0}.admin-modal-content{width:95%}}`;
+    document.head.appendChild(style);
 
-    // ASIGNACIÓN DOM
+    // Asignaciones
     sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
     closeSidebarBtn = document.getElementById('closeSidebarBtn');
     sidebarMenu = document.getElementById('sidebar-menu');
@@ -777,119 +425,60 @@ document.addEventListener('DOMContentLoaded', () => {
     loginMessage = document.getElementById('loginMessage');
     usernameInput = document.getElementById('username');
     passwordInput = document.getElementById('password');
-    togglePasswordVisibilityBtn = document.getElementById('togglePasswordVisibilityBtn');
-
     navDashboard = document.getElementById('nav-dashboard');
     navCards = document.getElementById('nav-cards');
     navSealedProducts = document.getElementById('nav-sealed-products');
     navCategories = document.getElementById('nav-categories');
     navOrders = document.getElementById('nav-orders');
     navLogout = document.getElementById('nav-logout');
-
     dashboardSection = document.getElementById('dashboard-section');
     cardsSection = document.getElementById('cards-section');
     sealedProductsSection = document.getElementById('sealed-products-section');
     categoriesSection = document.getElementById('categories-section');
-    ordersSection = document.getElementById('orders-section'); 
-
+    ordersSection = document.getElementById('orders-section');
     addCardBtn = document.getElementById('addCardBtn');
-    addSealedProductBtn = document.getElementById('addSealedProductBtn');
-    addCategoryBtn = document.getElementById('addCategoryBtn');
-
     cardModal = document.getElementById('cardModal');
-    cardModalTitle = document.getElementById('cardModalTitle');
     cardForm = document.getElementById('cardForm');
     cardId = document.getElementById('cardId');
     cardName = document.getElementById('cardName');
-    cardCode = document.getElementById('cardCode'); 
-    cardExpansion = document.getElementById('cardExpansion'); 
+    cardCode = document.getElementById('cardCode');
+    cardExpansion = document.getElementById('cardExpansion');
     cardImage = document.getElementById('cardImage');
     cardPrice = document.getElementById('cardPrice');
     cardStock = document.getElementById('cardStock');
     cardCategory = document.getElementById('cardCategory');
-
-    sealedProductModal = document.getElementById('sealedProductModal');
-    sealedProductModalTitle = document.getElementById('sealedProductModalTitle');
-    sealedProductForm = document.getElementById('sealedProductForm');
-    sealedProductId = document.getElementById('sealedProductId');
-    sealedProductName = document.getElementById('sealedProductName');
-    sealedProductImage = document.getElementById('sealedProductImage');
-    sealedProductCategory = document.getElementById('sealedProductCategory');
-    sealedProductPrice = document.getElementById('sealedProductPrice');
-    sealedProductStock = document.getElementById('sealedProductStock');
-
-    categoryModal = document.getElementById('categoryModal');
-    categoryModalTitle = document.getElementById('categoryModalTitle');
-    categoryForm = document.getElementById('categoryForm');
-    categoryId = document.getElementById('categoryId');
-    categoryName = document.getElementById('categoryName');
-
-    confirmModal = document.getElementById('confirmModal');
-    confirmMessage = document.getElementById('confirmMessage');
-    cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
-    confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-
     cardsTable = document.getElementById('cardsTable');
     sealedProductsTable = document.getElementById('sealedProductsTable');
     categoriesTable = document.getElementById('categoriesTable');
-    ordersTable = document.getElementById('ordersTable'); 
-
-    adminSearchInput = document.getElementById('adminSearchInput');
+    ordersTable = document.getElementById('ordersTable');
     adminCategoryFilter = document.getElementById('adminCategoryFilter');
-    adminPrevPageBtn = document.getElementById('adminPrevPageBtn');
-    adminNextPageBtn = document.getElementById('adminNextPageBtn');
-    adminPageInfo = document.getElementById('adminPageInfo');
-
     totalCardsCount = document.getElementById('totalCardsCount');
-    totalSealedProductsCount = document.getElementById('totalSealedProductsCount');
-    outOfStockCount = document.getElementById('outOfStockCount');
     uniqueCategoriesCount = document.getElementById('uniqueCategoriesCount');
-
     scannerModal = document.getElementById('scannerModal');
     openScannerBtn = document.getElementById('openScannerBtn');
-    closeScannerBtn = document.getElementById('closeScannerBtn');
     cameraStream = document.getElementById('cameraStream');
     captureCanvas = document.getElementById('captureCanvas');
     scannerStatusMessage = document.getElementById('scannerStatusMessage');
 
     openModal(loginModal);
 
-    // EVENTOS BÁSICOS
-    if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', () => { sidebarMenu.classList.add('show'); sidebarOverlay.style.display = 'block'; });
-    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', () => { sidebarMenu.classList.remove('show'); sidebarOverlay.style.display = 'none'; });
-    
-    if (openScannerBtn) {
-        openScannerBtn.addEventListener('click', () => {
-            openModal(scannerModal);
-            startCamera();
-        });
-    }
+    // Eventos Menú
+    sidebarToggleBtn?.addEventListener('click', () => { sidebarMenu.classList.add('show'); sidebarOverlay.style.display = 'block'; });
+    sidebarOverlay?.addEventListener('click', () => { sidebarMenu.classList.remove('show'); sidebarOverlay.style.display = 'none'; });
 
-    if (cardForm) cardForm.addEventListener('submit', handleSaveCard);
-    if (sealedProductForm) sealedProductForm.addEventListener('submit', handleSaveSealedProduct);
-    if (categoryForm) categoryForm.addEventListener('submit', handleSaveCategory);
+    const navs = [{b:navDashboard, s:dashboardSection}, {b:navCards, s:cardsSection}, {b:navSealedProducts, s:sealedProductsSection}, {b:navCategories, s:categoriesSection}, {b:navOrders, s:ordersSection}];
+    navs.forEach(n => n.b?.addEventListener('click', () => { 
+        showSection(n.s); 
+        if(window.innerWidth <= 768){ sidebarMenu.classList.remove('show'); sidebarOverlay.style.display = 'none'; }
+    }));
 
-    // Navegación de secciones
-    const navs = [{btn: navDashboard, sec: dashboardSection}, {btn: navCards, sec: cardsSection}, {btn: navSealedProducts, sec: sealedProductsSection}, {btn: navCategories, sec: categoriesSection}, {btn: navOrders, sec: ordersSection}];
-    navs.forEach(nav => {
-        if(nav.btn) nav.btn.addEventListener('click', () => {
-            showSection(nav.sec);
-            if (window.innerWidth <= 768) { sidebarMenu.classList.remove('show'); sidebarOverlay.style.display = 'none'; }
-        });
-    });
+    openScannerBtn?.addEventListener('click', () => { openModal(scannerModal); startCamera(); });
+    loginForm?.addEventListener('submit', handleLogin);
+    navLogout?.addEventListener('click', handleLogout);
+    cardForm?.addEventListener('submit', handleSaveCard);
+    addCardBtn?.addEventListener('click', () => { cardForm.reset(); cardId.value = ''; openModal(cardModal); });
 
-    if (loginForm) loginForm.addEventListener('submit', handleLogin);
-    if (navLogout) navLogout.addEventListener('click', handleLogout);
-    
-    // Cierre de modales
-    document.querySelectorAll('.close-button').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.admin-modal').forEach(m => closeModal(m));
-            stopCamera();
-        });
-    });
-
-    // Paginación
-    if (adminPrevPageBtn) adminPrevPageBtn.addEventListener('click', () => { if (currentCardsPage > 1) { currentCardsPage--; renderCardsTable(); } });
-    if (adminNextPageBtn) adminNextPageBtn.addEventListener('click', () => { currentCardsPage++; renderCardsTable(); });
+    document.querySelectorAll('.close-button').forEach(b => b.addEventListener('click', () => {
+        closeModal(cardModal); closeModal(scannerModal); stopCamera();
+    }));
 });
