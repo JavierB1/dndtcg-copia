@@ -42,7 +42,7 @@ let allCards = [], allCategories = [], allSealed = [], allOrders = [];
 // Elementos UI
 let loginView, adminView, sidebarMenu, sidebarOverlay;
 let cardForm, cardModal, quickSearchModal, sealedProductModal, categoryModal;
-let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBtn;
+let searchStatusMessage, tcgSearchInput, searchSetIdInput, submitSearchBtn;
 
 // ==========================================================================
 // 3. FUNCIONES DE UI Y MODALES
@@ -63,7 +63,7 @@ function closeModal(m) {
 }
 
 function clearSearchInputs() {
-    if (searchCardNumberInput) searchCardNumberInput.value = '';
+    if (tcgSearchInput) tcgSearchInput.value = '';
     if (searchSetIdInput) searchSetIdInput.value = '';
     if (searchStatusMessage) searchStatusMessage.textContent = '';
 }
@@ -97,7 +97,8 @@ function showSection(sectionId) {
 // ==========================================================================
 
 async function handleQuickSearch() {
-    let rawInput = searchCardNumberInput.value.trim();
+    // Usamos tcgSearchInput para evitar conflictos con el ID del formulario de cartas
+    let rawInput = tcgSearchInput.value.trim();
     const setIdInput = searchSetIdInput.value.trim().toLowerCase();
 
     if (!rawInput) {
@@ -126,7 +127,7 @@ async function handleQuickSearch() {
             if (!card) card = data.data[0];
 
             fillCardForm(card);
-            clearSearchInputs();
+            clearSearchInputs(); // Limpiar después de éxito
             closeModal(quickSearchModal);
         } else {
             searchStatusMessage.textContent = "No se encontró la carta.";
@@ -411,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <h2 style="margin-bottom: 20px;"><i class="fas fa-search"></i> Buscador TCG</h2>
             <div style="margin-bottom: 16px; text-align: left;">
                 <label>Número de Carta (ej: 028/151)</label>
-                <input type="text" id="searchCardNumber" placeholder="Número..." style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px;">
+                <input type="text" id="tcgSearchInput" placeholder="Número..." style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px;">
             </div>
             <div style="margin-bottom: 24px; text-align: left;">
                 <label>Expansión (opcional)</label>
@@ -422,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
             <p id="searchStatus" style="margin-top: 20px; font-size: 0.95rem;"></p>
         `;
-        searchCardNumberInput = document.getElementById('searchCardNumber');
+        tcgSearchInput = document.getElementById('tcgSearchInput');
         searchSetIdInput = document.getElementById('searchSetId');
         submitSearchBtn = document.getElementById('submitSearch');
         searchStatusMessage = document.getElementById('searchStatus');
