@@ -28,6 +28,8 @@ const appId = firebaseConfig.projectId;
 
 // Referencias a los elementos del DOM
 const elements = {
+    loginModal: document.getElementById('loginModal'),
+    adminPanelContainer: document.getElementById('adminPanelContainer'),
     loginForm: document.getElementById('loginForm'),
     btnLogout: document.getElementById('btnLogout'),
     loginMessage: document.getElementById('loginMessage'),
@@ -46,21 +48,33 @@ const elements = {
 
 // --- GESTIÓN DE SESIÓN ---
 
-// Al cargar, ponemos estado loading para evitar parpadeos
+// Estado inicial: Limpieza absoluta
 document.body.className = 'auth-loading';
 
 onAuthStateChanged(auth, async (user) => {
+    // Forzamos un reseteo visual antes de decidir qué mostrar
+    if (elements.loginModal) elements.loginModal.style.display = 'none';
+    if (elements.adminPanelContainer) elements.adminPanelContainer.style.display = 'none';
+
     if (user) {
         console.log("Sesión iniciada:", user.email);
-        // Quitamos cualquier rastro del login y mostramos el panel
+        // Cambiamos clases del body para que el CSS actúe
         document.body.classList.remove('auth-guest', 'auth-loading');
         document.body.classList.add('auth-ready');
+        
+        // Forzamos visibilidad por JS por si el CSS falla
+        if (elements.adminPanelContainer) elements.adminPanelContainer.style.display = 'flex';
+        if (elements.loginModal) elements.loginModal.style.display = 'none';
+        
         await loadData();
     } else {
         console.log("No hay sesión activa");
-        // Mostramos el login en pantalla completa
         document.body.classList.remove('auth-ready', 'auth-loading');
         document.body.classList.add('auth-guest');
+        
+        // Forzamos visibilidad por JS
+        if (elements.loginModal) elements.loginModal.style.display = 'flex';
+        if (elements.adminPanelContainer) elements.adminPanelContainer.style.display = 'none';
     }
 });
 
@@ -98,7 +112,6 @@ if (elements.btnLogout) {
         e.preventDefault();
         try {
             await signOut(auth);
-            // Forzamos recarga para limpiar estados
             window.location.reload();
         } catch (err) {
             console.error("Error al cerrar sesión", err);
@@ -109,8 +122,6 @@ if (elements.btnLogout) {
 // --- CARGA DE DATOS ---
 
 async function loadData() {
-    console.log("Cargando datos desde Firestore...");
-    // Función auxiliar para las rutas correctas de la colección según las reglas
     const getC = (n) => collection(db, 'artifacts', appId, 'public', 'data', n);
     
     try {
@@ -126,7 +137,6 @@ async function loadData() {
         const orders = oSnap.docs.map(d => ({id: d.id, ...d.data()}));
         const categories = catSnap.docs.map(d => ({id: d.id, ...d.data()}));
 
-        // Actualizar Estadísticas con seguridad de que el elemento existe
         if (elements.statCards) elements.statCards.textContent = cards.length;
         if (elements.statOrders) elements.statOrders.textContent = orders.length;
         if (elements.statStock) {
@@ -142,7 +152,6 @@ async function loadData() {
 }
 
 function renderAllTables(cards, sealed, orders, categories) {
-    // Render de Tabla Cartas
     if (elements.cardsTableBody) {
         elements.cardsTableBody.innerHTML = cards.length ? cards.map(c => `
             <tr>
@@ -159,7 +168,6 @@ function renderAllTables(cards, sealed, orders, categories) {
         `).join('') : '<tr><td colspan="6" style="text-align:center; padding:20px; color:#94a3b8;">No hay cartas registradas</td></tr>';
     }
 
-    // Render de Productos Sellados
     if (elements.sealedTableBody) {
         elements.sealedTableBody.innerHTML = sealed.length ? sealed.map(p => `
             <tr>
@@ -174,7 +182,6 @@ function renderAllTables(cards, sealed, orders, categories) {
         `).join('') : '<tr><td colspan="4" style="text-align:center; padding:20px; color:#94a3b8;">No hay productos sellados</td></tr>';
     }
 
-    // Render de Categorías
     if (elements.categoriesTableBody) {
         elements.categoriesTableBody.innerHTML = categories.length ? categories.map(cat => `
             <tr>
@@ -187,7 +194,6 @@ function renderAllTables(cards, sealed, orders, categories) {
         `).join('') : '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">No hay categorías</td></tr>';
     }
 
-    // Render de Pedidos
     if (elements.ordersTableBody) {
         elements.ordersTableBody.innerHTML = orders.length ? orders.map(o => `
             <tr>
@@ -213,11 +219,9 @@ elements.navLinks.forEach(link => {
         e.preventDefault();
         const targetId = href.replace('#', '');
 
-        // Cambiar estado visual de los links
         elements.navLinks.forEach(l => l.classList.remove('active'));
         link.classList.add('active');
 
-        // Mostrar sección correspondiente
         elements.sections.forEach(s => {
             s.classList.remove('active');
             if (s.id === targetId) s.classList.add('active');
