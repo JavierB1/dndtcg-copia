@@ -46,6 +46,7 @@ let currentCardsPage = 1;
 let currentSealedProductsPage = 1;
 
 let currentDeleteTarget = null;
+let ocrWorker = null; // NUEVA VARIABLE PARA LA IA
 
 // ==========================================================================
 // DOM ELEMENT REFERENCES
@@ -218,23 +219,31 @@ function showMessageModal(title, text) {
 // FUNCIÓN DE CÁMARA Y ESCÁNER REAL (OBTENCIÓN DE URL OFICIAL)
 // ==========================================================================
 
-function loadTesseractAPI() {
-    return new Promise((resolve) => {
-        if (window.Tesseract) {
-            resolve();
-        } else {
+async function initTesseractAPI() {
+    if (!window.Tesseract) {
+        await new Promise((resolve) => {
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
             script.onload = resolve;
             document.head.appendChild(script);
+        });
+    }
+    
+    // Si el worker ya existe, no lo volvemos a crear (ESTO ARREGLA EL CONGELAMIENTO EN IPAD)
+    if (!ocrWorker) {
+        try {
+            ocrWorker = await Tesseract.createWorker('eng');
+        } catch (e) {
+            console.error("Error iniciando IA:", e);
         }
-    });
+    }
 }
 
 async function startCamera() {
     try {
-        scannerStatusMessage.textContent = "Solicitando permisos de cámara...";
+        scannerStatusMessage.textContent = "Iniciando cámara y motor de IA...";
         
+        // Iniciamos la cámara
         mediaStream = await navigator.mediaDevices.getUserMedia({
             video: { 
                 facingMode: 'environment',
@@ -242,12 +251,15 @@ async function startCamera() {
                 height: { ideal: 1080 }
             }
         });
-        
         cameraStream.srcObject = mediaStream;
+        
+        // Iniciamos el motor de IA de fondo
+        await initTesseractAPI();
+        
         startScanningProcess();
     } catch (err) {
         console.error("Error al acceder a la cámara:", err);
-        scannerStatusMessage.textContent = "Error: Por favor permite el acceso a la cámara.";
+        scannerStatusMessage.textContent = "Error: Por favor permite el acceso a la cámara en Safari.";
         scannerStatusMessage.style.color = "#ef4444";
     }
 }
@@ -261,21 +273,21 @@ function stopCamera() {
         clearTimeout(scanTimeout);
         scanTimeout = null;
     }
+    // No destruimos ocrWorker aquí para que escaneos futuros sean rápidos
 }
 
 async function startScanningProcess() {
-    scannerStatusMessage.textContent = "Cargando motor de IA...";
-    await loadTesseractAPI();
-    scannerStatusMessage.textContent = "Enfoca el CÓDIGO (Ej: 025/165) bajo el láser.";
+    // MENSAJE DE AYUDA PARA EL USUARIO
+    scannerStatusMessage.innerHTML = "<strong>ACERCA LA CÁMARA</strong><br><small>Enfoca solo el número de colección (Ej: 152/162) para que la IA pueda leerlo.</small>";
     scannerStatusMessage.style.color = "#10b981";
-    scanTimeout = setTimeout(processScannedFrame, 3000);
+    scanTimeout = setTimeout(processScannedFrame, 2000); // 2 segundos iniciales
 }
 
 async function processScannedFrame() {
-    if (!mediaStream) return;
+    if (!mediaStream || !ocrWorker) return;
 
     try {
-        scannerStatusMessage.textContent = "Analizando carta...";
+        scannerStatusMessage.innerHTML = "Analizando texto...";
         scannerStatusMessage.style.color = "#f59e0b";
 
         const context = captureCanvas.getContext('2d');
@@ -283,15 +295,19 @@ async function processScannedFrame() {
         captureCanvas.height = cameraStream.videoHeight;
         context.drawImage(cameraStream, 0, 0, captureCanvas.width, captureCanvas.height);
 
-        const result = await Tesseract.recognize(captureCanvas, 'eng');
+        // USAMOS EL WORKER YA CREADO (Mucho más rápido)
+        const result = await ocrWorker.recognize(captureCanvas);
         const text = result.data.text;
+        
+        console.log("IA vio el siguiente texto: ", text);
 
         // Buscamos el patrón Number/Total
         const numberMatch = text.match(/([a-zA-Z0-9]{1,4})\s*\/\s*(\d{1,3})/);
 
         if (numberMatch) {
             let cardNumber = numberMatch[1].replace(/^0+/, ''); // Limpiar ceros iniciales
-            scannerStatusMessage.textContent = `¡Código detectado: ${numberMatch[0]}! Buscando URL...`;
+            scannerStatusMessage.innerHTML = `¡Código detectado: <strong>${numberMatch[0]}</strong>!<br><small>Buscando en base de datos...</small>`;
+            scannerStatusMessage.style.color = "#3b82f6";
 
             // CONEXIÓN A POKÉMON TCG API
             const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:${cardNumber}`);
@@ -300,15 +316,18 @@ async function processScannedFrame() {
             if (data.data && data.data.length > 0) {
                 fillFormWithAPIData(data.data[0], numberMatch[0]);
             } else {
-                scannerStatusMessage.textContent = "No encontrado en base de datos. Reintentando...";
-                scanTimeout = setTimeout(processScannedFrame, 2000);
+                scannerStatusMessage.innerHTML = `No encontré el ${numberMatch[0]}.<br><small>Asegúrate de no tapar la letra (ej. SWSH01)</small>`;
+                scannerStatusMessage.style.color = "#ef4444";
+                scanTimeout = setTimeout(processScannedFrame, 2500);
             }
         } else {
-            scannerStatusMessage.textContent = "No detecto el código. Acerca la cámara.";
+            scannerStatusMessage.innerHTML = "No detecto el código.<br><small>Acerca más el iPad al numerito de la esquina.</small>";
+            scannerStatusMessage.style.color = "#ef4444";
             scanTimeout = setTimeout(processScannedFrame, 2000);
         }
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Error en lectura:", error);
+        scannerStatusMessage.textContent = "Error de lectura. Reintentando...";
         scanTimeout = setTimeout(processScannedFrame, 2000);
     }
 }
@@ -317,7 +336,7 @@ function fillFormWithAPIData(card, originalCode) {
     stopCamera();
     closeModal(scannerModal);
     openModal(cardModal);
-    cardModalTitle.textContent = 'Carta Identificada';
+    cardModalTitle.textContent = 'Carta Identificada Automáticamente';
 
     // Rellenamos los campos
     cardName.value = card.name;
