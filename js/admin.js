@@ -215,25 +215,35 @@ function showMessageModal(title, text) {
 }
 
 // ==========================================================================
-// FUNCIÓN DE CÁMARA Y ESCÁNER EN VIVO
+// FUNCIÓN DE CÁMARA Y ESCÁNER EN VIVO (CONEXIÓN POKÉMON TCG REAL)
 // ==========================================================================
+
+// Función para cargar la Inteligencia Artificial de lectura de texto
+function loadTesseractAPI() {
+    return new Promise((resolve) => {
+        if (window.Tesseract) {
+            resolve();
+        } else {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+            script.onload = resolve;
+            document.head.appendChild(script);
+        }
+    });
+}
 
 async function startCamera() {
     try {
         scannerStatusMessage.textContent = "Solicitando permisos de cámara...";
         scannerStatusMessage.style.color = "#3b82f6";
         
-        // Pide acceso a la cámara. En móviles, prioriza la cámara trasera (environment)
         mediaStream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'environment' }
         });
         
-        // Conecta el video de la cámara al elemento HTML
         cameraStream.srcObject = mediaStream;
-        scannerStatusMessage.textContent = "Cámara activa. Escaneando carta...";
-        scannerStatusMessage.style.color = "#10b981";
         
-        // Inicia el proceso de lectura (temporizador)
+        // Iniciar proceso de lectura de inmediato
         startScanningProcess();
     } catch (err) {
         console.error("Error al acceder a la cámara:", err);
@@ -243,75 +253,122 @@ async function startCamera() {
 }
 
 function stopCamera() {
-    // Apaga la luz de la cámara
     if (mediaStream) {
         mediaStream.getTracks().forEach(track => track.stop());
         mediaStream = null;
     }
-    // Detiene el temporizador si se cierra antes
     if (scanTimeout) {
         clearTimeout(scanTimeout);
         scanTimeout = null;
     }
 }
 
-function startScanningProcess() {
-    // Aquí es donde irá la lógica OCR para la API de Pokémon TCG
-    scanTimeout = setTimeout(() => {
-        
-        // 1. TOMA LA FOTO INVISIBLE (Captura el frame exacto del video)
+async function startScanningProcess() {
+    scannerStatusMessage.textContent = "Cargando motor de Inteligencia Artificial...";
+    scannerStatusMessage.style.color = "#3b82f6";
+    
+    await loadTesseractAPI();
+    
+    scannerStatusMessage.textContent = "Buscando código (Ej: 025/165). Mantén la carta quieta...";
+    scannerStatusMessage.style.color = "#10b981";
+    
+    // Inicia un bucle que toma una foto cada 3 segundos hasta encontrar algo
+    scanTimeout = setTimeout(processScannedFrame, 3000);
+}
+
+async function processScannedFrame() {
+    if (!mediaStream) return; // Si la cámara se apagó, detenemos el proceso
+
+    try {
+        scannerStatusMessage.textContent = "Analizando texto de la carta...";
+        scannerStatusMessage.style.color = "#f59e0b"; // Naranja
+
+        // Tomamos una "foto" invisible del video
         const context = captureCanvas.getContext('2d');
         captureCanvas.width = cameraStream.videoWidth;
         captureCanvas.height = cameraStream.videoHeight;
         context.drawImage(cameraStream, 0, 0, captureCanvas.width, captureCanvas.height);
-        
-        // 2. Apaga la cámara y cierra el escáner
-        stopCamera();
-        closeModal(scannerModal);
-        
-        // 3. Abre el formulario con los datos encontrados
-        processScannedCardData();
-        
-    }, 3500); // 3.5 segundos escaneando en vivo
+
+        // Usamos la IA para leer el texto de esa foto
+        const result = await Tesseract.recognize(captureCanvas, 'eng');
+        const text = result.data.text;
+
+        // Buscamos un patrón típico de Pokémon (números divididos por un slash, ej. 025/165)
+        const numberMatch = text.match(/([a-zA-Z0-9]{1,4})\/(\d{1,3})/);
+
+        if (numberMatch) {
+            let cardNumber = numberMatch[1];
+            // Removemos ceros a la izquierda (ej. 025 se vuelve 25) porque la API oficial los usa así
+            cardNumber = cardNumber.replace(/^0+/, '');
+
+            scannerStatusMessage.textContent = `¡Código detectado: ${numberMatch[0]}! Descargando datos...`;
+            scannerStatusMessage.style.color = "#10b981";
+
+            // CONEXIÓN A LA API REAL DE POKÉMON TCG
+            const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:${cardNumber}`);
+            const data = await response.json();
+
+            if (data.data && data.data.length > 0) {
+                // Si encontramos la carta, autocompletamos
+                fillFormWithAPIData(data.data[0], numberMatch[0]);
+            } else {
+                scannerStatusMessage.textContent = `Código ${numberMatch[0]} no encontrado. Intentando de nuevo...`;
+                scannerStatusMessage.style.color = "#ef4444";
+                scanTimeout = setTimeout(processScannedFrame, 3000);
+            }
+        } else {
+            // Si la IA no logró leer el texto
+            scannerStatusMessage.textContent = "No detecto el código. Ilumina bien la carta y acércala.";
+            scannerStatusMessage.style.color = "#ef4444";
+            scanTimeout = setTimeout(processScannedFrame, 3000);
+        }
+    } catch (error) {
+        console.error("Error al leer la carta:", error);
+        scannerStatusMessage.textContent = "Error al procesar. Reintentando...";
+        scanTimeout = setTimeout(processScannedFrame, 3000);
+    }
 }
 
-function processScannedCardData() {
+// Función que toma los datos de la API de Pokémon y los pega en tu formulario
+function fillFormWithAPIData(card, originalCode) {
+    stopCamera();
+    closeModal(scannerModal);
     openModal(cardModal);
-    cardModalTitle.textContent = 'Carta Detectada';
-    
-    // Estos son los datos que la futura API entregará
-    cardName.value = 'Charizard VMAX (Escaneado)';
-    cardCode.value = '020/189'; 
-    cardExpansion.value = 'Darkness Ablaze'; // AHORA LA EXPANSIÓN VA AQUÍ
-    cardPrice.value = '45.00';
-    cardImage.value = 'https://assets.pokemon.com/assets/cms2/img/cards/web/swsh3/swsh3_en_20.png';
-    
-    // Verificamos si el juego (Pokémon TCG) existe en Categorías
-    if(cardCategory.options.length === 0) {
-        const option = document.createElement('option');
-        option.value = 'Pokémon TCG';
-        option.text = 'Pokémon TCG';
-        cardCategory.appendChild(option);
-    } else {
-        let exists = Array.from(cardCategory.options).some(opt => opt.value === 'Pokémon TCG');
-        if(!exists) {
-            const option = document.createElement('option');
-            option.value = 'Pokémon TCG';
-            option.text = 'Pokémon TCG';
-            cardCategory.appendChild(option);
+    cardModalTitle.textContent = 'Carta Encontrada Automáticamente';
+
+    // Rellenamos los datos reales
+    cardName.value = card.name;
+    cardCode.value = originalCode || card.number;
+    cardExpansion.value = card.set.name;
+
+    // Buscamos el precio en la base de datos (Cardmarket o TCGPlayer)
+    let price = 0;
+    if (card.cardmarket && card.cardmarket.prices && card.cardmarket.prices.averageSellPrice) {
+        price = card.cardmarket.prices.averageSellPrice;
+    } else if (card.tcgplayer && card.tcgplayer.prices) {
+        const priceKeys = Object.keys(card.tcgplayer.prices);
+        if (priceKeys.length > 0) {
+            price = card.tcgplayer.prices[priceKeys[0]].market || 0;
         }
     }
-    cardCategory.value = 'Pokémon TCG';
+    cardPrice.value = parseFloat(price).toFixed(2);
     
-    // Efecto visual de que se llenaron solos
-    cardName.style.backgroundColor = '#ecfdf5';
-    cardCode.style.backgroundColor = '#ecfdf5';
-    cardExpansion.style.backgroundColor = '#ecfdf5';
-    setTimeout(() => {
-        cardName.style.backgroundColor = '';
-        cardCode.style.backgroundColor = '';
-        cardExpansion.style.backgroundColor = '';
-    }, 2000);
+    // Rellenamos la foto oficial
+    cardImage.value = card.images.small || '';
+
+    // Rellenamos la categoría a "Pokémon TCG"
+    if(cardCategory.options.length === 0) {
+        cardCategory.appendChild(new Option('Pokémon TCG', 'Pokémon TCG'));
+    } else {
+        let exists = Array.from(cardCategory.options).some(opt => opt.value === 'Pokémon TCG');
+        if(!exists) cardCategory.appendChild(new Option('Pokémon TCG', 'Pokémon TCG'));
+    }
+    cardCategory.value = 'Pokémon TCG';
+
+    // Hacemos que brillen en verde un segundo para que veas qué se llenó
+    const fields = [cardName, cardCode, cardExpansion, cardPrice];
+    fields.forEach(f => f.style.backgroundColor = '#ecfdf5');
+    setTimeout(() => fields.forEach(f => f.style.backgroundColor = ''), 2000);
 }
 
 
@@ -401,7 +458,7 @@ async function loadCardsData() {
             precio: parseFloat(card.precio) || 0,
             stock: parseInt(card.stock) || 0,
             codigo: card.codigo || '',
-            expansion: card.expansion || '' // Aseguramos que cargue la expansión
+            expansion: card.expansion || ''
         }));
         renderCardsTable();
         updateDashboardStats();
@@ -488,7 +545,6 @@ function renderCardsTable() {
     const categoryFilter = adminCategoryFilter.value;
 
     const filteredCards = allCards.filter(card => {
-        // Busca en nombre, ID O en el código de la carta
         const matchesSearch = card.nombre?.toLowerCase().includes(searchQuery) || 
                               card.id?.toLowerCase().includes(searchQuery) ||
                               card.codigo?.toLowerCase().includes(searchQuery);
@@ -687,7 +743,7 @@ async function handleSaveCard(event) {
     const data = {
         nombre: cardName.value,
         codigo: cardCode.value, 
-        expansion: cardExpansion.value, // NUEVO
+        expansion: cardExpansion.value,
         imagen_url: cardImage.value || '',
         precio: parseFloat(cardPrice.value).toFixed(2),
         stock: parseInt(cardStock.value),
@@ -769,7 +825,7 @@ async function handleDeleteConfirmed() {
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     
-    // INYECCIÓN DE ESTILOS MÓVILES (Garantiza que se vea perfecto en celular)
+    // INYECCIÓN DE ESTILOS MÓVILES
     const mobileStyles = document.createElement('style');
     mobileStyles.innerHTML = `
         @media (max-width: 768px) {
@@ -781,12 +837,8 @@ document.addEventListener('DOMContentLoaded', () => {
             .sidebar-toggle-btn { display: block !important; margin-right: 15px; font-size: 1.5rem; }
             .close-sidebar-btn { display: block !important; }
             .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            
-            /* Ajustes para tocar con los dedos en celular */
             .action-btn { padding: 12px; margin-right: 5px; font-size: 1.2rem; }
-            .add-button { width: 55px; height: 55px; font-size: 2.2rem; } /* Botón '+' más fácil de tocar */
-            
-            /* Ajuste de Modales en Móvil */
+            .add-button { width: 55px; height: 55px; font-size: 2.2rem; }
             .admin-modal-content { width: 95%; max-height: 90vh; overflow-y: auto; padding: 20px; }
             .dashboard-stats { grid-template-columns: 1fr 1fr; }
         }
@@ -923,7 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
             navs.forEach(n => { if(n.btn) n.btn.classList.remove('active'); });
             nav.btn.classList.add('active');
             
-            // Cierra el menú en móviles automáticamente al elegir una opción
+            // Cierra el menú en móviles automáticamente
             if (window.innerWidth <= 768) {
                 sidebarMenu.classList.remove('show');
                 if(sidebarOverlay) sidebarOverlay.style.display = 'none';
@@ -943,7 +995,6 @@ document.addEventListener('DOMContentLoaded', () => {
             closeModal(loginModal);
             closeModal(messageModal);
             closeModal(orderDetailsModal);
-            // IMPORTANTE: Detener la cámara si se cierra el modal desde la X
             if (scannerModal && scannerModal.style.display === 'flex') {
                 stopCamera();
                 closeModal(scannerModal);
@@ -972,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addCategoryBtn) addCategoryBtn.addEventListener('click', () => { categoryForm.reset(); categoryId.value = ''; openModal(categoryModal); });
     if (categoryForm) categoryForm.addEventListener('submit', handleSaveCategory);
 
-    // Tablas CRUD (Edit/Delete)
+    // Tablas CRUD
     if (cardsTable) cardsTable.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if(!btn) return;
@@ -983,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardId.value = card.id; 
                 cardName.value = card.nombre; 
                 cardCode.value = card.codigo || ''; 
-                cardExpansion.value = card.expansion || ''; // CARGA LA EXPANSIÓN AL EDITAR
+                cardExpansion.value = card.expansion || ''; 
                 cardImage.value = card.imagen_url || '';
                 cardPrice.value = card.precio; 
                 cardStock.value = card.stock; 
