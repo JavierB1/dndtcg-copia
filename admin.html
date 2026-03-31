@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Evita el flash del panel administrativo */
+        /* Estilo crítico para evitar el flash del panel administrativo */
         .admin-container { display: none !important; }
         
         #loginModal { 
@@ -36,7 +36,6 @@
         .svg-header { margin-bottom: 24px; display: flex; justify-content: center; }
         .icon-svg { width: 64px; height: 64px; fill: #3182ce; }
 
-        /* Estilos para badges de estado en pedidos */
         .status-badge { padding: 5px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
         .status-badge.pendiente { background: #fef3c7; color: #d97706; }
         .status-badge.completado { background: #d1fae5; color: #059669; }
@@ -45,7 +44,7 @@
 </head>
 <body>
 
-    <!-- PANTALLA DE LOGIN EXCLUSIVA TCG -->
+    <!-- PANTALLA DE LOGIN -->
     <div id="loginModal">
         <div class="login-card">
             <div class="svg-header">
@@ -60,11 +59,11 @@
             
             <form id="loginForm">
                 <div style="text-align: left; margin-bottom: 16px;">
-                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-left: 4px;">Email</label>
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568;">Email</label>
                     <input type="email" id="username" placeholder="admin@dndtcg.com" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
                 </div>
                 <div style="text-align: left; margin-bottom: 24px;">
-                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-left: 4px;">Contraseña</label>
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568;">Contraseña</label>
                     <input type="password" id="password" placeholder="••••••••" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
                 </div>
                 <button type="submit" id="loginBtnSubmit" style="width: 100%; padding: 16px; background: #3182ce; color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer;">
@@ -106,7 +105,7 @@
                 </div>
             </header>
 
-            <!-- DASHBOARD -->
+            <!-- SECCIONES -->
             <section id="dashboard-section" class="admin-section active">
                 <div class="dashboard-stats">
                     <div class="stat-card"><h3>Total Cartas</h3><p id="totalCardsCount">0</p></div>
@@ -116,7 +115,6 @@
                 </div>
             </section>
 
-            <!-- GESTIÓN DE CARTAS -->
             <section id="cards-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                     <h2>Inventario de Cartas</h2>
@@ -130,87 +128,89 @@
                 <div class="table-responsive">
                     <table id="cardsTable">
                         <thead>
-                            <tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>
+                            <tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Expansión</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>
                         </thead>
                         <tbody></tbody>
                     </table>
                 </div>
-                <div class="pagination-controls">
-                    <button id="adminPrevPageBtn" class="refresh-button">Anterior</button>
-                    <span id="adminPageInfo" style="margin: 0 15px;">Página 1</span>
-                    <button id="adminNextPageBtn" class="refresh-button">Siguiente</button>
-                </div>
             </section>
-
-            <!-- PRODUCTOS SELLADOS -->
+            
             <section id="sealed-products-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Productos Sellados</h2>
                     <button id="addSealedProductBtn" class="add-button">+</button>
                 </div>
-                <div class="table-responsive">
-                    <table id="sealedProductsTable">
-                        <thead>
-                            <tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <div class="table-responsive"><table id="sealedProductsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
 
-            <!-- CATEGORÍAS -->
             <section id="categories-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2>Gestión de Categorías</h2>
+                    <h2>Categorías</h2>
                     <button id="addCategoryBtn" class="add-button">+</button>
                 </div>
-                <div class="table-responsive">
-                    <table id="categoriesTable">
-                        <thead>
-                            <tr><th>Nombre de Categoría</th><th>Acciones</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <div class="table-responsive"><table id="categoriesTable"><thead><tr><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
 
-            <!-- PEDIDOS -->
             <section id="orders-section" class="admin-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2>Pedidos de Clientes</h2>
-                </div>
-                <div class="table-responsive">
-                    <table id="ordersTable">
-                        <thead>
-                            <tr><th>ID Pedido</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <h2>Pedidos</h2>
+                <div class="table-responsive"><table id="ordersTable"><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
         </main>
     </div>
 
-    <!-- MODAL CARTA -->
+    <!-- MODAL CARTA (REDISEÑADO) -->
     <div id="cardModal" class="admin-modal">
         <div class="admin-modal-content">
             <span class="close-button">&times;</span>
             <h3 id="cardModalTitle">Añadir Carta</h3>
             <form id="cardForm">
                 <input type="hidden" id="cardId">
-                <label>Nombre</label><input type="text" id="cardName" required>
-                <label>Código</label><input type="text" id="cardCode" required placeholder="Ej: 028/151">
-                <label>Expansión</label><input type="text" id="cardExpansion" required>
-                <label>Categoría</label><select id="cardCategory" required></select>
-                <label>Precio</label><input type="number" step="0.01" id="cardPrice" required>
-                <label>Stock</label><input type="number" id="cardStock" required>
-                <label>Imagen URL</label><input type="url" id="cardImage">
+                
+                <!-- Fila 1: Nombre -->
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" id="cardName" required>
+                </div>
+
+                <!-- Fila 2: Código, Expansión, Categoría -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Código</label>
+                        <input type="text" id="searchCardNumber" placeholder="Ej: 028/151" id="cardCode" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Expansión</label>
+                        <input type="text" id="cardExpansion" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría</label>
+                        <select id="cardCategory" required></select>
+                    </div>
+                </div>
+
+                <!-- Fila 3: Precio y Stock -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Precio</label>
+                        <input type="number" step="0.01" id="cardPrice" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Stock</label>
+                        <input type="number" id="cardStock" required>
+                    </div>
+                </div>
+
+                <!-- Fila 4: Imagen URL -->
+                <div class="form-group">
+                    <label>Imagen URL</label>
+                    <input type="url" id="cardImage">
+                </div>
+
                 <button type="submit" class="confirm-button" style="width: 100%; margin-top: 15px;">Guardar</button>
             </form>
         </div>
     </div>
 
-    <!-- MODAL PRODUCTO SELLADO -->
     <div id="sealedProductModal" class="admin-modal">
         <div class="admin-modal-content">
             <span class="close-button">&times;</span>
@@ -227,7 +227,6 @@
         </div>
     </div>
 
-    <!-- MODAL CATEGORÍA -->
     <div id="categoryModal" class="admin-modal">
         <div class="admin-modal-content">
             <span class="close-button">&times;</span>
@@ -240,7 +239,6 @@
         </div>
     </div>
 
-    <!-- MODAL BUSCADOR -->
     <div id="scannerModal" class="admin-modal">
         <div class="admin-modal-content" id="quickSearchContent"></div>
     </div>
