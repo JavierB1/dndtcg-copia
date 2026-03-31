@@ -3,108 +3,367 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D TCG - Admin Panel</title>
+    <title>Panel de Administración - DND TCG</title>
+    <!-- Fuentes y Iconos -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin.css">
-    <!-- Iconos -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-
-    <!-- MODAL DE LOGIN (Fuera del contenedor principal para evitar conflictos de flex) -->
-    <div id="loginModal" class="admin-modal-overlay">
-        <div class="login-card">
-            <div class="login-header">
-                <i class="fas fa-shield-alt"></i>
-                <h2>Acceso Administrativo</h2>
-                <p>Ingrese sus credenciales para continuar</p>
-            </div>
-            <form id="loginForm">
-                <div class="input-group">
-                    <label for="username"><i class="fas fa-envelope"></i> Correo Electrónico</label>
-                    <input type="email" id="username" placeholder="admin@dndtcg.com" required>
-                </div>
-                <div class="input-group">
-                    <label for="password"><i class="fas fa-lock"></i> Contraseña</label>
-                    <input type="password" id="password" placeholder="••••••••" required>
-                </div>
-                <button type="submit" class="btn-login">Entrar al Panel</button>
-                <p id="loginMessage" class="error-msg"></p>
-            </form>
-        </div>
-    </div>
+    <!-- Overlay para móvil -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
     <div class="admin-container">
-        <!-- BARRA LATERAL -->
-        <aside class="sidebar" id="sidebar">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar-menu" class="sidebar">
             <div class="sidebar-header">
-                <img src="img/logo.png" alt="Logo" class="admin-logo" onerror="this.src='https://via.placeholder.com/50'">
-                <span>D&D TCG</span>
+                <img src="https://placehold.co/40x40/6366f1/ffffff?text=DND" alt="Logo" class="sidebar-logo">
+                <span class="sidebar-title">DND TCG Admin</span>
+                <button id="closeSidebarBtn" class="close-sidebar-btn"><i class="fas fa-times"></i></button>
             </div>
             <nav class="sidebar-nav">
-                <a href="#dashboard-section" class="nav-link active"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
-                <a href="#cards-section" class="nav-link"><i class="fas fa-clone"></i> <span>Cartas</span></a>
-                <a href="#sealed-products-section" class="nav-link"><i class="fas fa-box-open"></i> <span>Productos</span></a>
-                <a href="#categories-section" class="nav-link"><i class="fas fa-tags"></i> <span>Categorías</span></a>
-                <a href="#orders-section" class="nav-link"><i class="fas fa-shopping-cart"></i> <span>Pedidos</span></a>
-                <a href="#" id="btnLogout" class="nav-link logout"><i class="fas fa-sign-out-alt"></i> <span>Salir</span></a>
+                <ul>
+                    <li><a href="#" id="nav-dashboard" class="active"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                    <li><a href="#" id="nav-cards"><i class="fas fa-id-card"></i> Cartas</a></li>
+                    <li><a href="#" id="nav-sealed-products"><i class="fas fa-box-open"></i> Productos Sellados</a></li>
+                    <li><a href="#" id="nav-categories"><i class="fas fa-tags"></i> Categorías</a></li>
+                    <li><a href="#" id="nav-orders"><i class="fas fa-shopping-cart"></i> Pedidos</a></li>
+                    <li class="nav-divider"></li>
+                    <li><a href="#" id="nav-logout" class="nav-logout"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
+                </ul>
             </nav>
         </aside>
 
-        <!-- CONTENIDO PRINCIPAL -->
-        <main class="main-content" id="mainContent">
-            <!-- DASHBOARD -->
-            <section id="dashboard-section" class="admin-section active">
-                <h1>Resumen de Tienda</h1>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <i class="fas fa-clone"></i>
-                        <div class="stat-info">
-                            <span class="stat-value" id="stat-total-cards">0</span>
-                            <span class="stat-label">Cartas Totales</span>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <i class="fas fa-cubes"></i>
-                        <div class="stat-info">
-                            <span class="stat-value" id="stat-total-stock">0</span>
-                            <span class="stat-label">Stock Total</span>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <i class="fas fa-receipt"></i>
-                        <div class="stat-info">
-                            <span class="stat-value" id="stat-total-orders">0</span>
-                            <span class="stat-label">Pedidos Hoy</span>
-                        </div>
-                    </div>
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="main-header">
+                <button id="sidebarToggleBtn" class="menu-toggle"><i class="fas fa-bars"></i></button>
+                <div class="header-info">
+                    <h1 id="section-title">Dashboard</h1>
+                    <button id="refreshAdminPageBtn" class="btn-refresh"><i class="fas fa-sync-alt"></i></button>
                 </div>
-            </section>
+            </header>
 
-            <!-- SECCIÓN CARTAS (Resto de secciones se mantienen igual estructuralmente) -->
-            <section id="cards-section" class="admin-section">
-                <div class="section-header">
-                    <h2>Gestión de Cartas</h2>
-                    <button class="btn-add">Nueva Carta</button>
-                </div>
-                <div class="table-container">
-                    <table id="cardsTable">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Imagen</th>
-                                <th>Nombre</th>
-                                <th>Precio</th>
-                                <th>Stock</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
+            <div class="content-body">
+                <!-- Dashboard Section -->
+                <section id="dashboard-section" class="admin-section active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-id-card"></i></div>
+                            <div class="stat-details">
+                                <h3 id="totalCardsCount">0</h3>
+                                <p>Total de Cartas</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-box"></i></div>
+                            <div class="stat-details">
+                                <h3 id="totalSealedProductsCount">0</h3>
+                                <p>Productos Sellados</p>
+                            </div>
+                        </div>
+                        <div class="stat-card warning">
+                            <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                            <div class="stat-details">
+                                <h3 id="outOfStockCount">0</h3>
+                                <p>Sin Stock</p>
+                            </div>
+                        </div>
+                        <div class="stat-card info">
+                            <div class="stat-icon"><i class="fas fa-tags"></i></div>
+                            <div class="stat-details">
+                                <h3 id="uniqueCategoriesCount">0</h3>
+                                <p>Categorías</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Cards Management Section -->
+                <section id="cards-section" class="admin-section">
+                    <div class="section-header-actions">
+                        <h2>Gestión de Cartas</h2>
+                        <div class="header-buttons">
+                            <!-- Botón de Escáner añadido -->
+                            <button id="scanCardBtn" class="scan-button" style="background-color: #4f46e5; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-right: 10px;">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <button id="addCardBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="filter-bar">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="adminSearchInput" placeholder="Buscar por nombre, ID o código...">
+                        </div>
+                        <select id="adminCategoryFilter">
+                            <option value="">Todas las categorías</option>
+                        </select>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="cardsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Imagen</th>
+                                    <th>Código</th> <!-- Columna añadida -->
+                                    <th>Nombre</th>
+                                    <th>Precio</th>
+                                    <th>Stock</th>
+                                    <th>Categoría</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cardsTableBody">
+                                <!-- Datos cargados por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination">
+                        <button id="adminPrevPageBtn" disabled><i class="fas fa-chevron-left"></i></button>
+                        <span id="adminPageInfo">Página 1 de 1</span>
+                        <button id="adminNextPageBtn" disabled><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </section>
+
+                <!-- Sealed Products Section -->
+                <section id="sealed-products-section" class="admin-section">
+                    <div class="section-header-actions">
+                        <h2>Gestión de Productos Sellados</h2>
+                        <button id="addSealedProductBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                    </div>
+
+                    <div class="filter-bar">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="adminSealedSearchInput" placeholder="Buscar producto sellado...">
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="sealedProductsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Imagen</th>
+                                    <th>Nombre</th>
+                                    <th>Precio</th>
+                                    <th>Stock</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sealedProductsTableBody">
+                                <!-- Datos cargados por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Categories Section -->
+                <section id="categories-section" class="admin-section">
+                    <div class="section-header-actions">
+                        <h2>Gestión de Categorías</h2>
+                        <button id="addCategoryBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="categoriesTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoriesTableBody">
+                                <!-- Datos cargados por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Orders Section -->
+                <section id="orders-section" class="admin-section">
+                    <div class="section-header-actions">
+                        <h2>Gestión de Pedidos</h2>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="ordersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID Pedido</th>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody">
+                                <!-- Datos cargados por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
+    <!-- Modals -->
+    
+    <!-- Card Modal -->
+    <div id="cardModal" class="admin-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="cardModalTitle">Añadir Nueva Carta</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="cardForm">
+                    <input type="hidden" id="cardId">
+                    <div class="form-group">
+                        <label for="cardName">Nombre de la Carta</label>
+                        <input type="text" id="cardName" required>
+                    </div>
+                    <!-- Campo de Código añadido -->
+                    <div class="form-group">
+                        <label for="cardCode">Código de Colección (Ej: 154/198)</label>
+                        <input type="text" id="cardCode" placeholder="000/000">
+                    </div>
+                    <div class="form-group">
+                        <label for="cardImage">URL de la Imagen</label>
+                        <input type="url" id="cardImage">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cardPrice">Precio ($)</label>
+                            <input type="number" id="cardPrice" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cardStock">Stock</label>
+                            <input type="number" id="cardStock" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="cardCategory">Categoría</label>
+                        <select id="cardCategory" required></select>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" id="saveCardBtn" class="btn-save">Guardar Carta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Escáner añadido -->
+    <div id="scannerModal" class="admin-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Escáner de Cartas</h3>
+                <span class="close-button" id="closeScannerModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="camera-container" style="width: 100%; height: 300px; background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; position: relative; overflow: hidden;">
+                    <p>Cámara no activa</p>
+                    <video id="scannerVideo" style="display:none; width: 100%; height: 100%; object-fit: cover;"></video>
+                </div>
+                <div style="margin-top: 15px; text-align: center;">
+                    <button id="captureCardBtn" class="btn-save" style="background-color: #10b981;">Capturar y Buscar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sealed Product Modal -->
+    <div id="sealedProductModal" class="admin-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="sealedProductModalTitle">Añadir Producto Sellado</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="sealedProductForm">
+                    <input type="hidden" id="sealedProductId">
+                    <div class="form-group">
+                        <label for="sealedProductName">Nombre del Producto</label>
+                        <input type="text" id="sealedProductName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="sealedProductImage">URL de la Imagen</label>
+                        <input type="url" id="sealedProductImage">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sealedProductPrice">Precio ($)</label>
+                            <input type="number" id="sealedProductPrice" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sealedProductStock">Stock</label>
+                            <input type="number" id="sealedProductStock" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" id="saveSealedProductBtn" class="btn-save">Guardar Producto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div id="categoryModal" class="admin-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="categoryModalTitle">Añadir Categoría</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="categoryForm">
+                    <input type="hidden" id="categoryId">
+                    <div class="form-group">
+                        <label for="categoryName">Nombre de la Categoría</label>
+                        <input type="text" id="categoryName" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" id="saveCategoryBtn" class="btn-save">Guardar Categoría</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div id="orderDetailModal" class="admin-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Detalle del Pedido</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <div class="modal-body" id="orderDetailContent">
+                <!-- Se llena por JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensajes de Sistema añadido -->
+    <div id="messageModal" class="admin-modal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-body">
+                <h3 id="messageModalTitle"></h3>
+                <p id="messageModalText"></p>
+                <div style="margin-top: 20px;">
+                    <button id="okMessageModal" class="btn-save">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script type="module" src="js/admin.js"></script>
 </body>
 </html>
