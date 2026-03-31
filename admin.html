@@ -81,17 +81,11 @@
             <section id="cards-section" class="admin-section">
                 <div class="section-header-actions">
                     <h2>Gestión de Cartas</h2>
-                    <div class="header-buttons">
-                        <!-- BOTÓN DE ESCÁNER AÑADIDO -->
-                        <button id="scanCardBtn" class="scan-button" style="background-color: #2563eb; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; margin-right: 10px;">
-                            <i class="fas fa-camera"></i>
-                        </button>
-                        <button id="addCardBtn" class="add-button"><i class="fas fa-plus"></i></button>
-                    </div>
+                    <button id="addCardBtn" class="add-button"><i class="fas fa-plus"></i></button>
                 </div>
                 <div class="card-list-container">
                     <h3>Lista de Cartas</h3>
-                    <input type="text" id="adminSearchInput" placeholder="Buscar carta por nombre, ID o código..." class="admin-search-input">
+                    <input type="text" id="adminSearchInput" placeholder="Buscar carta por nombre o ID..." class="admin-search-input">
                     <select id="adminCategoryFilter" class="admin-select-filter">
                         <option value="">Todas las categorías</option>
                         <!-- Las opciones se cargarán dinámicamente -->
@@ -102,7 +96,6 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Imagen</th>
-                                    <th>Código</th> <!-- NUEVA COLUMNA AÑADIDA -->
                                     <th>Nombre</th>
                                     <th>Precio</th>
                                     <th>Stock</th>
@@ -221,11 +214,6 @@
                         <input type="hidden" id="cardId">
                         <label for="cardName">Nombre:</label>
                         <input type="text" id="cardName" required>
-                        
-                        <!-- NUEVO CAMPO: CÓDIGO DE CARTA AÑADIDO -->
-                        <label for="cardCode">Código (000/000):</label>
-                        <input type="text" id="cardCode" placeholder="Ej: 154/198" required>
-
                         <label for="cardImage">URL Imagen:</label>
                         <input type="url" id="cardImage" required>
                         <label for="cardPrice">Precio:</label>
@@ -239,20 +227,6 @@
                         </select>
                         <button type="submit" id="saveCardBtn">Guardar Carta</button>
                     </form>
-                </div>
-            </div>
-
-            <!-- Modal para Escáner (Placeholder para el visor de cámara) -->
-            <div id="scannerModal" class="admin-modal">
-                <div class="admin-modal-content">
-                    <span class="close-button" id="closeScannerModal">&times;</span>
-                    <h3>Escáner de Cartas</h3>
-                    <div id="camera-container" style="width: 100%; height: 300px; background: black; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; color: white;">
-                        <p>Visor de cámara</p>
-                    </div>
-                    <div class="modal-buttons">
-                        <button id="captureCardBtn" class="confirm-button">Escanear</button>
-                    </div>
                 </div>
             </div>
 
