@@ -353,7 +353,8 @@ function fillFormWithAPIData(card, originalCode) {
 // ==========================================================================
 async function handleLogin(event) {
     event.preventDefault();
-    const email = usernameInput ? usernameInput.value : '';
+    // EL TRUCO PARA EL IPAD: .trim() quita los espacios en blanco invisibles
+    const email = usernameInput ? usernameInput.value.trim() : '';
     const password = passwordInput ? passwordInput.value : '';
     clearLoginError();
 
@@ -363,7 +364,21 @@ async function handleLogin(event) {
         showSection(dashboardSection);
         await loadAllData();
     } catch (error) {
-        showLoginError('Error al iniciar sesión. Revisa tus credenciales.');
+        console.error('Error detallado de Firebase Auth:', error);
+        // Mostrar errores específicos para que sepas exactamente qué bloquea Safari
+        let errorMessage = 'Error al iniciar sesión. Revisa tus credenciales.';
+        
+        if (error.code === 'auth/invalid-email') {
+            errorMessage = 'El formato del correo electrónico no es válido.';
+        } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            errorMessage = 'Correo electrónico o contraseña incorrectos.';
+        } else if (error.code === 'auth/network-request-failed') {
+            errorMessage = 'Error de red o Safari está bloqueando la conexión (Cookies).';
+        } else {
+            errorMessage = `Safari reporta: ${error.message}`;
+        }
+        
+        showLoginError(errorMessage);
     }
 }
 
