@@ -318,7 +318,7 @@ button {
 }
 
 .confirm-button:hover {
-    background-color: var(--primary-hover);
+    filter: brightness(1.1);
 }
 
 .cancel-button {
@@ -465,6 +465,45 @@ form select:focus {
     color: var(--text-muted);
     cursor: pointer;
     margin-top: -10px;
+}
+
+/* ==========================================================================
+   ESCANER LASER (NUEVO EFECTO)
+   ========================================================================== */
+.scanner-container {
+    position: relative;
+    width: 100%;
+    height: 250px;
+    background-color: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+}
+
+.scanner-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    /* Crea el efecto de bordes oscurecidos enfocando el centro */
+    box-shadow: inset 0 0 0 30px rgba(0,0,0,0.5);
+    border: 2px solid rgba(16, 185, 129, 0.5); /* Borde verde cibernético */
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.laser-line {
+    position: absolute;
+    top: 0; left: 5%; width: 90%; height: 2px;
+    background-color: #ef4444; /* Rojo láser */
+    box-shadow: 0 0 10px #ef4444, 0 0 20px #ef4444;
+    animation: scanLaser 2s infinite linear;
+}
+
+@keyframes scanLaser {
+    0% { top: 10%; opacity: 0; }
+    10% { opacity: 1; }
+    50% { top: 90%; }
+    90% { opacity: 1; }
+    100% { top: 10%; opacity: 0; }
 }
 
 /* ==========================================================================
