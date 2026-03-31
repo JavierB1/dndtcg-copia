@@ -29,23 +29,23 @@ const appId = firebaseConfig.projectId;
 // ==========================================================================
 // 2. CONTROL DE SESIÓN (OBLIGATORIO AL RECARGAR PESTAÑA)
 // ==========================================================================
-// Forzamos el cierre de sesión inmediatamente al cargar el script
-let isForcedLogoutDone = false;
-signOut(auth).then(() => {
-    isForcedLogoutDone = true;
-    console.log("Sesión previa limpiada correctamente.");
-});
+let isForcedLogoutDone = sessionStorage.getItem('forcedLogout') === 'true';
 
-// Variables Globales de Estado
+if (!isForcedLogoutDone) {
+    signOut(auth).then(() => {
+        isForcedLogoutDone = true;
+        sessionStorage.setItem('forcedLogout', 'true');
+    });
+}
+
+// Variables Globales
 let allCards = [], allCategories = [], allSealed = [], allOrders = [];
-
-// Elementos UI
 let loginView, adminView, sidebarMenu, sidebarOverlay;
 let cardForm, cardModal, quickSearchModal, sealedProductModal, categoryModal;
 let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBtn;
 
 // ==========================================================================
-// 3. FUNCIONES DE UI Y MODALES
+// 3. FUNCIONES DE UI
 // ==========================================================================
 
 function openModal(m) { 
@@ -114,10 +114,10 @@ async function handleQuickSearch() {
     submitSearchBtn.disabled = true;
 
     try {
-        let queryStr = `number:"${cardNumber}"`;
-        if (setIdInput) queryStr += ` (set.id:"${setIdInput}*" OR set.name:"${setIdInput}*")`;
+        let query = `number:"${cardNumber}"`;
+        if (setIdInput) query += ` (set.id:"${setIdInput}*" OR set.name:"${setIdInput}*")`;
 
-        const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(queryStr)}`;
+        const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(query)}`;
         const response = await fetch(url);
         const data = await response.json();
 
@@ -133,7 +133,7 @@ async function handleQuickSearch() {
             searchStatusMessage.style.color = "#ef4444";
         }
     } catch (error) {
-        searchStatusMessage.textContent = "Error de conexión.";
+        searchStatusMessage.textContent = "Error de conexión con la API.";
     } finally {
         submitSearchBtn.disabled = false;
     }
@@ -158,7 +158,7 @@ function fillCardForm(card) {
 }
 
 // ==========================================================================
-// 5. CRUD Y CARGA DE DATOS (REFORZADO CONTRA DUPLICADOS)
+// 5. CRUD Y CARGA DE DATOS (RESTAURADO COMPLETO)
 // ==========================================================================
 
 async function handleSaveCard(e) {
@@ -166,10 +166,10 @@ async function handleSaveCard(e) {
     const id = document.getElementById('cardId').value;
     const nombre = document.getElementById('cardName').value.trim();
     
-    // --- VALIDACIÓN DE NOMBRE DUPLICADO ---
+    // Validación de nombre duplicado
     const duplicado = allCards.find(c => c.nombre.toLowerCase() === nombre.toLowerCase() && c.id !== id);
     if (duplicado) {
-        alert("¡Error! Ya existe una carta con el nombre: " + nombre);
+        alert("¡Error! Ya existe una carta con este nombre.");
         return;
     }
 
@@ -182,13 +182,12 @@ async function handleSaveCard(e) {
         stock: parseInt(document.getElementById('cardStock').value),
         categoria: document.getElementById('cardCategory').value
     };
-
     try {
         if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id), data);
         else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
         closeModal(cardModal);
         await loadAllData();
-    } catch (err) { console.error("Error:", err); }
+    } catch (err) { console.error("Error al guardar:", err); }
 }
 
 async function handleSaveSealed(e) {
@@ -196,8 +195,12 @@ async function handleSaveSealed(e) {
     const id = document.getElementById('sealedProductId').value;
     const nombre = document.getElementById('sealedProductName').value.trim();
 
+    // Validación de nombre duplicado
     const duplicado = allSealed.find(p => p.nombre.toLowerCase() === nombre.toLowerCase() && p.id !== id);
-    if (duplicado) { alert("¡Error! Producto ya registrado."); return; }
+    if (duplicado) {
+        alert("¡Error! Ya existe un producto sellado con este nombre.");
+        return;
+    }
 
     const data = {
         nombre: nombre,
@@ -211,7 +214,7 @@ async function handleSaveSealed(e) {
         else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'), data);
         closeModal(sealedProductModal);
         await loadAllData();
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Error al guardar producto:", err); }
 }
 
 async function handleSaveCategory(e) {
@@ -219,8 +222,12 @@ async function handleSaveCategory(e) {
     const id = document.getElementById('categoryId').value;
     const nombre = document.getElementById('categoryName').value.trim();
 
+    // Validación de nombre duplicado
     const duplicado = allCategories.find(c => c.name.toLowerCase() === nombre.toLowerCase() && c.id !== id);
-    if (duplicado) { alert("¡Error! Categoría ya existe."); return; }
+    if (duplicado) {
+        alert("¡Error! Ya existe una categoría con este nombre.");
+        return;
+    }
 
     const data = { name: nombre };
     try {
@@ -228,17 +235,16 @@ async function handleSaveCategory(e) {
         else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), data);
         closeModal(categoryModal);
         await loadAllData();
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Error al guardar categoría:", err); }
 }
 
 async function loadAllData() {
     try {
-        // Cargar Categorías
+        // Categorías
         const catSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'categories'));
         allCategories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCategoriesTable();
         
-        // Llenar Selects
         const catSelects = [document.getElementById('cardCategory'), document.getElementById('sealedProductCategory')];
         catSelects.forEach(sel => {
             if(sel) {
@@ -247,17 +253,17 @@ async function loadAllData() {
             }
         });
 
-        // Cargar Cartas
+        // Cartas
         const cardSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'cards'));
         allCards = cardSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCardsTable();
 
-        // Cargar Productos Sellados
+        // Sellados
         const sealedSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'));
         allSealed = sealedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderSealedTable();
 
-        // Cargar Pedidos
+        // Pedidos
         const orderSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
         allOrders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderOrdersTable();
@@ -332,7 +338,7 @@ function renderOrdersTable() {
         row.innerHTML = `
             <td>${o.id.substring(0,8)}</td>
             <td>${o.customerName}</td>
-            <td>$${parseFloat(o.total || 0).toFixed(2)}</td>
+            <td>$${o.total}</td>
             <td><span class="status-badge ${o.status}">${o.status}</span></td>
             <td><button class="action-btn"><i class="fas fa-eye"></i></button></td>
         `;
@@ -365,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sealedProductModal = document.getElementById('sealedProductModal');
     categoryModal = document.getElementById('categoryModal');
 
-    // Navegación Sidebar
+    // Navegación
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -373,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Login Form
+    // Login
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const user = document.getElementById('username').value.trim();
@@ -403,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Inyectar Buscador en el modal vacío del HTML
+    // Buscador
     const modalContent = document.getElementById('quickSearchContent');
     if (modalContent) {
         modalContent.innerHTML = `
@@ -427,6 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
         submitSearchBtn = document.getElementById('submitSearch');
         searchStatusMessage = document.getElementById('searchStatus');
         submitSearchBtn.addEventListener('click', handleQuickSearch);
+        document.getElementById('closeScannerX')?.addEventListener('click', () => { closeModal(quickSearchModal); clearSearchInputs(); });
     }
 
     // Formularios
@@ -441,26 +448,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
     document.getElementById('refreshAdminPageBtn')?.addEventListener('click', () => location.reload());
 
-    // Sidebar e iPad
+    // Sidebar
     document.getElementById('sidebarToggleBtn')?.addEventListener('click', (e) => { e.preventDefault(); toggleSidebar(true); });
     document.getElementById('closeSidebarBtn')?.addEventListener('click', (e) => { e.preventDefault(); toggleSidebar(false); });
     sidebarOverlay?.addEventListener('click', () => toggleSidebar(false));
 
-    // Delegación de eventos (X, Editar, Eliminar)
+    // Delegación de eventos (Editar / Eliminar)
     document.body.addEventListener('click', async (e) => {
-        // CORRECCIÓN: Manejar clics en las X (span) y botones de cierre
-        if (e.target.classList.contains('close-button')) {
-            const modal = e.target.closest('.admin-modal');
-            if (modal) {
-                closeModal(modal);
-                if (modal.id === 'scannerModal') clearSearchInputs();
-            }
-            return;
-        }
-
         const btn = e.target.closest('button');
         if (!btn) return;
-        
         const id = btn.dataset.id;
         const type = btn.dataset.type;
 
@@ -468,7 +464,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btn.classList.contains('edit')) {
             if (type === 'card') {
                 const d = allCards.find(x => x.id === id);
-                if(!d) return;
                 document.getElementById('cardId').value = d.id;
                 document.getElementById('cardName').value = d.nombre;
                 document.getElementById('cardCode').value = d.codigo;
@@ -480,7 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 openModal(cardModal);
             } else if (type === 'sealed') {
                 const d = allSealed.find(x => x.id === id);
-                if(!d) return;
                 document.getElementById('sealedProductId').value = d.id;
                 document.getElementById('sealedProductName').value = d.nombre;
                 document.getElementById('sealedProductCategory').value = d.categoria;
@@ -490,7 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 openModal(sealedProductModal);
             } else if (type === 'category') {
                 const d = allCategories.find(x => x.id === id);
-                if(!d) return;
                 document.getElementById('categoryId').value = d.id;
                 document.getElementById('categoryName').value = d.name;
                 openModal(categoryModal);
@@ -505,6 +498,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
                 await loadAllData();
             } catch (err) { alert("Error al eliminar."); }
+        }
+
+        // Cerrar modales con X
+        if (btn.classList.contains('close-button')) {
+            closeModal(cardModal);
+            closeModal(sealedProductModal);
+            closeModal(categoryModal);
+            closeModal(quickSearchModal);
+            clearSearchInputs();
         }
     });
 
