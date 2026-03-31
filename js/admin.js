@@ -3,8 +3,25 @@
 // ==========================================================================
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
-import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, runTransaction, getDoc } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
+import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    signOut, 
+    onAuthStateChanged,
+    setPersistence,
+    browserSessionPersistence 
+} from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
+import { 
+    getFirestore, 
+    collection, 
+    getDocs, 
+    addDoc, 
+    doc, 
+    updateDoc, 
+    deleteDoc, 
+    query, 
+    where 
+} from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
@@ -57,10 +74,10 @@ function showSection(sectionToShow, navId) {
     Object.values(navLinks).forEach(link => link?.classList.remove('active'));
     if (navLinks[navId]) navLinks[navId].classList.add('active');
 
-    // Cerrar sidebar en móviles
-    if(window.innerWidth < 768) {
+    // Cerrar sidebar en móviles/iPad
+    if(window.innerWidth < 1024) {
         sidebarMenu?.classList.remove('show');
-        sidebarOverlay ? sidebarOverlay.style.display='none' : null;
+        if(sidebarOverlay) sidebarOverlay.style.display='none';
     }
 }
 
@@ -73,7 +90,7 @@ function showMessage(title, text) {
 }
 
 // ==========================================================================
-// LÓGICA DE BÚSQUEDA TCGPLAYER
+// LÓGICA DE BÚSQUEDA TCGPLAYER (CORREGIDA)
 // ==========================================================================
 
 async function handleQuickSearch() {
@@ -522,16 +539,20 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal(cardModal); closeModal(quickSearchModal); closeModal(sealedProductModal); closeModal(categoryModal); closeModal(confirmModal); closeModal(messageModal); closeModal(orderDetailsModal);
     }));
 
-    // Login
+    // Login con Persistencia de Sesión
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('username')?.value.trim();
         const pass = document.getElementById('password')?.value;
         try {
+            // Establecer persistencia: se borra al cerrar el navegador/pestaña
+            await setPersistence(auth, browserSessionPersistence);
             await signInWithEmailAndPassword(auth, email, pass);
             closeModal(loginModal);
             await loadAllData();
-        } catch(err) { showMessage("Acceso Denegado", "Correo o contraseña incorrectos."); }
+        } catch(err) { 
+            showMessage("Acceso Denegado", "Correo o contraseña incorrectos."); 
+        }
     });
 
     onAuthStateChanged(auth, (user) => {
