@@ -330,15 +330,29 @@ async function processScannedFrame() {
 
         if (numberMatch) {
             let cardNumber = numberMatch[1].replace(/^0+/, ''); // Limpiar ceros iniciales
-            scannerStatusMessage.innerHTML = `¡Código detectado: <strong>${numberMatch[0]}</strong>!<br><small>Buscando en base de datos...</small>`;
+            let setTotal = numberMatch[2]; // Total de cartas de la expansión (ej. 162)
+
+            scannerStatusMessage.innerHTML = `¡Código detectado: <strong>${numberMatch[0]}</strong>!<br><small>Validando expansión exacta...</small>`;
             scannerStatusMessage.style.color = "#3b82f6";
 
-            // CONEXIÓN A POKÉMON TCG API
+            // CONEXIÓN A POKÉMON TCG API: Buscamos todas las cartas con ese número
             const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:${cardNumber}`);
             const data = await response.json();
 
             if (data.data && data.data.length > 0) {
-                fillFormWithAPIData(data.data[0], numberMatch[0]);
+                // FILTRO INTELIGENTE: Buscamos la carta cuya expansión tenga exactamente ese total de cartas
+                const exactMatch = data.data.find(c => c.set.printedTotal == setTotal);
+
+                if (exactMatch) {
+                    fillFormWithAPIData(exactMatch, numberMatch[0]);
+                } else if (data.data.length === 1) {
+                    // Si solo existe una carta con ese número en la historia, la tomamos
+                    fillFormWithAPIData(data.data[0], numberMatch[0]);
+                } else {
+                    scannerStatusMessage.innerHTML = `Número ${cardNumber} encontrado, pero la expansión no coincide.<br><small>Sigue enfocando.</small>`;
+                    scannerStatusMessage.style.color = "#f59e0b";
+                    scanTimeout = setTimeout(processScannedFrame, 1500);
+                }
             } else {
                 scannerStatusMessage.innerHTML = `No encontré el ${numberMatch[0]}.<br><small>Asegúrate de no tapar la letra (ej. SWSH01)</small>`;
                 scannerStatusMessage.style.color = "#ef4444";
