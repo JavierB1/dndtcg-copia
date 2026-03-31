@@ -4,21 +4,80 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - DND TCG</title>
-    <!-- Aquí llama al CSS. Asegúrate de tener una carpeta llamada "css" -->
     <link rel="stylesheet" href="css/admin.css">
-    <!-- Fuente moderna -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- ESTILO CRÍTICO: Oculta el panel por defecto para evitar el parpadeo -->
+    <style>
+        .admin-container { display: none !important; }
+        
+        /* Pantalla de Login a pantalla completa */
+        #loginModal { 
+            display: flex !important; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100vw; height: 100vh; 
+            background: linear-gradient(135deg, #f6f8fb 0%, #e9edf3 100%); 
+            z-index: 99999; 
+            align-items: center; 
+            justify-content: center;
+        }
+
+        .login-card {
+            background: white; 
+            padding: 40px; 
+            border-radius: 24px; 
+            width: 90%; 
+            max-width: 420px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08); 
+            text-align: center;
+        }
+
+        .svg-header { margin-bottom: 24px; display: flex; justify-content: center; gap: 20px; }
+        .icon-svg { width: 56px; height: 56px; fill: #3182ce; }
+    </style>
 </head>
 <body>
 
-    <!-- Overlay para móviles -->
-    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <!-- PANTALLA DE LOGIN (Visible por defecto) -->
+    <div id="loginModal">
+        <div class="login-card">
+            <div class="svg-header">
+                <!-- Pokébola -->
+                <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="#3182ce" stroke-width="2" fill="none"/>
+                    <line x1="2" y1="12" x2="22" y2="12" stroke="#3182ce" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" stroke="#3182ce" stroke-width="2" fill="white"/>
+                </svg>
+                <!-- Perfume -->
+                <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 21h10a2 2 0 002-2V9H5v10a2 2 0 002 2zM9 5h6v4H9V5z" stroke="#3182ce" stroke-width="2" fill="none"/>
+                    <path d="M12 12v4" stroke="#3182ce" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h2 style="font-weight: 700; color: #1a202c; margin-bottom: 8px;">DND TCG Panel</h2>
+            <p style="color: #718096; margin-bottom: 32px; font-size: 0.95rem;">Acceso Administrativo & Nevada</p>
+            
+            <form id="loginForm">
+                <div style="text-align: left; margin-bottom: 16px;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-left: 4px;">Email</label>
+                    <input type="email" id="username" placeholder="admin@dndtcg.com" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
+                </div>
+                <div style="text-align: left; margin-bottom: 24px;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-left: 4px;">Contraseña</label>
+                    <input type="password" id="password" placeholder="••••••••" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
+                </div>
+                <button type="submit" id="loginBtnSubmit" style="width: 100%; padding: 16px; background: #3182ce; color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer;">
+                    Iniciar Sesión
+                </button>
+            </form>
+            <p id="loginMessage" style="color: #e53e3e; margin-top: 20px; font-size: 0.85rem; display: none; padding: 10px; background: #fff5f5; border-radius: 8px;"></p>
+        </div>
+    </div>
 
+    <!-- CONTENEDOR ADMINISTRATIVO (Oculto por defecto) -->
     <div class="admin-container">
-        
-        <!-- Barra lateral (Sidebar) -->
         <aside class="sidebar" id="sidebar-menu">
             <div class="sidebar-header">
                 <h3>DND TCG Admin</h3>
@@ -36,9 +95,7 @@
             </nav>
         </aside>
 
-        <!-- Contenido Principal -->
         <main class="main-content">
-            <!-- Cabecera -->
             <header class="main-header">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <button id="sidebarToggleBtn" class="sidebar-toggle-btn"><i class="fas fa-bars"></i></button>
@@ -50,338 +107,64 @@
                 </div>
             </header>
 
-            <!-- SECCIÓN: Dashboard -->
             <section id="dashboard-section" class="admin-section active">
                 <h2>Resumen del Negocio</h2>
                 <div class="dashboard-stats">
-                    <div class="stat-card">
-                        <h3>Total Cartas</h3>
-                        <p id="totalCardsCount">0</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Prod. Sellados</h3>
-                        <p id="totalSealedProductsCount">0</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Categorías</h3>
-                        <p id="uniqueCategoriesCount">0</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Sin Stock</h3>
-                        <p id="outOfStockCount" style="color: #e53e3e;">0</p>
-                    </div>
+                    <div class="stat-card"><h3>Total Cartas</h3><p id="totalCardsCount">0</p></div>
+                    <div class="stat-card"><h3>Prod. Sellados</h3><p id="totalSealedProductsCount">0</p></div>
+                    <div class="stat-card"><h3>Categorías</h3><p id="uniqueCategoriesCount">0</p></div>
+                    <div class="stat-card"><h3>Sin Stock</h3><p id="outOfStockCount" style="color: #e53e3e;">0</p></div>
                 </div>
             </section>
 
-            <!-- SECCIÓN: Gestión de Cartas -->
             <section id="cards-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <h2>Inventario de Cartas</h2>
                     <div style="display: flex; gap: 10px;">
-                        <!-- BOTÓN DE ESCÁNER -->
-                        <button id="openScannerBtn" class="confirm-button" style="background-color: #10b981; border-radius: 50px; display: flex; align-items: center; gap: 8px;" title="Escanear carta con cámara">
-                            <i class="fas fa-barcode"></i> Escanear
+                        <button id="openScannerBtn" class="confirm-button" style="background-color: #10b981; border-radius: 50px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-barcode"></i> Buscar por Código
                         </button>
-                        <button id="addCardBtn" class="add-button" title="Añadir nueva carta manualmente">+</button>
+                        <button id="addCardBtn" class="add-button">+</button>
                     </div>
                 </div>
-                
-                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                    <input type="text" id="adminSearchInput" placeholder="Buscar carta o código..." class="admin-search-input" style="margin-bottom: 0;">
-                    <select id="adminCategoryFilter" class="admin-select-filter" style="max-width: 250px;">
-                        <option value="">Todas las categorías</option>
-                    </select>
-                </div>
-
                 <div class="table-responsive">
                     <table id="cardsTable">
                         <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Imagen</th>
-                                <th>Nombre</th>
-                                <th>Código</th>
-                                <th>Expansión</th> <!-- NUEVA COLUMNA DE EXPANSIÓN -->
-                                <th>Precio</th>
-                                <th>Stock</th>
-                                <th>Categoría</th> <!-- CATEGORÍA (JUEGO) -->
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <div class="pagination-controls">
-                    <button id="adminPrevPageBtn" class="pagination-btn"><i class="fas fa-chevron-left"></i></button>
-                    <span id="adminPageInfo" style="margin: 0 15px; font-weight: bold;">Página 1</span>
-                    <button id="adminNextPageBtn" class="pagination-btn"><i class="fas fa-chevron-right"></i></button>
-                </div>
-            </section>
-
-            <!-- SECCIÓN: Productos Sellados -->
-            <section id="sealed-products-section" class="admin-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <h2>Productos Sellados</h2>
-                    <button id="addSealedProductBtn" class="add-button" title="Añadir producto sellado">+</button>
-                </div>
-                
-                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                    <input type="text" id="adminSealedSearchInput" placeholder="Buscar producto..." class="admin-search-input" style="margin-bottom: 0;">
-                    <select id="adminSealedCategoryFilter" class="admin-select-filter" style="max-width: 250px;">
-                        <option value="">Todos los tipos</option>
-                    </select>
-                </div>
-
-                <div class="table-responsive">
-                    <table id="sealedProductsTable">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Imagen</th>
-                                <th>Producto</th>
-                                <th>Categoría</th>
-                                <th>Precio</th>
-                                <th>Stock</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <div class="pagination-controls">
-                    <button id="adminSealedPrevPageBtn" class="pagination-btn"><i class="fas fa-chevron-left"></i></button>
-                    <span id="adminSealedPageInfo" style="margin: 0 15px; font-weight: bold;">Página 1</span>
-                    <button id="adminSealedNextPageBtn" class="pagination-btn"><i class="fas fa-chevron-right"></i></button>
-                </div>
-            </section>
-
-            <!-- SECCIÓN: Categorías -->
-            <section id="categories-section" class="admin-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <h2>Gestión de Categorías (Juegos)</h2>
-                    <button id="addCategoryBtn" class="add-button" title="Añadir categoría">+</button>
-                </div>
-                
-                <div class="table-responsive">
-                    <table id="categoriesTable">
-                        <thead>
-                            <tr>
-                                <th>Nombre de Categoría</th>
-                                <th>Acciones</th>
-                            </tr>
+                            <tr><th>ID</th><th>Imagen</th><th>Nombre</th><th>Código</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>
                         </thead>
                         <tbody></tbody>
                     </table>
                 </div>
             </section>
-
-            <!-- SECCIÓN: Pedidos -->
-            <section id="orders-section" class="admin-section">
-                <h2>Gestión de Pedidos</h2>
-                <div class="table-responsive">
-                    <table id="ordersTable">
-                        <thead>
-                            <tr>
-                                <th>ID Pedido</th>
-                                <th>Fecha</th>
-                                <th>Cliente</th>
-                                <th>Total</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
+            <!-- Otras secciones se cargan dinámicamente -->
         </main>
     </div>
 
-    <!-- MODAL: Inicio de Sesión -->
-    <div id="loginModal" class="admin-modal">
-        <div class="admin-modal-content">
-            <h3>Acceso Restringido</h3>
-            <p style="text-align: center; margin-bottom: 15px; color: #718096;">Por favor, inicia sesión para continuar.</p>
-            <form id="loginForm">
-                <label>Email</label>
-                <input type="email" id="username" required>
-                
-                <label>Contraseña</label>
-                <div class="password-container">
-                    <input type="password" id="password" required>
-                    <button type="button" class="password-toggle-btn" id="togglePasswordVisibilityBtn"><i class="fas fa-eye"></i></button>
-                </div>
-                
-                <p id="loginMessage" style="color: #e53e3e; text-align: center; display: none; margin-top: 10px; font-size: 0.9em;"></p>
-                
-                <button type="submit" style="width: 100%; margin-top: 15px;">Ingresar</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL: Formulario de Carta -->
+    <!-- MODALES DE APOYO -->
     <div id="cardModal" class="admin-modal">
         <div class="admin-modal-content">
             <span class="close-button">&times;</span>
             <h3 id="cardModalTitle">Añadir Carta</h3>
             <form id="cardForm">
                 <input type="hidden" id="cardId">
-                <label>Nombre de la Carta</label>
-                <input type="text" id="cardName" placeholder="Ej: Charizard VMAX" required>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div>
-                        <label>Código</label>
-                        <input type="text" id="cardCode" placeholder="Ej: 020/189" required>
-                    </div>
-                    <div>
-                        <label>Expansión</label>
-                        <input type="text" id="cardExpansion" placeholder="Ej: SV1, 151" required>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
-                    <div>
-                        <label>Categoría (Juego)</label>
-                        <select id="cardCategory" required></select>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div>
-                        <label>Precio ($)</label>
-                        <input type="number" step="0.01" id="cardPrice" required>
-                    </div>
-                    <div>
-                        <label>Stock</label>
-                        <input type="number" id="cardStock" required>
-                    </div>
-                </div>
-
-                <label>URL de la Imagen</label>
-                <input type="url" id="cardImage">
-
-                <button type="submit" id="saveCardBtn" class="confirm-button" style="width: 100%;">Guardar Carta</button>
+                <label>Nombre</label><input type="text" id="cardName" required>
+                <label>Código</label><input type="text" id="cardCode" required>
+                <label>Expansión</label><input type="text" id="cardExpansion" required>
+                <label>Categoría</label><select id="cardCategory" required></select>
+                <label>Precio</label><input type="number" step="0.01" id="cardPrice" required>
+                <label>Stock</label><input type="number" id="cardStock" required>
+                <label>Imagen URL</label><input type="url" id="cardImage">
+                <button type="submit" class="confirm-button" style="width: 100%;">Guardar</button>
             </form>
         </div>
     </div>
 
-    <!-- EL MODAL DEL ESCÁNER CON CÁMARA REAL -->
     <div id="scannerModal" class="admin-modal">
-        <div class="admin-modal-content" style="max-width: 500px; text-align: center;">
-            <span class="close-button" id="closeScannerBtn">&times;</span>
-            <h3><i class="fas fa-expand"></i> Escaneando Carta...</h3>
-            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 15px;">Enfoca la carta de frente con buena iluminación</p>
-            
-            <div class="scanner-container">
-                <!-- Video real de la cámara -->
-                <video id="cameraStream" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
-                
-                <!-- El efecto láser y bordes -->
-                <div class="scanner-overlay">
-                    <div class="laser-line"></div>
-                </div>
-            </div>
-            
-            <!-- Lienzo oculto donde JavaScript tomará la foto -->
-            <canvas id="captureCanvas" style="display: none;"></canvas>
-            
-            <p id="scannerStatusMessage" style="margin-top: 15px; font-weight: bold; color: #3b82f6;">Iniciando cámara...</p>
+        <div class="admin-modal-content" id="quickSearchContent">
+            <!-- Se llena desde JS -->
         </div>
     </div>
 
-    <!-- MODAL: Formulario de Producto Sellado -->
-    <div id="sealedProductModal" class="admin-modal">
-        <div class="admin-modal-content">
-            <span class="close-button">&times;</span>
-            <h3 id="sealedProductModalTitle">Añadir Producto Sellado</h3>
-            <form id="sealedProductForm">
-                <input type="hidden" id="sealedProductId">
-                <label>Nombre del Producto</label>
-                <input type="text" id="sealedProductName" required>
-                
-                <label>Categoría</label>
-                <select id="sealedProductCategory" required></select>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div>
-                        <label>Precio ($)</label>
-                        <input type="number" step="0.01" id="sealedProductPrice" required>
-                    </div>
-                    <div>
-                        <label>Stock</label>
-                        <input type="number" id="sealedProductStock" required>
-                    </div>
-                </div>
-
-                <label>URL de la Imagen</label>
-                <input type="url" id="sealedProductImage">
-
-                <button type="submit" id="saveSealedProductBtn" class="confirm-button" style="width: 100%;">Guardar Producto</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL: Formulario de Categoría -->
-    <div id="categoryModal" class="admin-modal">
-        <div class="admin-modal-content">
-            <span class="close-button">&times;</span>
-            <h3 id="categoryModalTitle">Añadir Categoría (Juego)</h3>
-            <form id="categoryForm">
-                <input type="hidden" id="categoryId">
-                <label>Nombre</label>
-                <input type="text" id="categoryName" required>
-                <button type="submit" id="saveCategoryBtn" class="confirm-button" style="width: 100%;">Guardar</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL: Detalles del Pedido -->
-    <div id="orderDetailsModal" class="admin-modal">
-        <div class="admin-modal-content" style="max-width: 700px;">
-            <span class="close-button" id="closeOrderDetailsModal">&times;</span>
-            <h3>Detalles del Pedido</h3>
-            <div id="orderDetailsContent"></div>
-            
-            <div class="order-actions" style="margin-top: 20px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-                <label style="display: block; margin-bottom: 5px;">Actualizar Estado:</label>
-                <select id="orderStatusSelect" style="padding: 8px; border-radius: 6px; margin-bottom: 10px;">
-                    <option value="pending">Pendiente</option>
-                    <option value="processing">Procesando</option>
-                    <option value="shipped">Enviado</option>
-                    <option value="delivered">Entregado</option>
-                    <option value="cancelled">Cancelado</option>
-                </select>
-                <br>
-                <button id="updateOrderStatusBtn" class="confirm-button">Guardar Estado</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: Confirmación (Eliminar) -->
-    <div id="confirmModal" class="admin-modal">
-        <div class="admin-modal-content" style="text-align: center;">
-            <span class="close-button">&times;</span>
-            <h3>Confirmar Acción</h3>
-            <p id="confirmMessage" style="margin: 20px 0;">¿Estás seguro de que deseas hacer esto?</p>
-            <div class="modal-buttons" style="display: flex; justify-content: center; gap: 10px;">
-                <button id="cancelDeleteBtn" class="cancel-button">Cancelar</button>
-                <button id="confirmDeleteBtn" class="delete-button">Sí, Eliminar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: Mensajes del Sistema -->
-    <div id="messageModal" class="admin-modal">
-        <div class="admin-modal-content" style="text-align: center;">
-            <span class="close-button" id="closeMessageModal">&times;</span>
-            <h3 id="messageModalTitle">Mensaje</h3>
-            <p id="messageModalText" style="margin: 20px 0;"></p>
-            <button id="okMessageModal" class="confirm-button">Entendido</button>
-        </div>
-    </div>
-
-    <!-- Script principal de tu lógica -->
     <script type="module" src="js/admin.js"></script>
 </body>
 </html>
