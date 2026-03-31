@@ -37,10 +37,10 @@ const auth = getAuth(app);
 const appId = firebaseConfig.projectId;
 
 // ==========================================================================
-// FORZAR CIERRE DE SESIÓN AL CARGAR (ELIMINA EL AUTOLOGIN)
+// FORZAR CIERRE DE SESIÓN AL CARGAR (ELIMINA EL AUTOLOGIN DEFINITIVAMENTE)
 // ==========================================================================
-// Esto garantiza que CADA VEZ que recargues la página, debas poner la clave.
-signOut(auth).catch(err => console.log("Limpiando sesión previa..."));
+// Al ejecutar signOut inmediatamente, Firebase limpia cualquier token persistente.
+signOut(auth).catch(() => {});
 
 let allCards = [], allSealedProducts = [], allCategories = [], allOrders = [];
 let currentDeleteTarget = null;
@@ -63,7 +63,7 @@ function openModal(m) { if(m){ m.style.display='flex'; document.body.style.overf
 function closeModal(m) { if(m){ m.style.display='none'; document.body.style.overflow=''; } }
 
 function showSection(sectionId) {
-    // Ocultar todas
+    // Ocultar todas las secciones
     document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
     // Mostrar la seleccionada
     const target = document.getElementById(sectionId);
@@ -71,10 +71,10 @@ function showSection(sectionId) {
 
     // Actualizar menú lateral
     document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
-    const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
+    const activeLink = document.querySelector(`[data-section="${sectionId}"]`) || document.getElementById('nav-' + sectionId.replace('-section', ''));
     if(activeLink) activeLink.classList.add('active');
 
-    // Cerrar menú en móviles
+    // Cerrar menú en móviles e iPads
     if(window.innerWidth < 1024) {
         sidebarMenu?.classList.remove('show');
         if(sidebarOverlay) sidebarOverlay.style.display='none';
@@ -82,7 +82,7 @@ function showSection(sectionId) {
 }
 
 // ==========================================================================
-// BUSCADOR TCGPLAYER (TRIM + RECORTE DE SLASH)
+// BUSCADOR TCGPLAYER (LIMPIEZA Y BÚSQUEDA)
 // ==========================================================================
 
 async function handleQuickSearch() {
@@ -116,11 +116,8 @@ async function handleQuickSearch() {
 
             fillCardForm(card);
             
-            // Limpiar buscador al tener éxito antes de cerrar
-            if (searchCardNumberInput) searchCardNumberInput.value = '';
-            if (searchSetIdInput) searchSetIdInput.value = '';
-            if (searchStatusMessage) searchStatusMessage.textContent = '';
-            
+            // Limpiar inputs al tener éxito
+            clearSearchInputs();
             closeModal(quickSearchModal);
         } else {
             searchStatusMessage.textContent = "No se encontró nada.";
@@ -131,6 +128,12 @@ async function handleQuickSearch() {
     } finally {
         submitSearchBtn.disabled = false;
     }
+}
+
+function clearSearchInputs() {
+    if (searchCardNumberInput) searchCardNumberInput.value = '';
+    if (searchSetIdInput) searchSetIdInput.value = '';
+    if (searchStatusMessage) searchStatusMessage.textContent = '';
 }
 
 function fillCardForm(card) {
@@ -182,7 +185,7 @@ function renderCardsTable() {
         const row = tbody.insertRow();
         row.innerHTML = `
             <td>${c.id.substring(0,5)}</td>
-            <td><img src="${c.imagen_url}" width="40" style="border-radius:4px"></td>
+            <td><img src="${c.imagen_url}" width="40" style="border-radius:4px" onerror="this.src='https://placehold.co/40x50?text=Err'"></td>
             <td><strong>${c.nombre}</strong></td>
             <td>${c.codigo}</td>
             <td>$${parseFloat(c.precio).toFixed(2)}</td>
@@ -204,77 +207,90 @@ function updateStats() {
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Referencias principales para el cambio de pantalla
+    // Referencias principales
     loginView = document.getElementById('loginModal');
     adminView = document.querySelector('.admin-container');
     
-    // Inyectar Estilos de Pantalla Completa y SVGs
+    // Inyectar Estilos de Pantalla Completa y SVG Decorativo
     const style = document.createElement('style');
     style.innerHTML = `
-        /* Pantalla de Login Pantalla Completa */
+        /* LOGIN PANTALLA COMPLETA */
         #loginModal { 
-            display: flex; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            background: #f0f2f5; z-index: 9999; align-items: center; justify-content: center;
+            display: flex !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: linear-gradient(135deg, #f6f8fb 0%, #e9edf3 100%); 
+            z-index: 99999; align-items: center; justify-content: center;
         }
         .login-card {
-            background: white; padding: 40px; border-radius: 16px; width: 90%; max-width: 400px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1); text-align: center;
+            background: white; padding: 40px; border-radius: 24px; width: 90%; max-width: 420px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08); text-align: center;
         }
-        .admin-container { display: none; } /* Oculto por defecto */
+        .admin-container { display: none; } /* Oculto hasta login exitoso */
 
-        /* SVG Logos Decorativos */
-        .svg-container { margin-bottom: 20px; display: flex; justify-content: center; gap: 15px; }
-        .svg-icon { width: 50px; height: 50px; fill: #3182ce; opacity: 0.8; }
+        /* SVG DECORATIVO */
+        .svg-header { margin-bottom: 24px; display: flex; justify-content: center; gap: 20px; }
+        .icon-svg { width: 56px; height: 56px; fill: #3182ce; filter: drop-shadow(0 4px 6px rgba(49, 130, 206, 0.2)); }
     `;
     document.head.appendChild(style);
 
-    // Ajustar el HTML del Login para que sea la pantalla completa
+    // Ajustar el contenido de la pantalla de login
     loginView.innerHTML = `
         <div class="login-card">
-            <div class="svg-container">
-                <!-- SVG: Pokébola Simplificada -->
-                <svg class="svg-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.44.04-.87.11-1.29H8.5c.34.78 1.11 1.33 2.01 1.33.9 0 1.67-.55 2.01-1.33h4.39c.07.42.11.85.11 1.29 0 4.41-3.59 8-8 8zm8.39-9.29h-4.39c-.34-.78-1.11-1.33-2.01-1.33-.9 0-1.67.55-2.01 1.33H3.61c.42-3.1 2.67-5.63 5.63-6.61.16-.06.32-.1.48-.15.42-.12.86-.21 1.31-.26.31-.03.63-.04.97-.04.34 0 .66.01.97.04.45.05.89.14 1.31.26.16.05.32.09.48.15 2.96.98 5.21 3.51 5.63 6.61z"/>
+            <div class="svg-header">
+                <!-- SVG: Pokébola Minimalista -->
+                <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="#3182ce" stroke-width="2" fill="none"/>
+                    <line x1="2" y1="12" x2="22" y2="12" stroke="#3182ce" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" stroke="#3182ce" stroke-width="2" fill="white"/>
                 </svg>
-                <!-- SVG: Frasco Perfume (Nevada) -->
-                <svg class="svg-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16 8V5c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H5v11c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V8h-3zM9 5h6v3H9V5zm8 14H7V10h10v9z"/>
+                <!-- SVG: Perfume Minimalista -->
+                <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 21h10a2 2 0 002-2V9H5v10a2 2 0 002 2zM9 5h6v4H9V5z" stroke="#3182ce" stroke-width="2" fill="none"/>
+                    <path d="M12 12v4" stroke="#3182ce" stroke-width="2" stroke-linecap="round"/>
                 </svg>
             </div>
-            <h2 style="margin-bottom: 5px; color: #2d3748;">DND TCG Admin</h2>
-            <p style="color: #718096; margin-bottom: 25px; font-size: 0.9rem;">Gestión de Inventario y Nevada</p>
+            <h2 style="font-weight: 700; color: #1a202c; margin-bottom: 8px;">DND TCG Panel</h2>
+            <p style="color: #718096; margin-bottom: 32px; font-size: 0.95rem;">Acceso Administrativo & Nevada</p>
+            
             <form id="loginForm">
-                <input type="email" id="username" placeholder="Correo electrónico" style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px;" required>
-                <input type="password" id="password" placeholder="Contraseña" style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px;" required>
-                <button type="submit" style="width: 100%; padding: 14px; background: #3182ce; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Acceder al Panel</button>
+                <div style="text-align: left; margin-bottom: 16px;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-left: 4px;">Email</label>
+                    <input type="email" id="username" placeholder="admin@dndtcg.com" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
+                </div>
+                <div style="text-align: left; margin-bottom: 24px;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-left: 4px;">Contraseña</label>
+                    <input type="password" id="password" placeholder="••••••••" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
+                </div>
+                <button type="submit" id="loginBtnSubmit" style="width: 100%; padding: 16px; background: #3182ce; color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s;">
+                    Iniciar Sesión
+                </button>
             </form>
-            <p id="loginMessage" style="color: #e53e3e; margin-top: 15px; font-size: 0.85rem; display: none;"></p>
+            <p id="loginMessage" style="color: #e53e3e; margin-top: 20px; font-size: 0.85rem; display: none; padding: 10px; background: #fff5f5; border-radius: 8px;"></p>
         </div>
     `;
 
-    // Re-vincular elementos del formulario inyectado
+    // Manejar Login
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const user = document.getElementById('username').value.trim();
         const pass = document.getElementById('password').value;
         const msg = document.getElementById('loginMessage');
-        const btn = e.target.querySelector('button');
+        const btn = document.getElementById('loginBtnSubmit');
 
         try {
             btn.disabled = true;
             btn.textContent = "Verificando...";
-            // Obligar a que la sesión solo viva mientras la pestaña esté abierta
+            // Persistencia de sesión (solo mientras la pestaña esté abierta)
             await setPersistence(auth, browserSessionPersistence);
             await signInWithEmailAndPassword(auth, user, pass);
         } catch (err) {
             btn.disabled = false;
-            btn.textContent = "Acceder al Panel";
-            msg.textContent = "Credenciales incorrectas.";
+            btn.textContent = "Iniciar Sesión";
+            msg.textContent = "Credenciales inválidas. Por favor intenta de nuevo.";
             msg.style.display = "block";
         }
     });
 
-    // Observador de Estado
+    // Observador de Autenticación
     onAuthStateChanged(auth, (user) => {
         if (user) {
             loginView.style.display = 'none';
@@ -286,32 +302,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Eventos de Navegación Lateral
+    // Navegación Sidebar
     document.querySelectorAll('.sidebar-nav a').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            const section = link.getAttribute('id').replace('nav-', '') + '-section';
-            showSection(section.replace('sealed-products', 'sealed-products'));
+            const sectionId = link.getAttribute('id').replace('nav-', '') + '-section';
+            showSection(sectionId);
         });
     });
 
-    // Configurar el buscador manual
+    // Configuración del Buscador de Texto
     quickSearchModal = document.getElementById('scannerModal');
     const modalContent = quickSearchModal?.querySelector('.admin-modal-content');
     if (modalContent) {
         modalContent.innerHTML = `
             <span class="close-button">&times;</span>
-            <h2 style="margin-bottom: 15px;"><i class="fas fa-search"></i> Buscador Inteligente</h2>
-            <div style="margin-bottom: 15px; text-align: left;">
-                <label style="font-weight: bold; font-size: 0.8rem;">Número de Carta (ej: 028 o 028/151)</label>
-                <input type="text" id="searchCardNumber" placeholder="Ej: 028/151" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e0; margin-top: 5px;">
+            <h2 style="margin-bottom: 20px; color: #1a202c;"><i class="fas fa-search"></i> Buscador de Cartas</h2>
+            <div style="margin-bottom: 16px; text-align: left;">
+                <label style="font-weight: 700; font-size: 0.85rem; color: #4a5568;">Número de Carta (ej: 028 o 028/151)</label>
+                <input type="text" id="searchCardNumber" placeholder="Ej: 028/151" style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px; font-size: 1rem;">
             </div>
-            <div style="margin-bottom: 15px; text-align: left;">
-                <label style="font-weight: bold; font-size: 0.8rem;">Filtro Expansión (ej: 151, obsidian)</label>
-                <input type="text" id="searchSetId" placeholder="Opcional..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e0; margin-top: 5px;">
+            <div style="margin-bottom: 24px; text-align: left;">
+                <label style="font-weight: 700; font-size: 0.85rem; color: #4a5568;">Filtro Expansión (ej: 151, obsidian)</label>
+                <input type="text" id="searchSetId" placeholder="Opcional..." style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px; font-size: 1rem;">
             </div>
-            <button id="submitSearch" style="width: 100%; padding: 14px; background: #3182ce; color: white; border-radius: 8px; font-weight: bold; border: none; cursor: pointer;">Consultar TCGPlayer</button>
-            <p id="searchStatus" style="margin-top: 15px; font-size: 0.9rem;"></p>
+            <button id="submitSearch" style="width: 100%; padding: 16px; background: #3182ce; color: white; border-radius: 12px; font-weight: 700; border: none; cursor: pointer; font-size: 1rem;">
+                Consultar TCGPlayer
+            </button>
+            <p id="searchStatus" style="margin-top: 20px; font-size: 0.95rem; font-weight: 500;"></p>
         `;
         searchCardNumberInput = document.getElementById('searchCardNumber');
         searchSetIdInput = document.getElementById('searchSetId');
@@ -320,20 +338,22 @@ document.addEventListener('DOMContentLoaded', () => {
         submitSearchBtn.addEventListener('click', handleQuickSearch);
     }
 
-    // Botones de Apertura y Cierre
+    // Eventos Globales
     document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
+    
+    // El botón de recarga que pides (si existe el ID en tu HTML)
+    document.getElementById('refreshAdminPageBtn')?.addEventListener('click', () => location.reload());
+
+    // Cierre de modales y limpieza
     document.querySelectorAll('.close-button').forEach(b => b.addEventListener('click', () => {
         closeModal(quickSearchModal);
         closeModal(document.getElementById('cardModal'));
-        
-        // Limpiar inputs del buscador al cerrar
-        if (searchCardNumberInput) searchCardNumberInput.value = '';
-        if (searchSetIdInput) searchSetIdInput.value = '';
-        if (searchStatusMessage) searchStatusMessage.textContent = '';
+        clearSearchInputs();
     }));
 
-    // Cierre de sesión manual
-    document.getElementById('nav-logout')?.addEventListener('click', () => {
+    // Cerrar sesión manual
+    document.getElementById('nav-logout')?.addEventListener('click', (e) => {
+        e.preventDefault();
         signOut(auth).then(() => location.reload());
     });
 });
