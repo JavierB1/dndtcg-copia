@@ -37,6 +37,7 @@ body {
     width: 100%;
 }
 
+/* --- Barra Lateral (Sidebar) --- */
 .sidebar {
     width: 260px;
     background-color: var(--sidebar-bg);
@@ -56,6 +57,12 @@ body {
     align-items: center;
 }
 
+.sidebar-header h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
 .close-sidebar-btn {
     display: none;
     background: none;
@@ -65,7 +72,14 @@ body {
     cursor: pointer;
 }
 
-.sidebar-nav ul { list-style: none; }
+.sidebar-nav {
+    padding-top: 20px;
+    flex-grow: 1;
+}
+
+.sidebar-nav ul {
+    list-style: none;
+}
 
 .sidebar-nav ul li a {
     display: flex;
@@ -84,6 +98,7 @@ body {
     border-left: 4px solid var(--primary);
 }
 
+/* --- Contenido Principal --- */
 .main-content {
     flex-grow: 1;
     display: flex;
@@ -114,14 +129,61 @@ body {
     cursor: pointer;
 }
 
+.header-right-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.refresh-button {
+    background-color: #f1f5f9;
+    border: 1px solid var(--border-color);
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    transition: all 0.2s;
+}
+
+.refresh-button:hover {
+    background-color: #e2e8f0;
+}
+
+.user-info {
+    font-weight: 500;
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
 /* ==========================================================================
-   TABLES Y DASHBOARD
+   SECCIONES Y TARJETAS
    ========================================================================== */
-.admin-section { display: none; padding: 30px; animation: fadeIn 0.3s ease; }
-.admin-section.active { display: block; }
+.admin-section {
+    display: none; /* Oculto por defecto */
+    padding: 30px;
+    animation: fadeIn 0.3s ease;
+}
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.admin-section.active {
+    display: block; /* Solo se muestra la sección activa */
+}
 
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.admin-section h2 {
+    margin-bottom: 25px;
+    color: #1e293b;
+    font-size: 1.8rem;
+}
+
+/* Tarjetas del Dashboard */
 .dashboard-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -132,34 +194,197 @@ body {
     background-color: var(--card-bg);
     padding: 25px;
     border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     border: 1px solid var(--border-color);
 }
 
-.stat-card p { font-size: 2.5rem; font-weight: 700; }
+.stat-card h3 {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.stat-card p {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--sidebar-bg);
+}
+
+/* ==========================================================================
+   TABLAS Y CONTROLES
+   ========================================================================== */
+.admin-search-input,
+.admin-select-filter {
+    padding: 10px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    outline: none;
+    flex-grow: 1;
+}
+
+.admin-search-input:focus,
+.admin-select-filter:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
 
 .table-responsive {
     background-color: var(--card-bg);
     border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     border: 1px solid var(--border-color);
     overflow-x: auto;
     margin-bottom: 20px;
 }
 
-table { width: 100%; border-collapse: collapse; }
-th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border-color); }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+th, td {
+    padding: 15px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+th {
+    background-color: #f8fafc;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+tr:hover {
+    background-color: #f1f5f9;
+}
+
+td img {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+}
 
 /* ==========================================================================
-   MODALES
+   BOTONES
+   ========================================================================== */
+button {
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+}
+
+.add-button {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 50%; /* Hace que sea un círculo */
+    width: 45px;
+    height: 45px;
+    font-size: 1.8rem; /* Tamaño del "+" */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.add-button:hover {
+    background-color: var(--primary-hover);
+    transform: scale(1.05);
+}
+
+.confirm-button {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.confirm-button:hover {
+    filter: brightness(1.1);
+}
+
+.cancel-button {
+    background-color: #e2e8f0;
+    color: var(--text-main);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.cancel-button:hover {
+    background-color: #cbd5e1;
+}
+
+.delete-button {
+    background-color: var(--danger);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.delete-button:hover {
+    background-color: var(--danger-hover);
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    padding: 8px;
+    margin-right: 5px;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+
+.action-btn.edit { color: var(--primary); }
+.action-btn.edit:hover { background-color: #eff6ff; }
+.action-btn.delete { color: var(--danger); }
+.action-btn.delete:hover { background-color: #fef2f2; }
+
+/* ==========================================================================
+   MODALES (VENTANAS EMERGENTES INCLUYENDO LOGIN)
    ========================================================================== */
 .admin-modal {
-    display: none;
+    display: none; /* Flex cuando está activo por JS */
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(15, 23, 42, 0.85);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(15, 23, 42, 0.85); /* Fondo oscuro semitransparente */
+    backdrop-filter: blur(8px); /* Efecto cristal desenfocado elegante */
     z-index: 1000;
     align-items: center;
     justify-content: center;
     padding: 20px;
+}
+
+/* Este ID específico asegura que el modal de Login se vea perfecto */
+#loginModal {
+    display: flex; /* Para que al cargar la página bloquee la pantalla */
 }
 
 .admin-modal-content {
@@ -168,35 +393,143 @@ th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--bo
     max-width: 450px;
     padding: 30px;
     border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
     position: relative;
+    animation: modalSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .close-button {
     position: absolute;
-    top: 20px; right: 25px; font-size: 1.8rem; cursor: pointer;
+    top: 20px;
+    right: 25px;
+    font-size: 1.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-button:hover {
+    color: var(--danger);
+}
+
+.admin-modal-content h3 {
+    margin-bottom: 25px;
+    font-size: 1.5rem;
+    color: #1e293b;
+    text-align: center;
+}
+
+/* Formulario en los modales */
+form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-main);
+    font-size: 0.9rem;
+}
+
+form input, 
+form select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+form input:focus, 
+form select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.password-container {
+    position: relative;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-top: -10px;
 }
 
 /* ==========================================================================
-   RESPONSIVO (MÓVIL E IPAD)
+   ESCANER LASER (NUEVO EFECTO)
+   ========================================================================== */
+.scanner-container {
+    position: relative;
+    width: 240px;      /* Ancho ajustado a formato carta */
+    height: 336px;     /* Alto ajustado a formato carta (vertical) */
+    margin: 0 auto;    /* Centra el rectángulo en el modal */
+    background-color: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+}
+
+.scanner-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    /* Crea el efecto de bordes oscurecidos enfocando el centro */
+    box-shadow: inset 0 0 0 30px rgba(0,0,0,0.5);
+    border: 2px solid rgba(16, 185, 129, 0.5); /* Borde verde cibernético */
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.laser-line {
+    position: absolute;
+    top: 0; left: 5%; width: 90%; height: 2px;
+    background-color: #ef4444; /* Rojo láser */
+    box-shadow: 0 0 10px #ef4444, 0 0 20px #ef4444;
+    animation: scanLaser 2s infinite linear;
+}
+
+@keyframes scanLaser {
+    0% { top: 10%; opacity: 0; }
+    10% { opacity: 1; }
+    50% { top: 90%; }
+    90% { opacity: 1; }
+    100% { top: 10%; opacity: 0; }
+}
+
+/* ==========================================================================
+   RESPONSIVO (CELULARES Y TABLETS)
    ========================================================================== */
 .sidebar-overlay {
     display: none;
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background-color: rgba(0,0,0,0.5);
     z-index: 45;
 }
 
-/* CAMBIADO A 1024px PARA SOPORTAR IPADS */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
     .sidebar {
         position: fixed;
-        left: -260px;
+        left: -260px; /* Oculta la barra lateral */
         height: 100%;
     }
 
     .sidebar.show {
-        left: 0;
+        left: 0; /* Muestra la barra al hacer clic en el menú */
     }
 
     .sidebar-toggle-btn,
@@ -204,11 +537,11 @@ th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--bo
         display: block;
     }
 
-    .sidebar-overlay.show {
-        display: block;
-    }
-
     .main-content {
         width: 100%;
+    }
+
+    .desktop-only-title {
+        display: none;
     }
 }
