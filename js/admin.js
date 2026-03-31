@@ -31,16 +31,21 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projec
 // ==========================================================================
 let isForcedLogoutDone = false;
 
-// Forzar logout inicial para asegurar login manual al recargar
+// Forzar logout inicial para asegurar login manual al recargar la pestaña
 const forceLogout = async () => {
-    await signOut(auth);
-    isForcedLogoutDone = true;
+    try {
+        await signOut(auth);
+        isForcedLogoutDone = true;
+        console.log("Sesión previa limpiada. Esperando login manual.");
+    } catch (e) {
+        isForcedLogoutDone = true;
+    }
 };
 forceLogout();
 
 // Variables Globales de Estado
 let allCards = [], allCategories = [], allSealed = [], allOrders = [];
-let pendingDelete = { id: null, type: null }; // Almacena temporalmente qué borrar
+let pendingDelete = { id: null, type: null }; 
 
 // Elementos UI
 let loginView, adminView, sidebarMenu;
@@ -386,11 +391,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Listener de Auth
     onAuthStateChanged(auth, (user) => {
-        if (user && isForcedLogoutDone) { 
+        // CORRECCIÓN CRÍTICA: Solo permitimos acceso si el usuario NO es anónimo 
+        // y si el proceso de limpieza (forceLogout) ha concluido.
+        if (user && !user.isAnonymous && isForcedLogoutDone) { 
             loginView.style.setProperty('display', 'none', 'important'); 
             adminView.style.setProperty('display', 'flex', 'important'); 
             loadAllData(); 
         } else { 
+            // Si no hay usuario o es anónimo (login automático del entorno), mostramos el login manual.
             adminView.style.setProperty('display', 'none', 'important'); 
             loginView.style.setProperty('display', 'flex', 'important'); 
         }
@@ -506,6 +514,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             await signInWithCustomToken(auth, __initial_auth_token);
         } else {
+            // Se mantiene el inicio anónimo para estabilidad del entorno, 
+            // pero el filtro en onAuthStateChanged impedirá el acceso al panel.
             await signInAnonymously(auth);
         }
     };
