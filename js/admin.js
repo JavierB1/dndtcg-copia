@@ -39,7 +39,8 @@ const elements = {
     loginMessage: document.getElementById('loginMessage'),
     adminSearchInput: document.getElementById('adminSearchInput'),
     adminCategoryFilter: document.getElementById('adminCategoryFilter'),
-    adminPageInfo: document.getElementById('adminPageInfo')
+    adminPageInfo: document.getElementById('adminPageInfo'),
+    btnLogout: document.getElementById('btnLogout')
 };
 
 // ==========================================================================
@@ -47,7 +48,6 @@ const elements = {
 // ==========================================================================
 
 async function loadAllData() {
-    // REGLA DE ORO: Si no hay usuario, no pedimos datos (Evita Error de Permisos)
     if (!auth.currentUser) return;
 
     try {
@@ -57,9 +57,10 @@ async function loadAllData() {
             loadSealedProductsData(),
             loadOrdersData()
         ]);
-        console.log("Datos sincronizados correctamente con Firebase.");
+        updateDashboardStats();
+        console.log("Sincronización completa.");
     } catch (error) {
-        console.error("Error de permisos o red:", error.message);
+        console.error("Error al cargar datos:", error.message);
     }
 }
 
@@ -108,17 +109,17 @@ async function loadOrdersData() {
 // ==========================================================================
 
 onAuthStateChanged(auth, (user) => {
-    console.log("Estado Auth:", user ? "Conectado (" + user.email + ")" : "Desconectado");
-    
     if (user) {
-        // Usuario logueado: Ocultar login, mostrar panel y CARGAR datos
-        if (elements.loginModal) elements.loginModal.style.display = 'none';
+        console.log("Sesión activa:", user.email);
+        if (elements.loginModal) elements.loginModal.style.setProperty('display', 'none', 'important');
         if (elements.dashboardSection) elements.dashboardSection.classList.add('active');
         loadAllData();
     } else {
-        // Usuario no logueado: Mostrar login, ocultar todo lo demás
-        if (elements.loginModal) elements.loginModal.style.display = 'flex';
+        console.log("No hay sesión. Mostrando login...");
         hideAllSections();
+        if (elements.loginModal) {
+            elements.loginModal.style.setProperty('display', 'flex', 'important');
+        }
     }
 });
 
@@ -126,75 +127,158 @@ async function handleLogin(e) {
     e.preventDefault();
     const email = document.getElementById('username').value;
     const password = document.getElementById('password').value;
-    const msg = document.getElementById('loginMessage');
+    const msg = elements.loginMessage;
 
     try {
-        msg.textContent = "Verificando...";
-        msg.style.color = "#6366f1";
-        msg.style.display = "block";
+        if(msg) {
+            msg.textContent = "Iniciando sesión...";
+            msg.style.color = "#6366f1";
+            msg.style.display = "block";
+        }
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-        msg.textContent = "Error: Usuario o clave incorrectos.";
-        msg.style.color = "#ef4444";
+        if(msg) {
+            msg.textContent = "Error: Credenciales no válidas.";
+            msg.style.color = "#ef4444";
+        }
+        console.error("Error de login:", error.code);
+    }
+}
+
+async function handleLogout() {
+    try {
+        await signOut(auth);
+        window.location.reload();
+    } catch (error) {
+        console.error("Error al cerrar sesión:", error);
     }
 }
 
 function hideAllSections() {
-    const sections = [
-        elements.dashboardSection, elements.cardsSection, 
-        elements.sealedProductsSection, elements.categoriesSection, elements.ordersSection
-    ];
-    sections.forEach(s => { if(s) s.classList.remove('active'); });
+    const sections = document.querySelectorAll('.admin-section');
+    sections.forEach(s => s.classList.remove('active'));
 }
 
 // ==========================================================================
-// RENDERIZADO DE TABLAS (Tu lógica original intacta)
+// RENDERIZADO DE TABLAS Y DASHBOARD
 // ==========================================================================
+
+function updateDashboardStats() {
+    const stats = {
+        totalCards: document.getElementById('stat-total-cards'),
+        totalStock: document.getElementById('stat-total-stock'),
+        totalOrders: document.getElementById('stat-total-orders')
+    };
+
+    if (stats.totalCards) stats.totalCards.textContent = allCards.length;
+    if (stats.totalStock) {
+        const stock = allCards.reduce((acc, card) => acc + (card.stock || 0), 0);
+        stats.totalStock.textContent = stock;
+    }
+    if (stats.totalOrders) stats.totalOrders.textContent = allOrders.length;
+}
 
 function renderCardsTable() {
     const tableBody = document.querySelector('#cardsTable tbody');
     if (!tableBody) return;
     tableBody.innerHTML = '';
 
+    const query = elements.adminSearchInput ? elements.adminSearchInput.value.toLowerCase() : "";
+    const cat = elements.adminCategoryFilter ? elements.adminCategoryFilter.value : "";
+
     const filtered = allCards.filter(card => {
-        const query = elements.adminSearchInput ? elements.adminSearchInput.value.toLowerCase() : "";
-        const cat = elements.adminCategoryFilter ? elements.adminCategoryFilter.value : "";
-        return (card.nombre.toLowerCase().includes(query)) && (cat === "" || card.categoria === cat);
+        const matchesSearch = card.nombre.toLowerCase().includes(query);
+        const matchesCategory = cat === "" || card.categoria === cat;
+        return matchesSearch && matchesCategory;
     });
 
     const start = (currentCardsPage - 1) * itemsPerPage;
     const paginated = filtered.slice(start, start + itemsPerPage);
 
     paginated.forEach(card => {
-        const row = `<tr>
-            <td>${card.id.substring(0,6)}</td>
-            <td><img src="${card.imagen_url}" width="40"></td>
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${card.id.substring(0, 6)}</td>
+            <td><img src="${card.imagen_url || 'https://via.placeholder.com/40'}" onerror="this.src='https://via.placeholder.com/40'"></td>
             <td>${card.nombre}</td>
             <td>$${card.precio.toFixed(2)}</td>
             <td>${card.stock}</td>
             <td>${card.categoria}</td>
             <td class="action-buttons">
-                <button class="edit-button" onclick="editCard('${card.id}')">Editar</button>
+                <button class="edit-button" onclick="window.editCard('${card.id}')">Editar</button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+
+    if (elements.adminPageInfo) {
+        const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+        elements.adminPageInfo.textContent = `Página ${currentCardsPage} de ${totalPages}`;
+    }
+}
+
+function renderCategoriesTable() {
+    const tableBody = document.querySelector('#categoriesTable tbody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+    allCategories.forEach(cat => {
+        const row = `<tr>
+            <td>${cat.id.substring(0,6)}</td>
+            <td>${cat.name}</td>
+            <td class="action-buttons">
+                <button class="delete-category-button">Eliminar</button>
             </td>
         </tr>`;
         tableBody.innerHTML += row;
     });
-
-    if (elements.adminPageInfo) {
-        elements.adminPageInfo.textContent = `Página ${currentCardsPage} de ${Math.ceil(filtered.length/itemsPerPage) || 1}`;
-    }
 }
 
-function renderCategoriesTable() { /* Implementación de categorías */ }
-function renderSealedProductsTable() { /* Implementación de productos sellados */ }
-function renderOrdersTable() { /* Implementación de pedidos */ }
+function renderSealedProductsTable() {
+    const tableBody = document.querySelector('#sealedProductsTable tbody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+    allSealedProducts.forEach(prod => {
+        const row = `<tr>
+            <td>${prod.id.substring(0,6)}</td>
+            <td>${prod.nombre}</td>
+            <td>$${prod.precio.toFixed(2)}</td>
+            <td>${prod.stock}</td>
+            <td class="action-buttons">
+                <button class="edit-button">Editar</button>
+            </td>
+        </tr>`;
+        tableBody.innerHTML += row;
+    });
+}
+
+function renderOrdersTable() {
+    const tableBody = document.querySelector('#ordersTable tbody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+    allOrders.forEach(order => {
+        const date = order.timestamp ? new Date(order.timestamp).toLocaleDateString() : '---';
+        const row = `<tr>
+            <td>${order.id.substring(0,8)}</td>
+            <td>${order.customer?.nombre || 'N/A'}</td>
+            <td>$${(order.total || 0).toFixed(2)}</td>
+            <td>${date}</td>
+            <td><span class="status-badge">${order.status || 'Pendiente'}</span></td>
+        </tr>`;
+        tableBody.innerHTML += row;
+    });
+}
 
 function populateCategoryFilters() {
     if (!elements.adminCategoryFilter) return;
+    const currentVal = elements.adminCategoryFilter.value;
     elements.adminCategoryFilter.innerHTML = '<option value="">Todas las categorías</option>';
     allCategories.forEach(cat => {
-        elements.adminCategoryFilter.innerHTML += `<option value="${cat.name}">${cat.name}</option>`;
+        const opt = document.createElement('option');
+        opt.value = cat.name;
+        opt.textContent = cat.name;
+        elements.adminCategoryFilter.appendChild(opt);
     });
+    elements.adminCategoryFilter.value = currentVal;
 }
 
 // ==========================================================================
@@ -203,9 +287,17 @@ function populateCategoryFilters() {
 
 document.addEventListener('DOMContentLoaded', () => {
     if (elements.loginForm) elements.loginForm.onsubmit = handleLogin;
+    if (elements.btnLogout) elements.btnLogout.onclick = handleLogout;
     
     if (elements.adminSearchInput) {
         elements.adminSearchInput.addEventListener('input', () => {
+            currentCardsPage = 1;
+            renderCardsTable();
+        });
+    }
+
+    if (elements.adminCategoryFilter) {
+        elements.adminCategoryFilter.addEventListener('change', () => {
             currentCardsPage = 1;
             renderCardsTable();
         });
