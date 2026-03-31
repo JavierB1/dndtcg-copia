@@ -27,7 +27,7 @@ const auth = getAuth(app);
 const appId = firebaseConfig.projectId;
 
 // ==========================================================================
-// 2. CONTROL DE SESIÓN (OBLIGATORIO AL RECARGAR PESTAÑA)
+// 2. CONTROL DE SESIÓN (LOGIN OBLIGATORIO)
 // ==========================================================================
 let isForcedLogoutDone = false;
 signOut(auth).then(() => {
@@ -38,9 +38,9 @@ signOut(auth).then(() => {
 let allCards = [], allCategories = [], allSealed = [], allOrders = [];
 
 // Elementos UI
-let loginView, adminView, sidebarMenu, sidebarOverlay;
-let cardForm, cardModal, quickSearchModal, sealedProductModal, categoryModal;
-let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBtn;
+let loginView, adminView, sidebarMenu;
+let cardForm, cardModal, sealedProductForm, sealedProductModal, categoryForm, categoryModal, quickSearchModal;
+let searchStatusMessage, tcgSearchInput, searchSetIdInput, submitSearchBtn;
 let cardImagePreview, imagePreviewContainer;
 
 // ==========================================================================
@@ -61,31 +61,20 @@ function closeModal(m) {
     } 
 }
 
-// Función para actualizar la vista previa de la imagen
 function refreshPreviewImage(url) {
     if (url && url.trim() !== "" && url.startsWith('http')) {
-        cardImagePreview.src = url;
-        imagePreviewContainer.classList.add('active');
+        if(cardImagePreview) cardImagePreview.src = url;
+        imagePreviewContainer?.classList.add('active');
     } else {
-        cardImagePreview.src = "";
-        imagePreviewContainer.classList.remove('active');
+        if(cardImagePreview) cardImagePreview.src = "";
+        imagePreviewContainer?.classList.remove('active');
     }
 }
 
 function clearSearchInputs() {
-    if (searchCardNumberInput) searchCardNumberInput.value = '';
+    if (tcgSearchInput) tcgSearchInput.value = '';
     if (searchSetIdInput) searchSetIdInput.value = '';
     if (searchStatusMessage) searchStatusMessage.textContent = '';
-}
-
-function toggleSidebar(show) {
-    if (show) {
-        sidebarMenu?.classList.add('show');
-        sidebarOverlay?.classList.add('show');
-    } else {
-        sidebarMenu?.classList.remove('show');
-        sidebarOverlay?.classList.remove('show');
-    }
 }
 
 function showSection(sectionId) {
@@ -96,8 +85,16 @@ function showSection(sectionId) {
     document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
     const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
     if(activeLink) activeLink.classList.add('active');
-
-    if(window.innerWidth <= 1024) toggleSidebar(false);
+    
+    const titles = {
+        'dashboard-section': 'Panel de Control',
+        'cards-section': 'Gestión de Cartas',
+        'sealed-products-section': 'Productos Sellados',
+        'categories-section': 'Categorías',
+        'orders-section': 'Pedidos'
+    };
+    const titleEl = document.getElementById('main-title');
+    if(titleEl) titleEl.textContent = titles[sectionId] || 'Panel';
 }
 
 // ==========================================================================
@@ -105,7 +102,7 @@ function showSection(sectionId) {
 // ==========================================================================
 
 async function handleQuickSearch() {
-    let rawInput = searchCardNumberInput.value.trim();
+    let rawInput = tcgSearchInput.value.trim();
     const setIdInput = searchSetIdInput.value.trim().toLowerCase();
 
     if (!rawInput) {
@@ -117,7 +114,7 @@ async function handleQuickSearch() {
     let cardNumber = rawInput.includes('/') ? rawInput.split('/')[0].trim() : rawInput;
     let totalHint = rawInput.includes('/') ? rawInput.split('/')[1].trim() : null;
 
-    searchStatusMessage.textContent = "Buscando en Pokémon API...";
+    searchStatusMessage.textContent = "Buscando en API...";
     searchStatusMessage.style.color = "#3b82f6";
     submitSearchBtn.disabled = true;
 
@@ -137,11 +134,11 @@ async function handleQuickSearch() {
             clearSearchInputs();
             closeModal(quickSearchModal);
         } else {
-            searchStatusMessage.textContent = "No se encontró la carta.";
+            searchStatusMessage.textContent = "No encontrada.";
             searchStatusMessage.style.color = "#ef4444";
         }
     } catch (error) {
-        searchStatusMessage.textContent = "Error de conexión.";
+        searchStatusMessage.textContent = "Error API.";
     } finally {
         submitSearchBtn.disabled = false;
     }
@@ -153,10 +150,9 @@ function fillCardForm(card) {
     document.getElementById('cardName').value = card.name;
     document.getElementById('cardCode').value = `${card.number}/${card.set.printedTotal}`;
     document.getElementById('cardExpansion').value = card.set.name;
-    
-    const imageUrl = card.images.large || card.images.small;
-    document.getElementById('cardImage').value = imageUrl;
-    refreshPreviewImage(imageUrl); // Actualizar vista previa tras búsqueda exitosa
+    const img = card.images.large || card.images.small;
+    document.getElementById('cardImage').value = img;
+    refreshPreviewImage(img);
     
     let price = 0;
     if (card.tcgplayer?.prices) {
@@ -176,20 +172,16 @@ async function handleSaveCard(e) {
     e.preventDefault();
     const id = document.getElementById('cardId').value;
     const nombre = document.getElementById('cardName').value.trim();
-    
     const duplicado = allCards.find(c => c.nombre.toLowerCase() === nombre.toLowerCase() && c.id !== id);
-    if (duplicado) {
-        alert("¡Error! Ya existe una carta con el nombre: " + nombre);
-        return;
-    }
+    if (duplicado) { alert("¡Error! Ya existe."); return; }
 
     const data = {
         nombre: nombre,
         codigo: document.getElementById('cardCode').value,
         expansion: document.getElementById('cardExpansion').value,
         imagen_url: document.getElementById('cardImage').value,
-        precio: parseFloat(document.getElementById('cardPrice').value),
-        stock: parseInt(document.getElementById('cardStock').value),
+        precio: parseFloat(document.getElementById('cardPrice').value) || 0,
+        stock: parseInt(document.getElementById('cardStock').value) || 0,
         categoria: document.getElementById('cardCategory').value
     };
 
@@ -198,22 +190,21 @@ async function handleSaveCard(e) {
         else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
         closeModal(cardModal);
         await loadAllData();
-    } catch (err) { console.error("Error:", err); }
+    } catch (err) { console.error(err); }
 }
 
 async function handleSaveSealed(e) {
     e.preventDefault();
     const id = document.getElementById('sealedProductId').value;
     const nombre = document.getElementById('sealedProductName').value.trim();
-
     const duplicado = allSealed.find(p => p.nombre.toLowerCase() === nombre.toLowerCase() && p.id !== id);
-    if (duplicado) { alert("¡Error! Producto ya registrado con ese nombre."); return; }
+    if (duplicado) { alert("¡Error! Ya existe."); return; }
 
     const data = {
         nombre: nombre,
         categoria: document.getElementById('sealedProductCategory').value,
-        precio: parseFloat(document.getElementById('sealedProductPrice').value),
-        stock: parseInt(document.getElementById('sealedProductStock').value),
+        precio: parseFloat(document.getElementById('sealedProductPrice').value) || 0,
+        stock: parseInt(document.getElementById('sealedProductStock').value) || 0,
         imagen_url: document.getElementById('sealedProductImage').value
     };
     try {
@@ -228,9 +219,8 @@ async function handleSaveCategory(e) {
     e.preventDefault();
     const id = document.getElementById('categoryId').value;
     const nombre = document.getElementById('categoryName').value.trim();
-
     const duplicado = allCategories.find(c => c.name.toLowerCase() === nombre.toLowerCase() && c.id !== id);
-    if (duplicado) { alert("¡Error! Esta categoría ya existe."); return; }
+    if (duplicado) { alert("¡Error! Ya existe."); return; }
 
     const data = { name: nombre };
     try {
@@ -243,7 +233,6 @@ async function handleSaveCategory(e) {
 
 async function loadAllData() {
     try {
-        // Categorías
         const catSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'categories'));
         allCategories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCategoriesTable();
@@ -251,28 +240,25 @@ async function loadAllData() {
         const catSelects = [document.getElementById('cardCategory'), document.getElementById('sealedProductCategory')];
         catSelects.forEach(sel => {
             if(sel) {
-                sel.innerHTML = '<option value="" disabled selected>Selecciona Categoría</option>';
+                sel.innerHTML = '<option value="" disabled selected>Selecciona</option>';
                 allCategories.forEach(c => sel.appendChild(new Option(c.name, c.name)));
             }
         });
 
-        // Cartas
         const cardSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'cards'));
         allCards = cardSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCardsTable();
 
-        // Productos Sellados
         const sealedSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'));
         allSealed = sealedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderSealedTable();
 
-        // Pedidos
         const orderSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
         allOrders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderOrdersTable();
 
         updateStats();
-    } catch (e) { console.error("Error en carga:", e); }
+    } catch (e) { console.error("Error cargando:", e); }
 }
 
 function renderCardsTable() {
@@ -340,23 +326,19 @@ function renderOrdersTable() {
         const row = tbody.insertRow();
         row.innerHTML = `
             <td>${o.id.substring(0,8)}</td>
-            <td>${o.customerName}</td>
+            <td>${o.customerName || 'Invitado'}</td>
             <td>$${parseFloat(o.total || 0).toFixed(2)}</td>
-            <td><span class="status-badge ${o.status}">${o.status}</span></td>
+            <td><span class="status-badge ${o.status || 'pendiente'}">${o.status || 'pendiente'}</span></td>
             <td><button class="action-btn"><i class="fas fa-eye"></i></button></td>
         `;
     });
 }
 
 function updateStats() {
-    const elCards = document.getElementById('totalCardsCount');
-    if(elCards) elCards.textContent = allCards.length;
-    const elSealed = document.getElementById('totalSealedProductsCount');
-    if(elSealed) elSealed.textContent = allSealed.length;
-    const elCat = document.getElementById('uniqueCategoriesCount');
-    if(elCat) elCat.textContent = allCategories.length;
-    const elOut = document.getElementById('outOfStockCount');
-    if(elOut) elOut.textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
+    const el1 = document.getElementById('totalCardsCount'); if(el1) el1.textContent = allCards.length;
+    const el2 = document.getElementById('totalSealedProductsCount'); if(el2) el2.textContent = allSealed.length;
+    const el3 = document.getElementById('uniqueCategoriesCount'); if(el3) el3.textContent = allCategories.length;
+    const el4 = document.getElementById('outOfStockCount'); if(el4) el4.textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
 }
 
 // ==========================================================================
@@ -365,28 +347,22 @@ function updateStats() {
 
 document.addEventListener('DOMContentLoaded', () => {
     loginView = document.getElementById('loginModal');
-    adminView = document.querySelector('.admin-container');
+    adminView = document.getElementById('adminContainer');
     sidebarMenu = document.getElementById('sidebar-menu');
-    sidebarOverlay = document.getElementById('sidebar-overlay');
-    
     cardForm = document.getElementById('cardForm');
     cardModal = document.getElementById('cardModal');
-    const sealedProductForm = document.getElementById('sealedProductForm');
+    sealedProductForm = document.getElementById('sealedProductForm');
     sealedProductModal = document.getElementById('sealedProductModal');
-    const categoryForm = document.getElementById('categoryForm');
+    categoryForm = document.getElementById('categoryForm');
     categoryModal = document.getElementById('categoryModal');
     quickSearchModal = document.getElementById('scannerModal');
-    
-    // Vista previa
     cardImagePreview = document.getElementById('cardImagePreview');
     imagePreviewContainer = document.getElementById('imagePreviewContainer');
 
-    // NAVEGACIÓN
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => { e.preventDefault(); showSection(link.dataset.section); });
     });
 
-    // LOGIN
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const user = document.getElementById('username').value.trim();
@@ -400,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await signInWithEmailAndPassword(auth, user, pass);
         } catch (err) {
             btn.disabled = false;
-            btn.textContent = "Iniciar Sesión";
+            btn.textContent = "Acceder";
             if(msg) { msg.textContent = "Credenciales incorrectas."; msg.style.display = "block"; }
         }
     });
@@ -416,7 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Buscador
     const modalContent = document.getElementById('quickSearchContent');
     if (modalContent) {
         modalContent.innerHTML = `
@@ -433,50 +408,37 @@ document.addEventListener('DOMContentLoaded', () => {
             <button id="submitSearch" style="width: 100%; padding: 16px; background: #3182ce; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer;">Consultar</button>
             <p id="searchStatus" style="margin-top: 20px; font-size: 0.95rem;"></p>
         `;
-        searchCardNumberInput = document.getElementById('tcgSearchInput');
+        tcgSearchInput = document.getElementById('tcgSearchInput');
         searchSetIdInput = document.getElementById('searchSetId');
         submitSearchBtn = document.getElementById('submitSearch');
         searchStatusMessage = document.getElementById('searchStatus');
         submitSearchBtn.addEventListener('click', handleQuickSearch);
     }
 
-    // EVENTOS DE TIEMPO REAL PARA VISTA PREVIA
     document.getElementById('cardImage')?.addEventListener('input', (e) => {
         refreshPreviewImage(e.target.value);
     });
 
-    // CRUD Event Listeners
     cardForm?.addEventListener('submit', handleSaveCard);
     sealedProductForm?.addEventListener('submit', handleSaveSealed);
     categoryForm?.addEventListener('submit', handleSaveCategory);
 
-    // Botones de Abrir Modales (Añadir)
     document.getElementById('addCardBtn')?.addEventListener('click', () => { 
-        cardForm.reset(); 
-        document.getElementById('cardId').value = ''; 
-        refreshPreviewImage(""); 
-        openModal(cardModal); 
+        cardForm.reset(); document.getElementById('cardId').value = ''; 
+        refreshPreviewImage(""); openModal(cardModal); 
     });
     document.getElementById('addSealedProductBtn')?.addEventListener('click', () => { 
-        sealedProductForm.reset(); 
-        document.getElementById('sealedProductId').value = ''; 
+        sealedProductForm.reset(); document.getElementById('sealedProductId').value = ''; 
         openModal(sealedProductModal); 
     });
     document.getElementById('addCategoryBtn')?.addEventListener('click', () => { 
-        categoryForm.reset(); 
-        document.getElementById('categoryId').value = ''; 
+        categoryForm.reset(); document.getElementById('categoryId').value = ''; 
         openModal(categoryModal); 
     });
 
     document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
     document.getElementById('refreshAdminPageBtn')?.addEventListener('click', () => location.reload());
 
-    // Sidebar e iPad controls
-    document.getElementById('sidebarToggleBtn')?.addEventListener('click', (e) => { e.preventDefault(); toggleSidebar(true); });
-    document.getElementById('closeSidebarBtn')?.addEventListener('click', (e) => { e.preventDefault(); toggleSidebar(false); });
-    sidebarOverlay?.addEventListener('click', () => toggleSidebar(false));
-
-    // DELEGACIÓN (Cerrar, Editar, Eliminar)
     document.body.addEventListener('click', async (e) => {
         if (e.target.classList.contains('close-button')) {
             const modal = e.target.closest('.admin-modal');
@@ -490,11 +452,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = btn.dataset.id;
         const type = btn.dataset.type;
 
-        // EDITAR
         if (btn.classList.contains('edit')) {
             if (type === 'card') {
                 const d = allCards.find(x => x.id === id);
-                if(!d) return;
                 document.getElementById('cardId').value = d.id;
                 document.getElementById('cardName').value = d.nombre;
                 document.getElementById('cardCode').value = d.codigo;
@@ -507,7 +467,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 openModal(cardModal);
             } else if (type === 'sealed') {
                 const d = allSealed.find(x => x.id === id);
-                if(!d) return;
                 document.getElementById('sealedProductId').value = d.id;
                 document.getElementById('sealedProductName').value = d.nombre;
                 document.getElementById('sealedProductCategory').value = d.categoria;
@@ -517,21 +476,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 openModal(sealedProductModal);
             } else if (type === 'category') {
                 const d = allCategories.find(x => x.id === id);
-                if(!d) return;
                 document.getElementById('categoryId').value = d.id;
                 document.getElementById('categoryName').value = d.name;
                 openModal(categoryModal);
             }
         }
 
-        // ELIMINAR
         if (btn.classList.contains('delete')) {
-            if (!confirm("¿Seguro que deseas eliminar este elemento?")) return;
+            if (!confirm("¿Eliminar?")) return;
             const col = type === 'card' ? 'cards' : (type === 'sealed' ? 'sealed_products' : 'categories');
             try {
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
                 await loadAllData();
-            } catch (err) { alert("Error al eliminar."); }
+            } catch (err) { alert("Error."); }
         }
     });
 
