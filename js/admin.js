@@ -41,11 +41,11 @@ if (!isForcedLogoutDone) {
 // Variables Globales
 let allCards = [], allCategories = [], allSealed = [], allOrders = [];
 let loginView, adminView, sidebarMenu, sidebarOverlay;
-let cardForm, cardModal, quickSearchModal;
+let cardForm, cardModal, quickSearchModal, sealedProductModal, categoryModal;
 let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBtn;
 
 // ==========================================================================
-// 3. FUNCIONES DE UI (OPTIMIZADAS PARA IPAD/TOUCH)
+// 3. FUNCIONES DE UI
 // ==========================================================================
 
 function openModal(m) { 
@@ -87,7 +87,6 @@ function showSection(sectionId) {
     const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
     if(activeLink) activeLink.classList.add('active');
 
-    // Auto-cerrar menú en iPad/Móvil tras elegir sección
     if(window.innerWidth <= 1024) {
         toggleSidebar(false);
     }
@@ -127,7 +126,7 @@ async function handleQuickSearch() {
             if (!card) card = data.data[0];
 
             fillCardForm(card);
-            clearSearchInputs(); // Limpia campos al encontrar éxito
+            clearSearchInputs();
             closeModal(quickSearchModal);
         } else {
             searchStatusMessage.textContent = "No se encontró la carta.";
@@ -159,11 +158,11 @@ function fillCardForm(card) {
 }
 
 // ==========================================================================
-// 5. CRUD Y CARGA DE DATOS
+// 5. CRUD Y CARGA DE DATOS (RESTAURADO COMPLETO)
 // ==========================================================================
 
 async function handleSaveCard(e) {
-    e.preventDefault(); // PREVIENE RECARGA (Evita Logout)
+    e.preventDefault();
     const id = document.getElementById('cardId').value;
     const data = {
         nombre: document.getElementById('cardName').value,
@@ -174,41 +173,70 @@ async function handleSaveCard(e) {
         stock: parseInt(document.getElementById('cardStock').value),
         categoria: document.getElementById('cardCategory').value
     };
-
     try {
-        if (id) {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id), data);
-        } else {
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
-        }
+        if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id), data);
+        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
         closeModal(cardModal);
         await loadAllData();
-    } catch (err) {
-        console.error("Error al guardar:", err);
-    }
+    } catch (err) { console.error("Error al guardar:", err); }
+}
+
+async function handleSaveSealed(e) {
+    e.preventDefault();
+    const id = document.getElementById('sealedProductId').value;
+    const data = {
+        nombre: document.getElementById('sealedProductName').value,
+        categoria: document.getElementById('sealedProductCategory').value,
+        precio: parseFloat(document.getElementById('sealedProductPrice').value),
+        stock: parseInt(document.getElementById('sealedProductStock').value),
+        imagen_url: document.getElementById('sealedProductImage').value
+    };
+    try {
+        if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id), data);
+        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'), data);
+        closeModal(sealedProductModal);
+        await loadAllData();
+    } catch (err) { console.error("Error al guardar producto:", err); }
+}
+
+async function handleSaveCategory(e) {
+    e.preventDefault();
+    const id = document.getElementById('categoryId').value;
+    const data = { name: document.getElementById('categoryName').value };
+    try {
+        if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id), data);
+        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), data);
+        closeModal(categoryModal);
+        await loadAllData();
+    } catch (err) { console.error("Error al guardar categoría:", err); }
 }
 
 async function loadAllData() {
     try {
-        const cardSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'cards'));
-        allCards = cardSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderCardsTable();
-
+        // Categorías
         const catSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'categories'));
         allCategories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderCategoriesTable();
         
         const catSelects = [document.getElementById('cardCategory'), document.getElementById('sealedProductCategory')];
         catSelects.forEach(sel => {
             if(sel) {
-                sel.innerHTML = '<option value="" disabled selected>Selecciona Juego</option>';
+                sel.innerHTML = '<option value="" disabled selected>Selecciona Categoría</option>';
                 allCategories.forEach(c => sel.appendChild(new Option(c.name, c.name)));
             }
         });
 
+        // Cartas
+        const cardSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'cards'));
+        allCards = cardSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderCardsTable();
+
+        // Sellados
         const sealedSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'));
         allSealed = sealedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderSealedTable();
 
+        // Pedidos
         const orderSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
         allOrders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderOrdersTable();
@@ -227,10 +255,12 @@ function renderCardsTable() {
             <td><img src="${c.imagen_url}" width="40" style="border-radius:4px" onerror="this.src='https://placehold.co/40x50?text=Err'"></td>
             <td><strong>${c.nombre}</strong></td>
             <td>${c.codigo}</td>
+            <td>${c.expansion || '-'}</td>
             <td>$${parseFloat(c.precio).toFixed(2)}</td>
             <td>${c.stock}</td>
             <td class="action-buttons">
-                <button class="action-btn edit" data-id="${c.id}"><i class="fas fa-edit"></i></button>
+                <button class="action-btn edit" data-id="${c.id}" data-type="card"><i class="fas fa-edit"></i></button>
+                <button class="action-btn delete" data-id="${c.id}" data-type="card" style="color: #ef4444;"><i class="fas fa-trash"></i></button>
             </td>
         `;
     });
@@ -246,10 +276,27 @@ function renderSealedTable() {
             <td><img src="${p.imagen_url}" width="40"></td>
             <td><strong>${p.nombre}</strong></td>
             <td>${p.categoria}</td>
-            <td>$${p.precio}</td>
+            <td>$${parseFloat(p.precio).toFixed(2)}</td>
             <td>${p.stock}</td>
             <td class="action-buttons">
-                <button class="action-btn edit" data-id="${p.id}"><i class="fas fa-edit"></i></button>
+                <button class="action-btn edit" data-id="${p.id}" data-type="sealed"><i class="fas fa-edit"></i></button>
+                <button class="action-btn delete" data-id="${p.id}" data-type="sealed" style="color: #ef4444;"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
+    });
+}
+
+function renderCategoriesTable() {
+    const tbody = document.querySelector('#categoriesTable tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    allCategories.forEach(c => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><strong>${c.name}</strong></td>
+            <td class="action-buttons">
+                <button class="action-btn edit" data-id="${c.id}" data-type="category"><i class="fas fa-edit"></i></button>
+                <button class="action-btn delete" data-id="${c.id}" data-type="category" style="color: #ef4444;"><i class="fas fa-trash"></i></button>
             </td>
         `;
     });
@@ -272,14 +319,10 @@ function renderOrdersTable() {
 }
 
 function updateStats() {
-    const cardsCount = document.getElementById('totalCardsCount');
-    if(cardsCount) cardsCount.textContent = allCards.length;
-    const sealedCount = document.getElementById('totalSealedProductsCount');
-    if(sealedCount) sealedCount.textContent = allSealed.length;
-    const categoriesCount = document.getElementById('uniqueCategoriesCount');
-    if(categoriesCount) categoriesCount.textContent = allCategories.length;
-    const stockCount = document.getElementById('outOfStockCount');
-    if(stockCount) stockCount.textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
+    document.getElementById('totalCardsCount').textContent = allCards.length;
+    document.getElementById('totalSealedProductsCount').textContent = allSealed.length;
+    document.getElementById('uniqueCategoriesCount').textContent = allCategories.length;
+    document.getElementById('outOfStockCount').textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
 }
 
 // ==========================================================================
@@ -287,48 +330,35 @@ function updateStats() {
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Referencias críticas
     loginView = document.getElementById('loginModal');
     adminView = document.querySelector('.admin-container');
     sidebarMenu = document.getElementById('sidebar-menu');
     sidebarOverlay = document.getElementById('sidebar-overlay');
+    
     cardForm = document.getElementById('cardForm');
+    const sealedForm = document.getElementById('sealedProductForm');
+    const catForm = document.getElementById('categoryForm');
+    
     quickSearchModal = document.getElementById('scannerModal');
     cardModal = document.getElementById('cardModal');
+    sealedProductModal = document.getElementById('sealedProductModal');
+    categoryModal = document.getElementById('categoryModal');
 
-    // BOTONES DE HAMBURGUESA (Optimizados para iPad)
-    const toggleBtn = document.getElementById('sidebarToggleBtn');
-    const closeBtn = document.getElementById('closeSidebarBtn');
-
-    toggleBtn?.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleSidebar(true);
-    });
-
-    closeBtn?.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleSidebar(false);
-    });
-
-    sidebarOverlay?.addEventListener('click', () => toggleSidebar(false));
-
-    // NAVEGACIÓN
+    // Navegación
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            const sectionId = link.getAttribute('data-section');
-            if(sectionId) showSection(sectionId);
+            showSection(link.dataset.section);
         });
     });
 
-    // LOGIN
+    // Login
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const user = document.getElementById('username').value.trim();
         const pass = document.getElementById('password').value;
         const msg = document.getElementById('loginMessage');
         const btn = document.getElementById('loginBtnSubmit');
-
         try {
             btn.disabled = true;
             btn.textContent = "Verificando...";
@@ -337,10 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             btn.disabled = false;
             btn.textContent = "Iniciar Sesión";
-            if(msg) {
-                msg.textContent = "Credenciales incorrectas.";
-                msg.style.display = "block";
-            }
+            if(msg) { msg.textContent = "Credenciales incorrectas."; msg.style.display = "block"; }
         }
     });
 
@@ -355,18 +382,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // BUSCADOR (CONFIGURACIÓN DINÁMICA)
+    // Buscador
     const modalContent = document.getElementById('quickSearchContent');
     if (modalContent) {
         modalContent.innerHTML = `
             <span class="close-button" id="closeScannerX">&times;</span>
             <h2 style="margin-bottom: 20px;"><i class="fas fa-search"></i> Buscador TCG</h2>
             <div style="margin-bottom: 16px; text-align: left;">
-                <label style="font-weight: 700; font-size: 0.85rem; color: #4a5568;">Número de Carta (ej: 028/151)</label>
+                <label>Número de Carta (ej: 028/151)</label>
                 <input type="text" id="searchCardNumber" placeholder="Número..." style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px;">
             </div>
             <div style="margin-bottom: 24px; text-align: left;">
-                <label style="font-weight: 700; font-size: 0.85rem; color: #4a5568;">Expansión (opcional)</label>
+                <label>Expansión (opcional)</label>
                 <input type="text" id="searchSetId" placeholder="Ej: 151, sv1" style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px;">
             </div>
             <button id="submitSearch" style="width: 100%; padding: 16px; background: #3182ce; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer;">
@@ -379,36 +406,80 @@ document.addEventListener('DOMContentLoaded', () => {
         submitSearchBtn = document.getElementById('submitSearch');
         searchStatusMessage = document.getElementById('searchStatus');
         submitSearchBtn.addEventListener('click', handleQuickSearch);
-        
-        document.getElementById('closeScannerX')?.addEventListener('click', () => {
-            closeModal(quickSearchModal);
-            clearSearchInputs();
-        });
+        document.getElementById('closeScannerX')?.addEventListener('click', () => { closeModal(quickSearchModal); clearSearchInputs(); });
     }
 
-    // EVENTOS DE GUARDADO Y BOTONES
+    // Formularios
     cardForm?.addEventListener('submit', handleSaveCard);
-    
+    sealedForm?.addEventListener('submit', handleSaveSealed);
+    catForm?.addEventListener('submit', handleSaveCategory);
+
+    // Botones Añadir
+    document.getElementById('addCardBtn')?.addEventListener('click', () => { cardForm.reset(); document.getElementById('cardId').value = ''; openModal(cardModal); });
+    document.getElementById('addSealedProductBtn')?.addEventListener('click', () => { sealedForm.reset(); document.getElementById('sealedProductId').value = ''; openModal(sealedProductModal); });
+    document.getElementById('addCategoryBtn')?.addEventListener('click', () => { catForm.reset(); document.getElementById('categoryId').value = ''; openModal(categoryModal); });
     document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
     document.getElementById('refreshAdminPageBtn')?.addEventListener('click', () => location.reload());
-    document.getElementById('addCardBtn')?.addEventListener('click', () => {
-        cardForm?.reset();
-        document.getElementById('cardId').value = '';
-        openModal(cardModal);
-    });
 
-    // CIERRE GENERAL DE MODALES (X y Click Fuera)
-    document.body.addEventListener('click', (e) => {
-        if (e.target.classList.contains('close-button')) {
-            const modal = e.target.closest('.admin-modal');
-            if(modal) {
-                if(modal.id === 'scannerModal') clearSearchInputs();
-                closeModal(modal);
+    // Sidebar
+    document.getElementById('sidebarToggleBtn')?.addEventListener('click', (e) => { e.preventDefault(); toggleSidebar(true); });
+    document.getElementById('closeSidebarBtn')?.addEventListener('click', (e) => { e.preventDefault(); toggleSidebar(false); });
+    sidebarOverlay?.addEventListener('click', () => toggleSidebar(false));
+
+    // Delegación de eventos (Editar / Eliminar)
+    document.body.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const type = btn.dataset.type;
+
+        // EDITAR
+        if (btn.classList.contains('edit')) {
+            if (type === 'card') {
+                const d = allCards.find(x => x.id === id);
+                document.getElementById('cardId').value = d.id;
+                document.getElementById('cardName').value = d.nombre;
+                document.getElementById('cardCode').value = d.codigo;
+                document.getElementById('cardExpansion').value = d.expansion || '';
+                document.getElementById('cardImage').value = d.imagen_url;
+                document.getElementById('cardPrice').value = d.precio;
+                document.getElementById('cardStock').value = d.stock;
+                document.getElementById('cardCategory').value = d.categoria;
+                openModal(cardModal);
+            } else if (type === 'sealed') {
+                const d = allSealed.find(x => x.id === id);
+                document.getElementById('sealedProductId').value = d.id;
+                document.getElementById('sealedProductName').value = d.nombre;
+                document.getElementById('sealedProductCategory').value = d.categoria;
+                document.getElementById('sealedProductPrice').value = d.precio;
+                document.getElementById('sealedProductStock').value = d.stock;
+                document.getElementById('sealedProductImage').value = d.imagen_url;
+                openModal(sealedProductModal);
+            } else if (type === 'category') {
+                const d = allCategories.find(x => x.id === id);
+                document.getElementById('categoryId').value = d.id;
+                document.getElementById('categoryName').value = d.name;
+                openModal(categoryModal);
             }
         }
-        if (e.target.classList.contains('admin-modal')) {
-            if(e.target.id === 'scannerModal') clearSearchInputs();
-            closeModal(e.target);
+
+        // ELIMINAR
+        if (btn.classList.contains('delete')) {
+            if (!confirm("¿Seguro que deseas eliminar este elemento?")) return;
+            const col = type === 'card' ? 'cards' : (type === 'sealed' ? 'sealed_products' : 'categories');
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id));
+                await loadAllData();
+            } catch (err) { alert("Error al eliminar."); }
+        }
+
+        // Cerrar modales con X
+        if (btn.classList.contains('close-button')) {
+            closeModal(cardModal);
+            closeModal(sealedProductModal);
+            closeModal(categoryModal);
+            closeModal(quickSearchModal);
+            clearSearchInputs();
         }
     });
 
