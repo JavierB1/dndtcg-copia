@@ -1,5 +1,5 @@
 // ==========================================================================
-// GLOBAL VARIABLES (Firebase & Logic)
+// CONFIGURACIÓN Y SERVICIOS DE FIREBASE
 // ==========================================================================
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
@@ -36,55 +36,53 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const appId = firebaseConfig.projectId;
 
+// ==========================================================================
+// FORZAR CIERRE DE SESIÓN AL CARGAR (ELIMINA EL AUTOLOGIN)
+// ==========================================================================
+// Esto garantiza que CADA VEZ que recargues la página, debas poner la clave.
+signOut(auth).catch(err => console.log("Limpiando sesión previa..."));
+
 let allCards = [], allSealedProducts = [], allCategories = [], allOrders = [];
 let currentDeleteTarget = null;
-
-// Paginación
 const itemsPerPage = 10;
 let currentCardsPage = 1;
-let currentSealedPage = 1;
 
 // ==========================================================================
-// DOM ELEMENTS
+// REFERENCIAS DOM
 // ==========================================================================
-let loginScreen, adminContainer; // Contenedores de pantalla completa
-let sidebarMenu, sidebarOverlay, cardModal, quickSearchModal, sealedProductModal, categoryModal, confirmModal, messageModal, orderDetailsModal;
-let cardForm, sealedProductForm, categoryForm;
-let dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection;
+let loginView, adminView, sidebarMenu, sidebarOverlay;
+let cardForm, cardModal, quickSearchModal, confirmModal, messageModal;
 let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBtn;
 let navLinks = {};
 
 // ==========================================================================
-// UTILITY FUNCTIONS
+// FUNCIONES DE NAVEGACIÓN Y UI
 // ==========================================================================
 
 function openModal(m) { if(m){ m.style.display='flex'; document.body.style.overflow='hidden'; } }
 function closeModal(m) { if(m){ m.style.display='none'; document.body.style.overflow=''; } }
 
-function showSection(sectionToShow, navId) {
-    const sections = [dashboardSection, cardsSection, sealedProductsSection, categoriesSection, ordersSection];
-    sections.forEach(s => s?.classList.remove('active'));
-    sectionToShow?.classList.add('active');
+function showSection(sectionId) {
+    // Ocultar todas
+    document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+    // Mostrar la seleccionada
+    const target = document.getElementById(sectionId);
+    if(target) target.classList.add('active');
 
-    Object.values(navLinks).forEach(link => link?.classList.remove('active'));
-    if (navLinks[navId]) navLinks[navId].classList.add('active');
+    // Actualizar menú lateral
+    document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+    const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
+    if(activeLink) activeLink.classList.add('active');
 
+    // Cerrar menú en móviles
     if(window.innerWidth < 1024) {
         sidebarMenu?.classList.remove('show');
         if(sidebarOverlay) sidebarOverlay.style.display='none';
     }
 }
 
-function showMessage(title, text) {
-    const titleEl = document.getElementById('messageModalTitle');
-    const textEl = document.getElementById('messageModalText');
-    if (titleEl) titleEl.textContent = title;
-    if (textEl) textEl.textContent = text;
-    openModal(messageModal);
-}
-
 // ==========================================================================
-// LÓGICA DE BÚSQUEDA TCGPLAYER
+// BUSCADOR TCGPLAYER (TRIM + RECORTE DE SLASH)
 // ==========================================================================
 
 async function handleQuickSearch() {
@@ -92,40 +90,34 @@ async function handleQuickSearch() {
     const setIdInput = searchSetIdInput.value.trim().toLowerCase();
 
     if (!rawInput) {
-        searchStatusMessage.textContent = "Ingresa el número de la carta.";
+        searchStatusMessage.textContent = "Ingresa el número.";
         searchStatusMessage.style.color = "#ef4444";
         return;
     }
 
-    let cardNumber = rawInput;
-    let printedTotal = null;
-    
-    if (rawInput.includes('/')) {
-        const parts = rawInput.split('/');
-        cardNumber = parts[0].trim();
-        printedTotal = parts[1].trim();
-    }
+    let cardNumber = rawInput.includes('/') ? rawInput.split('/')[0].trim() : rawInput;
+    let totalHint = rawInput.includes('/') ? rawInput.split('/')[1].trim() : null;
 
     searchStatusMessage.textContent = "Consultando TCGPlayer...";
     searchStatusMessage.style.color = "#3b82f6";
     submitSearchBtn.disabled = true;
 
     try {
-        let queryParts = [`number:"${cardNumber}"`];
-        if (setIdInput) queryParts.push(`(set.id:"${setIdInput}*" OR set.name:"${setIdInput}*")`);
+        let query = `number:"${cardNumber}"`;
+        if (setIdInput) query += ` (set.id:"${setIdInput}*" OR set.name:"${setIdInput}*")`;
 
-        const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(queryParts.join(' '))}`;
+        const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(query)}`;
         const response = await fetch(url);
         const data = await response.json();
 
         if (data.data && data.data.length > 0) {
-            let bestMatch = printedTotal ? data.data.find(c => c.set.printedTotal == printedTotal) : data.data[0];
-            if (!bestMatch) bestMatch = data.data[0];
+            let card = totalHint ? data.data.find(c => c.set.printedTotal == totalHint) : data.data[0];
+            if (!card) card = data.data[0];
 
-            fillCardFormWithData(bestMatch);
+            fillCardForm(card);
             closeModal(quickSearchModal);
         } else {
-            searchStatusMessage.textContent = "No se encontró la carta.";
+            searchStatusMessage.textContent = "No se encontró nada.";
             searchStatusMessage.style.color = "#ef4444";
         }
     } catch (error) {
@@ -135,7 +127,7 @@ async function handleQuickSearch() {
     }
 }
 
-function fillCardFormWithData(card) {
+function fillCardForm(card) {
     openModal(cardModal);
     document.getElementById('cardId').value = '';
     document.getElementById('cardName').value = card.name;
@@ -143,458 +135,194 @@ function fillCardFormWithData(card) {
     document.getElementById('cardExpansion').value = card.set.name;
     document.getElementById('cardImage').value = card.images.large || card.images.small;
     
-    let tcgPrice = 0;
+    let price = 0;
     if (card.tcgplayer?.prices) {
         const p = card.tcgplayer.prices;
-        const types = ['holofoil', 'reverseHolofoil', 'normal'];
-        const found = types.find(t => p[t]);
-        tcgPrice = found ? (p[found].market || p[found].mid || 0) : 0;
+        const cat = ['holofoil', 'reverseHolofoil', 'normal'].find(t => p[t]);
+        price = cat ? (p[cat].market || 0) : 0;
     }
-    document.getElementById('cardPrice').value = parseFloat(tcgPrice).toFixed(2);
+    document.getElementById('cardPrice').value = parseFloat(price).toFixed(2);
     document.getElementById('cardCategory').value = 'Pokémon TCG';
 }
 
 // ==========================================================================
-// DATA LOADING & RENDERING
+// CARGA DE DATOS DESDE FIRESTORE
 // ==========================================================================
 
 async function loadAllData() {
     try {
-        const catSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'categories'));
-        allCategories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderCategoriesTable();
-        updateCategorySelects();
-
         const cardSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'cards'));
         allCards = cardSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCardsTable();
 
-        const sealedSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'));
-        allSealedProducts = sealedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderSealedProductsTable();
+        const catSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'categories'));
+        allCategories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        const catSelect = document.getElementById('cardCategory');
+        if(catSelect) {
+            catSelect.innerHTML = '<option value="" disabled selected>Selecciona Juego</option>';
+            allCategories.forEach(c => catSelect.appendChild(new Option(c.name, c.name)));
+        }
 
-        const orderSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
-        allOrders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.timestamp - a.timestamp);
-        renderOrdersTable();
-
-        updateDashboardStats();
-    } catch (e) {
-        console.error("Error al cargar datos:", e);
-    }
-}
-
-function updateDashboardStats() {
-    const cardsEl = document.getElementById('totalCardsCount');
-    const sealedEl = document.getElementById('totalSealedProductsCount');
-    const catEl = document.getElementById('uniqueCategoriesCount');
-    const stockEl = document.getElementById('outOfStockCount');
-
-    if(cardsEl) cardsEl.textContent = allCards.length;
-    if(sealedEl) sealedEl.textContent = allSealedProducts.length;
-    if(catEl) catEl.textContent = allCategories.length;
-    if(stockEl) stockEl.textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
-}
-
-function updateCategorySelects() {
-    const selects = [document.getElementById('cardCategory'), document.getElementById('sealedProductCategory')];
-    selects.forEach(s => {
-        if(!s) return;
-        s.innerHTML = '<option value="" disabled selected>Selecciona Categoría</option>';
-        allCategories.forEach(c => s.appendChild(new Option(c.name, c.name)));
-    });
+        updateStats();
+    } catch (e) { console.error(e); }
 }
 
 function renderCardsTable() {
     const tbody = document.querySelector('#cardsTable tbody');
     if(!tbody) return;
     tbody.innerHTML = '';
-    const start = (currentCardsPage - 1) * itemsPerPage;
-    const paginated = allCards.slice(start, start + itemsPerPage);
-
-    paginated.forEach(c => {
+    allCards.forEach(c => {
         const row = tbody.insertRow();
         row.innerHTML = `
-            <td>${c.id.substring(0,6)}...</td>
-            <td><img src="${c.imagen_url}" width="40" style="border-radius:4px" onerror="this.src='https://placehold.co/40x50?text=Err'"></td>
+            <td>${c.id.substring(0,5)}</td>
+            <td><img src="${c.imagen_url}" width="40" style="border-radius:4px"></td>
             <td><strong>${c.nombre}</strong></td>
             <td>${c.codigo}</td>
-            <td>${c.expansion || ''}</td>
             <td>$${parseFloat(c.precio).toFixed(2)}</td>
             <td>${c.stock}</td>
-            <td>${c.categoria}</td>
             <td class="action-buttons">
                 <button class="action-btn edit" data-id="${c.id}"><i class="fas fa-edit"></i></button>
-                <button class="action-btn delete" data-id="${c.id}" data-type="card"><i class="fas fa-trash"></i></button>
-            </td>
-        `;
-    });
-    const info = document.getElementById('adminPageInfo');
-    if(info) info.textContent = `Página ${currentCardsPage}`;
-}
-
-function renderSealedProductsTable() {
-    const tbody = document.querySelector('#sealedProductsTable tbody');
-    if(!tbody) return;
-    tbody.innerHTML = '';
-    
-    const start = (currentSealedPage - 1) * itemsPerPage;
-    const paginated = allSealedProducts.slice(start, start + itemsPerPage);
-
-    paginated.forEach(p => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${p.id.substring(0,6)}...</td>
-            <td><img src="${p.imagen_url}" width="40" style="border-radius:4px"></td>
-            <td><strong>${p.nombre}</strong></td>
-            <td>${p.categoria}</td>
-            <td>$${parseFloat(p.precio).toFixed(2)}</td>
-            <td>${p.stock}</td>
-            <td class="action-buttons">
-                <button class="action-btn edit-sealed" data-id="${p.id}"><i class="fas fa-edit"></i></button>
-                <button class="action-btn delete" data-id="${p.id}" data-type="sealed"><i class="fas fa-trash"></i></button>
-            </td>
-        `;
-    });
-    const info = document.getElementById('adminSealedPageInfo');
-    if(info) info.textContent = `Página ${currentSealedPage}`;
-}
-
-function renderCategoriesTable() {
-    const tbody = document.querySelector('#categoriesTable tbody');
-    if(!tbody) return;
-    tbody.innerHTML = '';
-    allCategories.forEach(c => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td><strong>${c.name}</strong></td>
-            <td class="action-buttons">
-                <button class="action-btn edit-cat" data-id="${c.id}"><i class="fas fa-edit"></i></button>
-                <button class="action-btn delete" data-id="${c.id}" data-type="category"><i class="fas fa-trash"></i></button>
             </td>
         `;
     });
 }
 
-function renderOrdersTable() {
-    const tbody = document.querySelector('#ordersTable tbody');
-    if(!tbody) return;
-    tbody.innerHTML = '';
-    allOrders.forEach(o => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${o.id.substring(0,8)}</td>
-            <td>${new Date(o.timestamp).toLocaleDateString()}</td>
-            <td>${o.customerName}</td>
-            <td>$${parseFloat(o.total).toFixed(2)}</td>
-            <td><span class="status-badge ${o.status}">${o.status}</span></td>
-            <td><button class="view-order-btn" data-id="${o.id}">Ver</button></td>
-        `;
-    });
+function updateStats() {
+    const el = document.getElementById('totalCardsCount');
+    if(el) el.textContent = allCards.length;
 }
 
 // ==========================================================================
-// CRUD OPERATIONS
-// ==========================================================================
-
-async function handleSaveCard(e) {
-    e.preventDefault();
-    const id = document.getElementById('cardId').value;
-    const data = {
-        nombre: document.getElementById('cardName').value,
-        codigo: document.getElementById('cardCode').value,
-        expansion: document.getElementById('cardExpansion').value,
-        imagen_url: document.getElementById('cardImage').value,
-        precio: parseFloat(document.getElementById('cardPrice').value),
-        stock: parseInt(document.getElementById('cardStock').value),
-        categoria: document.getElementById('cardCategory').value
-    };
-    try {
-        if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id), data);
-        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
-        closeModal(cardModal);
-        await loadAllData();
-    } catch (err) { showMessage("Error", "No se pudo guardar la carta."); }
-}
-
-async function handleSaveSealed(e) {
-    e.preventDefault();
-    const id = document.getElementById('sealedProductId').value;
-    const data = {
-        nombre: document.getElementById('sealedProductName').value,
-        categoria: document.getElementById('sealedProductCategory').value,
-        precio: parseFloat(document.getElementById('sealedProductPrice').value),
-        stock: parseInt(document.getElementById('sealedProductStock').value),
-        imagen_url: document.getElementById('sealedProductImage').value
-    };
-    try {
-        if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id), data);
-        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'), data);
-        closeModal(sealedProductModal);
-        await loadAllData();
-    } catch (err) { showMessage("Error", "No se pudo guardar el producto."); }
-}
-
-async function handleSaveCategory(e) {
-    e.preventDefault();
-    const id = document.getElementById('categoryId').value;
-    const data = { name: document.getElementById('categoryName').value };
-    try {
-        if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id), data);
-        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), data);
-        closeModal(categoryModal);
-        await loadAllData();
-    } catch (err) { showMessage("Error", "No se pudo guardar la categoría."); }
-}
-
-async function confirmDelete() {
-    if (!currentDeleteTarget) return;
-    const { id, type } = currentDeleteTarget;
-    const paths = { card: 'cards', sealed: 'sealed_products', category: 'categories' };
-    try {
-        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', paths[type], id));
-        closeModal(confirmModal);
-        await loadAllData();
-    } catch (err) { showMessage("Error", "No se pudo eliminar el elemento."); }
-}
-
-// ==========================================================================
-// INITIALIZATION & EVENT LISTENERS
+// INICIALIZACIÓN Y EVENTOS
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Referencias Principales de Pantalla
-    loginScreen = document.getElementById('loginModal');
-    adminContainer = document.querySelector('.admin-container');
+    // Referencias principales para el cambio de pantalla
+    loginView = document.getElementById('loginModal');
+    adminView = document.querySelector('.admin-container');
+    
+    // Inyectar Estilos de Pantalla Completa y SVGs
+    const style = document.createElement('style');
+    style.innerHTML = `
+        /* Pantalla de Login Pantalla Completa */
+        #loginModal { 
+            display: flex; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: #f0f2f5; z-index: 9999; align-items: center; justify-content: center;
+        }
+        .login-card {
+            background: white; padding: 40px; border-radius: 16px; width: 90%; max-width: 400px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); text-align: center;
+        }
+        .admin-container { display: none; } /* Oculto por defecto */
 
-    // Referencias Secciones
-    dashboardSection = document.getElementById('dashboard-section');
-    cardsSection = document.getElementById('cards-section');
-    sealedProductsSection = document.getElementById('sealed-products-section');
-    categoriesSection = document.getElementById('categories-section');
-    ordersSection = document.getElementById('orders-section');
+        /* SVG Logos Decorativos */
+        .svg-container { margin-bottom: 20px; display: flex; justify-content: center; gap: 15px; }
+        .svg-icon { width: 50px; height: 50px; fill: #3182ce; opacity: 0.8; }
+    `;
+    document.head.appendChild(style);
 
-    // Referencias Modales
-    sidebarMenu = document.getElementById('sidebar-menu');
-    sidebarOverlay = document.getElementById('sidebar-overlay');
-    cardModal = document.getElementById('cardModal');
+    // Ajustar el HTML del Login para que sea la pantalla completa
+    loginView.innerHTML = `
+        <div class="login-card">
+            <div class="svg-container">
+                <!-- SVG: Pokébola Simplificada -->
+                <svg class="svg-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.44.04-.87.11-1.29H8.5c.34.78 1.11 1.33 2.01 1.33.9 0 1.67-.55 2.01-1.33h4.39c.07.42.11.85.11 1.29 0 4.41-3.59 8-8 8zm8.39-9.29h-4.39c-.34-.78-1.11-1.33-2.01-1.33-.9 0-1.67.55-2.01 1.33H3.61c.42-3.1 2.67-5.63 5.63-6.61.16-.06.32-.1.48-.15.42-.12.86-.21 1.31-.26.31-.03.63-.04.97-.04.34 0 .66.01.97.04.45.05.89.14 1.31.26.16.05.32.09.48.15 2.96.98 5.21 3.51 5.63 6.61z"/>
+                </svg>
+                <!-- SVG: Frasco Perfume (Nevada) -->
+                <svg class="svg-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 8V5c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H5v11c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V8h-3zM9 5h6v3H9V5zm8 14H7V10h10v9z"/>
+                </svg>
+            </div>
+            <h2 style="margin-bottom: 5px; color: #2d3748;">DND TCG Admin</h2>
+            <p style="color: #718096; margin-bottom: 25px; font-size: 0.9rem;">Gestión de Inventario y Nevada</p>
+            <form id="loginForm">
+                <input type="email" id="username" placeholder="Correo electrónico" style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px;" required>
+                <input type="password" id="password" placeholder="Contraseña" style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px;" required>
+                <button type="submit" style="width: 100%; padding: 14px; background: #3182ce; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Acceder al Panel</button>
+            </form>
+            <p id="loginMessage" style="color: #e53e3e; margin-top: 15px; font-size: 0.85rem; display: none;"></p>
+        </div>
+    `;
+
+    // Re-vincular elementos del formulario inyectado
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const user = document.getElementById('username').value.trim();
+        const pass = document.getElementById('password').value;
+        const msg = document.getElementById('loginMessage');
+        const btn = e.target.querySelector('button');
+
+        try {
+            btn.disabled = true;
+            btn.textContent = "Verificando...";
+            // Obligar a que la sesión solo viva mientras la pestaña esté abierta
+            await setPersistence(auth, browserSessionPersistence);
+            await signInWithEmailAndPassword(auth, user, pass);
+        } catch (err) {
+            btn.disabled = false;
+            btn.textContent = "Acceder al Panel";
+            msg.textContent = "Credenciales incorrectas.";
+            msg.style.display = "block";
+        }
+    });
+
+    // Observador de Estado
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            loginView.style.display = 'none';
+            adminView.style.display = 'flex';
+            loadAllData();
+        } else {
+            loginView.style.display = 'flex';
+            adminView.style.display = 'none';
+        }
+    });
+
+    // Eventos de Navegación Lateral
+    document.querySelectorAll('.sidebar-nav a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const section = link.getAttribute('id').replace('nav-', '') + '-section';
+            showSection(section.replace('sealed-products', 'sealed-products'));
+        });
+    });
+
+    // Configurar el buscador manual
     quickSearchModal = document.getElementById('scannerModal');
-    sealedProductModal = document.getElementById('sealedProductModal');
-    categoryModal = document.getElementById('categoryModal');
-    confirmModal = document.getElementById('confirmModal');
-    messageModal = document.getElementById('messageModal');
-    orderDetailsModal = document.getElementById('orderDetailsModal');
-
-    // Formularios
-    cardForm = document.getElementById('cardForm');
-    sealedProductForm = document.getElementById('sealedProductForm');
-    categoryForm = document.getElementById('categoryForm');
-
-    // Enlaces de navegación
-    navLinks = {
-        'dashboard': document.getElementById('nav-dashboard'),
-        'cards': document.getElementById('nav-cards'),
-        'sealed': document.getElementById('nav-sealed-products'),
-        'categories': document.getElementById('nav-categories'),
-        'orders': document.getElementById('nav-orders')
-    };
-
-    // Navegación Sidebar
-    navLinks['dashboard']?.addEventListener('click', (e) => { e.preventDefault(); showSection(dashboardSection, 'dashboard'); });
-    navLinks['cards']?.addEventListener('click', (e) => { e.preventDefault(); showSection(cardsSection, 'cards'); });
-    navLinks['sealed']?.addEventListener('click', (e) => { e.preventDefault(); showSection(sealedProductsSection, 'sealed'); });
-    navLinks['categories']?.addEventListener('click', (e) => { e.preventDefault(); showSection(categoriesSection, 'categories'); });
-    navLinks['orders']?.addEventListener('click', (e) => { e.preventDefault(); showSection(ordersSection, 'orders'); });
-    
-    document.getElementById('nav-logout')?.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        signOut(auth).then(() => {
-            // Forzar cierre de sesión y reinicio de UI
-            if(adminContainer) adminContainer.style.display = 'none';
-            if(loginScreen) loginScreen.style.display = 'flex';
-            location.reload();
-        }); 
-    });
-
-    // Control del Sidebar
-    document.getElementById('sidebarToggleBtn')?.addEventListener('click', () => {
-        sidebarMenu?.classList.add('show');
-        if(sidebarOverlay) sidebarOverlay.style.display = 'block';
-    });
-    
-    document.getElementById('closeSidebarBtn')?.addEventListener('click', () => {
-        sidebarMenu?.classList.remove('show');
-        if(sidebarOverlay) sidebarOverlay.style.display = 'none';
-    });
-
-    sidebarOverlay?.addEventListener('click', () => {
-        sidebarMenu?.classList.remove('show');
-        sidebarOverlay.style.display = 'none';
-    });
-
-    // Botones Añadir
-    document.getElementById('addCardBtn')?.addEventListener('click', () => { cardForm.reset(); document.getElementById('cardId').value = ''; openModal(cardModal); });
-    document.getElementById('addSealedProductBtn')?.addEventListener('click', () => { sealedProductForm.reset(); document.getElementById('sealedProductId').value = ''; openModal(sealedProductModal); });
-    document.getElementById('addCategoryBtn')?.addEventListener('click', () => { categoryForm.reset(); document.getElementById('categoryId').value = ''; openModal(categoryModal); });
-    document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
-
-    // Eventos de Guardado
-    cardForm?.addEventListener('submit', handleSaveCard);
-    sealedProductForm?.addEventListener('submit', handleSaveSealed);
-    categoryForm?.addEventListener('submit', handleSaveCategory);
-    document.getElementById('confirmDeleteBtn')?.addEventListener('click', confirmDelete);
-    document.getElementById('cancelDeleteBtn')?.addEventListener('click', () => closeModal(confirmModal));
-
-    // Delegación de eventos para Tablas
-    document.body.addEventListener('click', (e) => {
-        const btn = e.target.closest('button');
-        if (!btn) return;
-
-        const id = btn.dataset.id;
-        if (btn.classList.contains('edit')) {
-            const c = allCards.find(x => x.id === id);
-            if(c) {
-                document.getElementById('cardId').value = c.id;
-                document.getElementById('cardName').value = c.nombre;
-                document.getElementById('cardCode').value = c.codigo;
-                document.getElementById('cardExpansion').value = c.expansion;
-                document.getElementById('cardImage').value = c.imagen_url;
-                document.getElementById('cardPrice').value = c.precio;
-                document.getElementById('cardStock').value = c.stock;
-                document.getElementById('cardCategory').value = c.categoria;
-                openModal(cardModal);
-            }
-        }
-        if (btn.classList.contains('edit-sealed')) {
-            const p = allSealedProducts.find(x => x.id === id);
-            if(p) {
-                document.getElementById('sealedProductId').value = p.id;
-                document.getElementById('sealedProductName').value = p.nombre;
-                document.getElementById('sealedProductCategory').value = p.categoria;
-                document.getElementById('sealedProductPrice').value = p.precio;
-                document.getElementById('sealedProductStock').value = p.stock;
-                document.getElementById('sealedProductImage').value = p.imagen_url;
-                openModal(sealedProductModal);
-            }
-        }
-        if (btn.classList.contains('edit-cat')) {
-            const c = allCategories.find(x => x.id === id);
-            if(c) {
-                document.getElementById('categoryId').value = c.id;
-                document.getElementById('categoryName').value = c.name;
-                openModal(categoryModal);
-            }
-        }
-        if (btn.classList.contains('delete')) {
-            currentDeleteTarget = { id: btn.dataset.id, type: btn.dataset.type };
-            openModal(confirmModal);
-        }
-        if (btn.classList.contains('view-order-btn')) {
-            const order = allOrders.find(o => o.id === id);
-            if(order) {
-                document.getElementById('orderDetailsContent').innerHTML = `
-                    <p><strong>Cliente:</strong> ${order.customerName}</p>
-                    <p><strong>Total:</strong> $${order.total}</p>
-                    <p><strong>Productos:</strong> ${order.cart}</p>
-                `;
-                openModal(orderDetailsModal);
-            }
-        }
-    });
-
-    // Paginación
-    document.getElementById('adminPrevPageBtn')?.addEventListener('click', () => { if(currentCardsPage > 1) { currentCardsPage--; renderCardsTable(); } });
-    document.getElementById('adminNextPageBtn')?.addEventListener('click', () => { if(currentCardsPage * itemsPerPage < allCards.length) { currentCardsPage++; renderCardsTable(); } });
-    
-    document.getElementById('adminSealedPrevPageBtn')?.addEventListener('click', () => { if(currentSealedPage > 1) { currentSealedPage--; renderSealedProductsTable(); } });
-    document.getElementById('adminSealedNextPageBtn')?.addEventListener('click', () => { if(currentSealedPage * itemsPerPage < allSealedProducts.length) { currentSealedPage++; renderSealedProductsTable(); } });
-
-    // Configurar Modal de Búsqueda
     const modalContent = quickSearchModal?.querySelector('.admin-modal-content');
     if (modalContent) {
         modalContent.innerHTML = `
             <span class="close-button">&times;</span>
-            <h2 style="margin-bottom: 20px;"><i class="fas fa-search"></i> Buscador por Código</h2>
-            <div class="search-group">
-                <label>Número de Carta (ej: 028 o 028/151)</label>
-                <input type="text" id="searchCardNumber" class="search-input" placeholder="Escribe el número...">
+            <h2 style="margin-bottom: 15px;"><i class="fas fa-search"></i> Buscador Inteligente</h2>
+            <div style="margin-bottom: 15px; text-align: left;">
+                <label style="font-weight: bold; font-size: 0.8rem;">Número de Carta (ej: 028 o 028/151)</label>
+                <input type="text" id="searchCardNumber" placeholder="Ej: 028/151" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e0; margin-top: 5px;">
             </div>
-            <div class="search-group">
-                <label>Nombre o Código Expansión (mew, 151, obsidian)</label>
-                <input type="text" id="searchSetId" class="search-input" placeholder="Opcional...">
+            <div style="margin-bottom: 15px; text-align: left;">
+                <label style="font-weight: bold; font-size: 0.8rem;">Filtro Expansión (ej: 151, obsidian)</label>
+                <input type="text" id="searchSetId" placeholder="Opcional..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e0; margin-top: 5px;">
             </div>
-            <button id="submitSearch" class="btn-search-submit">Buscar Información</button>
-            <p id="searchStatus" style="margin-top: 15px; text-align: center; font-size: 0.9rem; min-height: 1.2em;"></p>
+            <button id="submitSearch" style="width: 100%; padding: 14px; background: #3182ce; color: white; border-radius: 8px; font-weight: bold; border: none; cursor: pointer;">Consultar TCGPlayer</button>
+            <p id="searchStatus" style="margin-top: 15px; font-size: 0.9rem;"></p>
         `;
         searchCardNumberInput = document.getElementById('searchCardNumber');
         searchSetIdInput = document.getElementById('searchSetId');
         submitSearchBtn = document.getElementById('submitSearch');
         searchStatusMessage = document.getElementById('searchStatus');
-        submitSearchBtn?.addEventListener('click', handleQuickSearch);
+        submitSearchBtn.addEventListener('click', handleQuickSearch);
     }
 
-    // Cierre de Modales
+    // Botones de Apertura y Cierre
+    document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
     document.querySelectorAll('.close-button').forEach(b => b.addEventListener('click', () => {
-        closeModal(cardModal); closeModal(quickSearchModal); closeModal(sealedProductModal); closeModal(categoryModal); closeModal(confirmModal); closeModal(messageModal); closeModal(orderDetailsModal);
+        closeModal(quickSearchModal);
+        closeModal(document.getElementById('cardModal'));
     }));
 
-    // Login con Persistencia de Sesión
-    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('username')?.value.trim();
-        const pass = document.getElementById('password')?.value;
-        const btn = e.target.querySelector('button[type="submit"]');
-        
-        try {
-            if(btn) { btn.disabled = true; btn.textContent = "Validando..."; }
-            await setPersistence(auth, browserSessionPersistence);
-            await signInWithEmailAndPassword(auth, email, pass);
-            // El observador onAuthStateChanged manejará el cambio de pantalla
-        } catch(err) { 
-            if(btn) { btn.disabled = false; btn.textContent = "Ingresar"; }
-            showMessage("Acceso Denegado", "Correo o contraseña incorrectos."); 
-        }
-    });
-
-    // OBSERVADOR DE ESTADO (Maneja la visibilidad total de la pantalla)
-    onAuthStateChanged(auth, (user) => {
-        if (user) { 
-            // Usuario Autenticado: Ocultar login, mostrar panel
-            if(loginScreen) loginScreen.style.display = 'none';
-            if(adminContainer) adminContainer.style.display = 'flex';
-            loadAllData(); 
-        } else { 
-            // Usuario No Autenticado: Mostrar login a pantalla completa, ocultar panel
-            if(adminContainer) adminContainer.style.display = 'none';
-            if(loginScreen) {
-                loginScreen.style.display = 'flex';
-                // Convertir el modal de login en pantalla completa mediante estilos inline si es necesario
-                loginScreen.style.position = 'fixed';
-                loginScreen.style.top = '0';
-                loginScreen.style.left = '0';
-                loginScreen.style.width = '100%';
-                loginScreen.style.height = '100%';
-                loginScreen.style.zIndex = '9999';
-                loginScreen.style.backgroundColor = '#f7fafc';
-                
-                // Asegurar que el contenido del login se vea bien
-                const content = loginScreen.querySelector('.admin-modal-content');
-                if(content) {
-                    content.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
-                    content.style.border = 'none';
-                    // Añadir SVG decorativo si no existe
-                    if(!loginScreen.querySelector('.login-svg-decor')) {
-                        const svgDiv = document.createElement('div');
-                        svgDiv.className = 'login-svg-decor';
-                        svgDiv.style.marginBottom = '20px';
-                        svgDiv.innerHTML = `
-                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 15V17M12 7V13M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#3182ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        `;
-                        content.prepend(svgDiv);
-                    }
-                }
-            }
-        }
+    // Cierre de sesión manual
+    document.getElementById('nav-logout')?.addEventListener('click', () => {
+        signOut(auth).then(() => location.reload());
     });
 });
