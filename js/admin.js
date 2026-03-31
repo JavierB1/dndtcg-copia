@@ -85,7 +85,6 @@ async function handleQuickSearch() {
         return;
     }
 
-    // Separa número y total si el usuario escribe 028/151
     let cardNumber = rawInput.includes('/') ? rawInput.split('/')[0].trim() : rawInput;
     let totalHint = rawInput.includes('/') ? rawInput.split('/')[1].trim() : null;
 
@@ -197,6 +196,37 @@ document.addEventListener('DOMContentLoaded', () => {
     loginView = document.getElementById('loginModal');
     adminView = document.querySelector('.admin-container');
     
+    // Aseguramos que el contenido del login sea TCG EXCLUSIVO (Sin Nevada ni Perfume)
+    loginView.innerHTML = `
+        <div class="login-card">
+            <div class="svg-header">
+                <!-- Pokébola Minimalista -->
+                <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="#3182ce" stroke-width="2" fill="none"/>
+                    <line x1="2" y1="12" x2="22" y2="12" stroke="#3182ce" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" stroke="#3182ce" stroke-width="2" fill="white"/>
+                </svg>
+            </div>
+            <h2 style="font-weight: 700; color: #1a202c; margin-bottom: 8px;">DND TCG Panel</h2>
+            <p style="color: #718096; margin-bottom: 32px; font-size: 0.95rem;">Acceso Administrativo de Inventario</p>
+            
+            <form id="loginForm">
+                <div style="text-align: left; margin-bottom: 16px;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-left: 4px;">Email</label>
+                    <input type="email" id="username" placeholder="admin@dndtcg.com" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
+                </div>
+                <div style="text-align: left; margin-bottom: 24px;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-left: 4px;">Contraseña</label>
+                    <input type="password" id="password" placeholder="••••••••" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
+                </div>
+                <button type="submit" id="loginBtnSubmit" style="width: 100%; padding: 16px; background: #3182ce; color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer;">
+                    Iniciar Sesión
+                </button>
+            </form>
+            <p id="loginMessage" style="color: #e53e3e; margin-top: 20px; font-size: 0.85rem; display: none; padding: 10px; background: #fff5f5; border-radius: 8px;"></p>
+        </div>
+    `;
+
     // Manejar Login
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
