@@ -6,9 +6,9 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebas
 import { 
     getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
     setPersistence, browserSessionPersistence 
-} from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
+} from 'https://www.gstat000000000000000000000ic.com/firebasejs/12.0.0/firebase-auth.js';
 import { 
-    getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where
+    getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc 
 } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -27,14 +27,16 @@ const auth = getAuth(app);
 const appId = firebaseConfig.projectId;
 
 // ==========================================================================
-// 2. CIERRE DE SESIÓN OBLIGATORIO (LOGIN AL RECARGAR)
+// 2. CONTROL DE SESIÓN (OBLIGATORIO AL RECARGAR PESTAÑA)
 // ==========================================================================
-// Forzamos el cierre de sesión CADA VEZ que el script se carga (al abrir o recargar).
-let isForcedLogoutDone = false;
-signOut(auth).then(() => {
-    isForcedLogoutDone = true;
-    console.log("Sesión cerrada obligatoriamente por recarga de página.");
-});
+let isForcedLogoutDone = sessionStorage.getItem('forcedLogout') === 'true';
+
+if (!isForcedLogoutDone) {
+    signOut(auth).then(() => {
+        isForcedLogoutDone = true;
+        sessionStorage.setItem('forcedLogout', 'true');
+    });
+}
 
 // Variables Globales
 let allCards = [], allCategories = [], allSealed = [], allOrders = [];
@@ -112,10 +114,10 @@ async function handleQuickSearch() {
     submitSearchBtn.disabled = true;
 
     try {
-        let queryStr = `number:"${cardNumber}"`;
-        if (setIdInput) queryStr += ` (set.id:"${setIdInput}*" OR set.name:"${setIdInput}*")`;
+        let query = `number:"${cardNumber}"`;
+        if (setIdInput) query += ` (set.id:"${setIdInput}*" OR set.name:"${setIdInput}*")`;
 
-        const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(queryStr)}`;
+        const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(query)}`;
         const response = await fetch(url);
         const data = await response.json();
 
@@ -156,45 +158,27 @@ function fillCardForm(card) {
 }
 
 // ==========================================================================
-// 5. CRUD Y CARGA DE DATOS
+// 5. CRUD Y CARGA DE DATOS (RESTAURADO COMPLETO)
 // ==========================================================================
 
 async function handleSaveCard(e) {
     e.preventDefault();
-    const saveBtn = e.target.querySelector('button[type="submit"]');
     const id = document.getElementById('cardId').value;
     const data = {
         nombre: document.getElementById('cardName').value,
-        codigo: document.getElementById('cardCode').value.trim(),
+        codigo: document.getElementById('cardCode').value,
         expansion: document.getElementById('cardExpansion').value,
         imagen_url: document.getElementById('cardImage').value,
         precio: parseFloat(document.getElementById('cardPrice').value),
         stock: parseInt(document.getElementById('cardStock').value),
         categoria: document.getElementById('cardCategory').value
     };
-
-    // --- VALIDACIÓN DE DUPLICADOS MEJORADA ---
-    const duplicado = allCards.find(c => c.codigo.toLowerCase() === data.codigo.toLowerCase());
-    if (duplicado && duplicado.id !== id) {
-        alert("¡Error! Esta carta (" + data.codigo + ") ya está registrada en el sistema.");
-        return;
-    }
-
     try {
-        if (saveBtn) saveBtn.disabled = true; // Evitar doble clic
-        if (id) {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id), data);
-        } else {
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
-        }
+        if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id), data);
+        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
         closeModal(cardModal);
         await loadAllData();
-    } catch (err) { 
-        console.error("Error al guardar:", err); 
-        alert("Ocurrió un error al intentar guardar.");
-    } finally {
-        if (saveBtn) saveBtn.disabled = false;
-    }
+    } catch (err) { console.error("Error al guardar:", err); }
 }
 
 async function handleSaveSealed(e) {
@@ -327,7 +311,7 @@ function renderOrdersTable() {
         row.innerHTML = `
             <td>${o.id.substring(0,8)}</td>
             <td>${o.customerName}</td>
-            <td>$${parseFloat(o.total).toFixed(2)}</td>
+            <td>$${o.total}</td>
             <td><span class="status-badge ${o.status}">${o.status}</span></td>
             <td><button class="action-btn"><i class="fas fa-eye"></i></button></td>
         `;
