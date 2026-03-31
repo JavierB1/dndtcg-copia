@@ -507,8 +507,10 @@ form select:focus {
     100% { top: 10%; opacity: 0; }
 }
 
+/* ... (Todo el CSS anterior se mantiene igual hasta el final) ... */
+
 /* ==========================================================================
-   RESPONSIVO (CELULARES Y TABLETS)
+   RESPONSIVO (CELULARES Y TABLETS - AJUSTADO PARA IPAD)
    ========================================================================== */
 .sidebar-overlay {
     display: none;
@@ -521,7 +523,8 @@ form select:focus {
     z-index: 45;
 }
 
-@media (max-width: 768px) {
+/* CAMBIADO DE 768px A 1024px PARA SOPORTAR TODOS LOS IPADS */
+@media (max-width: 1024px) {
     .sidebar {
         position: fixed;
         left: -260px; /* Oculta la barra lateral */
@@ -537,8 +540,13 @@ form select:focus {
         display: block;
     }
 
+    .sidebar-overlay.show {
+        display: block;
+    }
+
     .main-content {
         width: 100%;
+        margin-left: 0;
     }
 
     .desktop-only-title {
