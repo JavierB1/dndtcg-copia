@@ -49,14 +49,24 @@
         .admin-modal-content { background: white; padding: 30px; border-radius: 24px; position: relative; width: 90%; max-width: 500px; }
         .admin-modal-content.wide { max-width: 850px; }
 
-        /* Confirmación de Eliminación Personalizada */
-        .confirm-modal-content { text-align: center; padding: 40px 30px; }
-        .confirm-icon { width: 70px; height: 70px; background: #fee2e2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 20px; }
-        .confirm-title { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 10px; }
-        .confirm-text { color: #64748b; margin-bottom: 30px; line-height: 1.5; }
-        .confirm-actions { display: flex; gap: 15px; }
-        .btn-cancel { flex: 1; padding: 14px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: white; font-weight: 600; cursor: pointer; color: #64748b; }
-        .btn-confirm-delete { flex: 1; padding: 14px; border-radius: 12px; border: none; background: #ef4444; color: white; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
+        /* Estilos Comunes para Modales de Mensaje (Eliminar y Alerta) */
+        .message-modal-content { text-align: center; padding: 40px 30px; }
+        .message-icon { width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 20px; }
+        
+        /* Rojo para Eliminación */
+        .icon-danger { background: #fee2e2; color: #ef4444; }
+        /* Amarillo para Alerta/Advertencia */
+        .icon-warning { background: #fef3c7; color: #d97706; }
+
+        .message-title { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 10px; }
+        .message-text { color: #64748b; margin-bottom: 30px; line-height: 1.5; }
+        .message-actions { display: flex; gap: 15px; }
+        
+        .btn-modal { flex: 1; padding: 14px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-cancel { border: 1.5px solid #e2e8f0; background: white; color: #64748b; }
+        .btn-delete { background: #ef4444; color: white; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
+        .btn-accept { background: #f59e0b; color: white; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2); }
+        .btn-modal:hover { transform: translateY(-2px); opacity: 0.9; }
 
         /* Layout con Vista Previa */
         .modal-body-layout { display: flex; gap: 30px; margin-top: 20px; }
@@ -148,6 +158,7 @@
                 </div>
             </section>
 
+            <!-- SECCIONES TABLAS -->
             <section id="cards-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                     <h3 style="font-weight: 700;">Cartas Pokémon</h3>
@@ -156,12 +167,7 @@
                         <button id="addCardBtn" class="add-button">+</button>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    <table id="cardsTable">
-                        <thead><tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Expansión</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <div class="table-responsive"><table id="cardsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Expansión</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
 
             <section id="sealed-products-section" class="admin-section">
@@ -169,12 +175,7 @@
                     <h3 style="font-weight: 700;">Productos Sellados</h3>
                     <button id="addSealedProductBtn" class="add-button">+</button>
                 </div>
-                <div class="table-responsive">
-                    <table id="sealedProductsTable">
-                        <thead><tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <div class="table-responsive"><table id="sealedProductsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
 
             <section id="categories-section" class="admin-section">
@@ -182,42 +183,42 @@
                     <h3 style="font-weight: 700;">Gestión de Categorías</h3>
                     <button id="addCategoryBtn" class="add-button">+</button>
                 </div>
-                <div class="table-responsive" style="max-width: 600px;">
-                    <table id="categoriesTable">
-                        <thead><tr><th>Nombre</th><th>Acciones</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <div class="table-responsive" style="max-width: 600px;"><table id="categoriesTable"><thead><tr><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
 
             <section id="orders-section" class="admin-section">
                 <h3 style="margin-bottom: 25px; font-weight: 700;">Pedidos Recientes</h3>
-                <div class="table-responsive">
-                    <table id="ordersTable">
-                        <thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <div class="table-responsive"><table id="ordersTable"><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
         </main>
     </div>
 
-    <!-- MODAL CONFIRMAR ELIMINACIÓN (NUEVO) -->
+    <!-- MODAL CONFIRMAR ELIMINACIÓN -->
     <div id="confirmDeleteModal" class="admin-modal">
-        <div class="admin-modal-content confirm-modal-content">
-            <div class="confirm-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <h3 class="confirm-title">¿Estás seguro?</h3>
-            <p class="confirm-text">Esta acción eliminará permanentemente el elemento de tu inventario. No podrás deshacer este cambio.</p>
-            <div class="confirm-actions">
-                <button class="btn-cancel" id="btnCancelDelete">Cancelar</button>
-                <button class="btn-confirm-delete" id="btnConfirmDelete">Eliminar ahora</button>
+        <div class="admin-modal-content message-modal-content">
+            <div class="message-icon icon-danger"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3 class="message-title">¿Estás seguro?</h3>
+            <p class="message-text">Esta acción eliminará permanentemente el elemento de tu inventario. No podrás deshacer este cambio.</p>
+            <div class="message-actions">
+                <button class="btn-modal btn-cancel" id="btnCancelDelete">Cancelar</button>
+                <button class="btn-modal btn-delete" id="btnConfirmDelete">Eliminar ahora</button>
             </div>
         </div>
     </div>
 
-    <!-- OTROS MODALES -->
+    <!-- MODAL ALERTA PERSONALIZADO (NUEVO) -->
+    <div id="alertModal" class="admin-modal">
+        <div class="admin-modal-content message-modal-content">
+            <div class="message-icon icon-warning"><i class="fas fa-exclamation-circle"></i></div>
+            <h3 class="message-title" id="alertTitle">Atención</h3>
+            <p class="message-text" id="alertText">Ha ocurrido un problema con el registro.</p>
+            <div class="message-actions">
+                <button class="btn-modal btn-accept" id="btnAlertAccept">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OTROS MODALES DE GESTIÓN -->
     <div id="cardModal" class="admin-modal">
         <div class="admin-modal-content wide">
             <span class="close-button">&times;</span>
@@ -241,10 +242,7 @@
                     </form>
                 </div>
                 <div class="preview-side">
-                    <div id="imagePreviewContainer" class="image-preview-container">
-                        <i class="fas fa-image placeholder-icon"></i>
-                        <img id="cardImagePreview" src="" alt="Preview">
-                    </div>
+                    <div id="imagePreviewContainer" class="image-preview-container"><i class="fas fa-image placeholder-icon"></i><img id="cardImagePreview" src="" alt="Preview"></div>
                     <p style="font-size: 0.7rem; color: #94a3b8; text-align: center; margin-top: 10px;">Vista Previa del Arte</p>
                 </div>
             </div>
@@ -259,10 +257,7 @@
                 <input type="hidden" id="sealedProductId">
                 <div class="form-group"><label>Nombre del Producto</label><input type="text" id="sealedProductName" required></div>
                 <div class="form-group"><label>Categoría</label><select id="sealedProductCategory" required></select></div>
-                <div class="form-row">
-                    <div class="form-group"><label>Precio</label><input type="number" step="0.01" id="sealedProductPrice" required></div>
-                    <div class="form-group"><label>Stock</label><input type="number" id="sealedProductStock" required></div>
-                </div>
+                <div class="form-row"><div class="form-group"><label>Precio</label><input type="number" step="0.01" id="sealedProductPrice" required></div><div class="form-group"><label>Stock</label><input type="number" id="sealedProductStock" required></div></div>
                 <div class="form-group"><label>Imagen URL</label><input type="url" id="sealedProductImage"></div>
                 <button type="submit" class="confirm-button" style="width: 100%;">Guardar Producto</button>
             </form>
@@ -281,9 +276,7 @@
         </div>
     </div>
 
-    <div id="scannerModal" class="admin-modal">
-        <div class="admin-modal-content" id="quickSearchContent"></div>
-    </div>
+    <div id="scannerModal" class="admin-modal"><div class="admin-modal-content" id="quickSearchContent"></div></div>
 
     <script type="module" src="js/admin.js"></script>
 </body>
