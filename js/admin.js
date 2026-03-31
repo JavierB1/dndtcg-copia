@@ -27,16 +27,14 @@ const auth = getAuth(app);
 const appId = firebaseConfig.projectId;
 
 // ==========================================================================
-// 2. CONTROL DE SESIÓN (OBLIGATORIO AL RECARGAR PESTAÑA)
+// 2. CIERRE DE SESIÓN OBLIGATORIO (LOGIN AL RECARGAR)
 // ==========================================================================
-let isForcedLogoutDone = sessionStorage.getItem('forcedLogout') === 'true';
-
-if (!isForcedLogoutDone) {
-    signOut(auth).then(() => {
-        isForcedLogoutDone = true;
-        sessionStorage.setItem('forcedLogout', 'true');
-    });
-}
+// Forzamos el cierre de sesión CADA VEZ que el script se carga (al abrir o recargar).
+let isForcedLogoutDone = false;
+signOut(auth).then(() => {
+    isForcedLogoutDone = true;
+    console.log("Sesión cerrada obligatoriamente por recarga de página.");
+});
 
 // Variables Globales
 let allCards = [], allCategories = [], allSealed = [], allOrders = [];
@@ -163,10 +161,11 @@ function fillCardForm(card) {
 
 async function handleSaveCard(e) {
     e.preventDefault();
+    const saveBtn = e.target.querySelector('button[type="submit"]');
     const id = document.getElementById('cardId').value;
     const data = {
         nombre: document.getElementById('cardName').value,
-        codigo: document.getElementById('cardCode').value,
+        codigo: document.getElementById('cardCode').value.trim(),
         expansion: document.getElementById('cardExpansion').value,
         imagen_url: document.getElementById('cardImage').value,
         precio: parseFloat(document.getElementById('cardPrice').value),
@@ -174,20 +173,28 @@ async function handleSaveCard(e) {
         categoria: document.getElementById('cardCategory').value
     };
 
-    // --- VALIDACIÓN DE DUPLICADOS ---
-    const duplicado = allCards.find(c => c.codigo === data.codigo);
+    // --- VALIDACIÓN DE DUPLICADOS MEJORADA ---
+    const duplicado = allCards.find(c => c.codigo.toLowerCase() === data.codigo.toLowerCase());
     if (duplicado && duplicado.id !== id) {
-        alert("¡Error! Esta carta ya está registrada en el sistema.");
+        alert("¡Error! Esta carta (" + data.codigo + ") ya está registrada en el sistema.");
         return;
     }
-    // --------------------------------
 
     try {
-        if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id), data);
-        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
+        if (saveBtn) saveBtn.disabled = true; // Evitar doble clic
+        if (id) {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id), data);
+        } else {
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
+        }
         closeModal(cardModal);
         await loadAllData();
-    } catch (err) { console.error("Error al guardar:", err); }
+    } catch (err) { 
+        console.error("Error al guardar:", err); 
+        alert("Ocurrió un error al intentar guardar.");
+    } finally {
+        if (saveBtn) saveBtn.disabled = false;
+    }
 }
 
 async function handleSaveSealed(e) {
