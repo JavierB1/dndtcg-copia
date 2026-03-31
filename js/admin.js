@@ -37,14 +37,14 @@ const auth = getAuth(app);
 const appId = firebaseConfig.projectId;
 
 // ==========================================================================
-// 2. LOGOUT FORZADO (ELIMINA EL AUTOLOGIN)
+// 2. LOGOUT FORZADO AL CARGAR (LOGIN OBLIGATORIO)
 // ==========================================================================
 let isForcedLogoutDone = false;
 signOut(auth).then(() => {
     isForcedLogoutDone = true;
 });
 
-let allCards = [], allCategories = [];
+let allCards = [], allCategories = [], allSealed = [], allOrders = [];
 let loginView, adminView, sidebarMenu, sidebarOverlay;
 let cardForm, cardModal, quickSearchModal;
 let searchStatusMessage, searchCardNumberInput, searchSetIdInput, submitSearchBtn;
@@ -62,7 +62,7 @@ function showSection(sectionId) {
     if(target) target.classList.add('active');
 
     document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
-    const activeLink = document.getElementById('nav-' + sectionId.replace('-section', ''));
+    const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
     if(activeLink) activeLink.classList.add('active');
 
     if(window.innerWidth < 1024) {
@@ -105,7 +105,7 @@ async function handleQuickSearch() {
             if (!card) card = data.data[0];
 
             fillCardForm(card);
-            clearSearchInputs();
+            clearSearchInputs(); // Limpia después de éxito
             closeModal(quickSearchModal);
         } else {
             searchStatusMessage.textContent = "No se encontró nada.";
@@ -143,8 +143,28 @@ function fillCardForm(card) {
 }
 
 // ==========================================================================
-// 5. CARGA DE DATOS
+// 5. CRUD Y CARGA DE DATOS
 // ==========================================================================
+
+async function handleSaveCard(e) {
+    e.preventDefault(); // IMPORTANTE: Evita recarga y por ende el logout forzado
+    const id = document.getElementById('cardId').value;
+    const data = {
+        nombre: document.getElementById('cardName').value,
+        codigo: document.getElementById('cardCode').value,
+        expansion: document.getElementById('cardExpansion').value,
+        imagen_url: document.getElementById('cardImage').value,
+        precio: parseFloat(document.getElementById('cardPrice').value),
+        stock: parseInt(document.getElementById('cardStock').value),
+        categoria: document.getElementById('cardCategory').value
+    };
+    try {
+        if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id), data);
+        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
+        closeModal(cardModal);
+        await loadAllData();
+    } catch (err) { alert("Error al guardar carta."); }
+}
 
 async function loadAllData() {
     try {
@@ -196,11 +216,10 @@ document.addEventListener('DOMContentLoaded', () => {
     loginView = document.getElementById('loginModal');
     adminView = document.querySelector('.admin-container');
     
-    // Aseguramos que el contenido del login sea TCG EXCLUSIVO (Sin Nevada ni Perfume)
+    // Contenido del login
     loginView.innerHTML = `
         <div class="login-card">
             <div class="svg-header">
-                <!-- Pokébola Minimalista -->
                 <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="10" stroke="#3182ce" stroke-width="2" fill="none"/>
                     <line x1="2" y1="12" x2="22" y2="12" stroke="#3182ce" stroke-width="2"/>
@@ -212,14 +231,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             <form id="loginForm">
                 <div style="text-align: left; margin-bottom: 16px;">
-                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-left: 4px;">Email</label>
-                    <input type="email" id="username" placeholder="admin@dndtcg.com" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
+                    <label>Email</label>
+                    <input type="email" id="username" placeholder="admin@dndtcg.com" required>
                 </div>
                 <div style="text-align: left; margin-bottom: 24px;">
-                    <label style="font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-left: 4px;">Contraseña</label>
-                    <input type="password" id="password" placeholder="••••••••" style="width: 100%; padding: 14px; margin-top: 4px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 1rem;" required>
+                    <label>Contraseña</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
                 </div>
-                <button type="submit" id="loginBtnSubmit" style="width: 100%; padding: 16px; background: #3182ce; color: white; border: none; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer;">
+                <button type="submit" id="loginBtnSubmit" style="width: 100%; padding: 16px; background: #3182ce; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer;">
                     Iniciar Sesión
                 </button>
             </form>
@@ -227,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     `;
 
-    // Manejar Login
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const user = document.getElementById('username').value.trim();
@@ -267,11 +285,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="close-button">&times;</span>
             <h2 style="margin-bottom: 20px;"><i class="fas fa-search"></i> Buscador TCG</h2>
             <div style="margin-bottom: 16px; text-align: left;">
-                <label style="font-weight: 700; font-size: 0.85rem;">Número de Carta (ej: 028/151)</label>
+                <label>Número de Carta (ej: 028/151)</label>
                 <input type="text" id="searchCardNumber" placeholder="Número..." style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px;">
             </div>
             <div style="margin-bottom: 24px; text-align: left;">
-                <label style="font-weight: 700; font-size: 0.85rem;">Expansión (ej: sv1, 151)</label>
+                <label>Expansión (ej: sv1, 151)</label>
                 <input type="text" id="searchSetId" placeholder="Opcional..." style="width: 100%; padding: 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 6px;">
             </div>
             <button id="submitSearch" style="width: 100%; padding: 16px; background: #3182ce; color: white; border-radius: 12px; font-weight: 700; border: none; cursor: pointer;">
@@ -286,28 +304,31 @@ document.addEventListener('DOMContentLoaded', () => {
         submitSearchBtn.addEventListener('click', handleQuickSearch);
     }
 
-    // Navegación Sidebar
+    // Eventos de Navegación
     document.querySelectorAll('.sidebar-nav a').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            const sectionId = link.getAttribute('id').replace('nav-', '') + '-section';
+            const sectionId = link.getAttribute('data-section');
             showSection(sectionId);
         });
     });
 
+    // Evento de Guardar Carta
+    document.getElementById('cardForm').addEventListener('submit', handleSaveCard);
+
     document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
     document.getElementById('refreshAdminPageBtn')?.addEventListener('click', () => location.reload());
 
-    // Cierre de modales
+    // Cierre de modales y LIMPIEZA
     document.body.addEventListener('click', (e) => {
         if (e.target.classList.contains('close-button')) {
-            closeModal(quickSearchModal);
-            closeModal(document.getElementById('cardModal'));
-            clearSearchInputs();
+            const modal = e.target.closest('.admin-modal');
+            if (modal.id === 'scannerModal') clearSearchInputs(); // Limpia al cerrar manualmente
+            closeModal(modal);
         }
     });
 
-    document.getElementById('nav-logout')?.addEventListener('click', () => {
+    document.getElementById('nav-logout-btn')?.addEventListener('click', () => {
         signOut(auth).then(() => location.reload());
     });
 });
