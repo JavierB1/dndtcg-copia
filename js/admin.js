@@ -41,12 +41,51 @@ const elements = {
     adminPageInfo: document.getElementById('adminPageInfo'),
     btnLogout: document.getElementById('btnLogout'),
     mainContent: document.querySelector('.main-content'),
-    sidebar: document.querySelector('.sidebar')
+    sidebar: document.querySelector('.sidebar'),
+    adminContainer: document.querySelector('.admin-container')
 };
 
 // ==========================================================================
-// GESTIÓN DE INTERFAZ Y NAVEGACIÓN
+// GESTIÓN DE INTERFAZ (CSS & HTML)
 // ==========================================================================
+
+/**
+ * Esta función es el "Martillo": Fuerza al CSS a mostrar u ocultar
+ */
+function setInitialUIState(isAuthenticated) {
+    console.log("Cambiando estado de UI. Autenticado:", isAuthenticated);
+
+    if (isAuthenticated) {
+        // 1. Ocultar Modal de Login con máxima prioridad
+        if (elements.loginModal) {
+            elements.loginModal.style.setProperty('display', 'none', 'important');
+        }
+        
+        // 2. Mostrar Contenedores Principales
+        if (elements.sidebar) elements.sidebar.style.display = 'flex';
+        if (elements.mainContent) elements.mainContent.style.display = 'block';
+        if (elements.adminContainer) elements.adminContainer.style.display = 'flex';
+
+        showSection('dashboard-section');
+    } else {
+        // 1. Ocultar todo lo que no sea el Login
+        if (elements.sidebar) elements.sidebar.style.display = 'none';
+        if (elements.mainContent) elements.mainContent.style.display = 'none';
+        if (elements.adminContainer) elements.adminContainer.style.display = 'block'; // Necesario para que el modal se centre bien
+
+        hideAllSections();
+
+        // 2. Forzar visualización del Modal
+        if (elements.loginModal) {
+            // Aplicamos estilos inline que sobreescriben cualquier CSS
+            elements.loginModal.style.setProperty('display', 'flex', 'important');
+            elements.loginModal.style.setProperty('visibility', 'visible', 'important');
+            elements.loginModal.style.setProperty('opacity', '1', 'important');
+            elements.loginModal.style.setProperty('position', 'fixed', 'important');
+            elements.loginModal.style.setProperty('z-index', '9999', 'important');
+        }
+    }
+}
 
 function hideAllSections() {
     const sections = document.querySelectorAll('.admin-section');
@@ -62,30 +101,6 @@ function showSection(sectionId) {
     if (target) {
         target.classList.add('active');
         target.style.display = 'block';
-    }
-}
-
-/**
- * Control crítico de visibilidad inicial.
- * Bloquea la interfaz hasta que auth responda.
- */
-function setInitialUIState(isAuthenticated) {
-    if (isAuthenticated) {
-        // Usuario logueado: Mostrar app, ocultar modal
-        if (elements.loginModal) elements.loginModal.style.setProperty('display', 'none', 'important');
-        if (elements.sidebar) elements.sidebar.style.display = 'flex';
-        if (elements.mainContent) elements.mainContent.style.display = 'block';
-        showSection('dashboard-section');
-    } else {
-        // Usuario no logueado: Ocultar todo, forzar modal
-        if (elements.sidebar) elements.sidebar.style.display = 'none';
-        if (elements.mainContent) elements.mainContent.style.display = 'none';
-        hideAllSections();
-        if (elements.loginModal) {
-            elements.loginModal.style.setProperty('display', 'flex', 'important');
-            elements.loginModal.style.visibility = 'visible';
-            elements.loginModal.style.opacity = '1';
-        }
     }
 }
 
@@ -154,11 +169,9 @@ async function loadOrdersData() {
 
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        console.log("Acceso autorizado:", user.email);
         setInitialUIState(true);
         loadAllData();
     } else {
-        console.log("Acceso restringido: Mostrando Login.");
         setInitialUIState(false);
     }
 });
@@ -171,31 +184,26 @@ async function handleLogin(e) {
 
     try {
         if(msg) {
-            msg.textContent = "Verificando credenciales...";
+            msg.textContent = "Verificando...";
             msg.style.display = "block";
             msg.style.color = "#6366f1";
         }
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
         if(msg) {
-            msg.textContent = "Error: Usuario o contraseña incorrectos.";
+            msg.textContent = "Error: Credenciales inválidas.";
             msg.style.color = "#ef4444";
         }
-        console.error("Auth Error:", error.code);
     }
 }
 
 async function handleLogout() {
-    try {
-        await signOut(auth);
-        window.location.reload();
-    } catch (error) {
-        console.error("Logout error:", error);
-    }
+    await signOut(auth);
+    window.location.reload();
 }
 
 // ==========================================================================
-// RENDERIZADO DE COMPONENTES
+// RENDERIZADO
 // ==========================================================================
 
 function updateDashboardStats() {
@@ -283,11 +291,11 @@ function populateCategoryFilters() {
 }
 
 // ==========================================================================
-// INICIALIZACIÓN DE EVENTOS
+// INICIALIZACIÓN
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Estado inicial de seguridad: Ocultar todo hasta que Firebase hable
+    // Iniciar en estado "Sin Autenticar" por seguridad
     setInitialUIState(false);
 
     if (elements.loginForm) elements.loginForm.onsubmit = handleLogin;
