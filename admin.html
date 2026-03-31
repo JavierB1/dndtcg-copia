@@ -79,8 +79,10 @@
 
             <!-- Sección de Gestión de Cartas -->
             <section id="cards-section" class="admin-section">
-                <h2>Gestión de Cartas</h2>
-                <button id="addCardBtn" class="add-button">Añadir Nueva Carta</button>
+                <div class="section-header-actions">
+                    <h2>Gestión de Cartas</h2>
+                    <button id="addCardBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                </div>
                 <div class="card-list-container">
                     <h3>Lista de Cartas</h3>
                     <input type="text" id="adminSearchInput" placeholder="Buscar carta por nombre o ID..." class="admin-search-input">
@@ -107,17 +109,19 @@
                         </table>
                     </div>
                     <div class="pagination-controls">
-                        <button id="adminPrevPageBtn" class="pagination-btn">-</button>
+                        <button id="adminPrevPageBtn" class="pagination-btn"><i class="fas fa-chevron-left"></i></button>
                         <span id="adminPageInfo">Página 1 de 1</span>
-                        <button id="adminNextPageBtn">+</button>
+                        <button id="adminNextPageBtn" class="pagination-btn"><i class="fas fa-chevron-right"></i></button>
                     </div>
                 </div>
             </section>
 
             <!-- Sección de Gestión de Productos Sellados -->
             <section id="sealed-products-section" class="admin-section">
-                <h2>Gestión de Productos Sellados</h2>
-                <button id="addSealedProductBtn" class="add-button">Añadir Nuevo Producto Sellado</button>
+                <div class="section-header-actions">
+                    <h2>Gestión de Productos Sellados</h2>
+                    <button id="addSealedProductBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                </div>
                 <div class="sealed-product-list-container">
                     <h3>Lista de Productos Sellados</h3>
                     <input type="text" id="adminSealedSearchInput" placeholder="Buscar producto por nombre o ID..." class="admin-search-input">
@@ -144,17 +148,19 @@
                         </table>
                     </div>
                     <div class="pagination-controls">
-                        <button id="adminSealedPrevPageBtn">-</button>
+                        <button id="adminSealedPrevPageBtn" class="pagination-btn"><i class="fas fa-chevron-left"></i></button>
                         <span id="adminSealedPageInfo">Página 1 de 1</span>
-                        <button id="adminSealedNextPageBtn">+</button>
+                        <button id="adminSealedNextPageBtn" class="pagination-btn"><i class="fas fa-chevron-right"></i></button>
                     </div>
                 </div>
             </section>
 
             <!-- Sección de Gestión de Categorías -->
             <section id="categories-section" class="admin-section">
-                <h2>Gestión de Categorías</h2>
-                <button id="addCategoryBtn" class="add-button">Añadir Nueva Categoría</button>
+                <div class="section-header-actions">
+                    <h2>Gestión de Categorías</h2>
+                    <button id="addCategoryBtn" class="add-button"><i class="fas fa-plus"></i></button>
+                </div>
                 <div class="category-list-container">
                     <h3>Lista de Categorías</h3>
                     <div class="table-responsive">
