@@ -6,7 +6,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebas
 import { 
     getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
     setPersistence, browserSessionPersistence 
-} from 'https://www.gstat000000000000000000000ic.com/firebasejs/12.0.0/firebase-auth.js';
+} from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
 import { 
     getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc 
 } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
