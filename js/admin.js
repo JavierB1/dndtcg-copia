@@ -85,7 +85,7 @@ let cardForm;
 let cardId;
 let cardName;
 let cardCode; 
-let cardExpansion; // NUEVO CAMPO
+let cardExpansion;
 let cardImage;
 let cardPrice;
 let cardStock;
@@ -765,9 +765,35 @@ async function handleDeleteConfirmed() {
 }
 
 // ==========================================================================
-// EVENT LISTENERS
+// EVENT LISTENERS Y CONFIGURACIÓN INICIAL
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
+    
+    // INYECCIÓN DE ESTILOS MÓVILES (Garantiza que se vea perfecto en celular)
+    const mobileStyles = document.createElement('style');
+    mobileStyles.innerHTML = `
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; left: -260px; height: 100%; z-index: 50; transition: left 0.3s ease; }
+            .sidebar.show { left: 0; }
+            .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 45; }
+            .main-content { width: 100%; margin-left: 0; }
+            .desktop-only-title { display: none; }
+            .sidebar-toggle-btn { display: block !important; margin-right: 15px; font-size: 1.5rem; }
+            .close-sidebar-btn { display: block !important; }
+            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            
+            /* Ajustes para tocar con los dedos en celular */
+            .action-btn { padding: 12px; margin-right: 5px; font-size: 1.2rem; }
+            .add-button { width: 55px; height: 55px; font-size: 2.2rem; } /* Botón '+' más fácil de tocar */
+            
+            /* Ajuste de Modales en Móvil */
+            .admin-modal-content { width: 95%; max-height: 90vh; overflow-y: auto; padding: 20px; }
+            .dashboard-stats { grid-template-columns: 1fr 1fr; }
+        }
+    `;
+    document.head.appendChild(mobileStyles);
+
+    // ================= DOM =================
     sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
     closeSidebarBtn = document.getElementById('closeSidebarBtn');
     sidebarMenu = document.getElementById('sidebar-menu');
@@ -802,7 +828,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cardId = document.getElementById('cardId');
     cardName = document.getElementById('cardName');
     cardCode = document.getElementById('cardCode'); 
-    cardExpansion = document.getElementById('cardExpansion'); // NUEVO EVENTO
+    cardExpansion = document.getElementById('cardExpansion'); 
     cardImage = document.getElementById('cardImage');
     cardPrice = document.getElementById('cardPrice');
     cardStock = document.getElementById('cardStock');
@@ -863,7 +889,6 @@ document.addEventListener('DOMContentLoaded', () => {
     orderStatusSelect = document.getElementById('orderStatusSelect');
     updateOrderStatusBtn = document.getElementById('updateOrderStatusBtn');
 
-    // Referencias del escáner añadidas al inicio de los eventos
     scannerModal = document.getElementById('scannerModal');
     openScannerBtn = document.getElementById('openScannerBtn');
     closeScannerBtn = document.getElementById('closeScannerBtn');
@@ -874,10 +899,21 @@ document.addEventListener('DOMContentLoaded', () => {
     openModal(loginModal);
     hideAllSections();
 
-    // Eventos de Navegación
-    if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', () => { sidebarMenu.classList.add('active'); sidebarOverlay.classList.add('active'); });
-    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', () => { sidebarMenu.classList.remove('active'); sidebarOverlay.classList.remove('active'); });
-    if (sidebarOverlay) sidebarOverlay.addEventListener('click', () => { sidebarMenu.classList.remove('active'); sidebarOverlay.classList.remove('active'); });
+    // ================= EVENTOS DEL MENÚ MÓVIL =================
+    if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', () => { 
+        sidebarMenu.classList.add('show'); 
+        if(sidebarOverlay) sidebarOverlay.style.display = 'block'; 
+    });
+    
+    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', () => { 
+        sidebarMenu.classList.remove('show'); 
+        if(sidebarOverlay) sidebarOverlay.style.display = 'none'; 
+    });
+    
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', () => { 
+        sidebarMenu.classList.remove('show'); 
+        sidebarOverlay.style.display = 'none'; 
+    });
 
     const navs = [{btn: navDashboard, sec: dashboardSection}, {btn: navCards, sec: cardsSection}, {btn: navSealedProducts, sec: sealedProductsSection}, {btn: navCategories, sec: categoriesSection}, {btn: navOrders, sec: ordersSection}];
     navs.forEach(nav => {
@@ -886,8 +922,12 @@ document.addEventListener('DOMContentLoaded', () => {
             showSection(nav.sec);
             navs.forEach(n => { if(n.btn) n.btn.classList.remove('active'); });
             nav.btn.classList.add('active');
-            if (sidebarMenu) sidebarMenu.classList.remove('active');
-            if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+            
+            // Cierra el menú en móviles automáticamente al elegir una opción
+            if (window.innerWidth <= 768) {
+                sidebarMenu.classList.remove('show');
+                if(sidebarOverlay) sidebarOverlay.style.display = 'none';
+            }
         });
     });
 
@@ -934,7 +974,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tablas CRUD (Edit/Delete)
     if (cardsTable) cardsTable.addEventListener('click', (e) => {
-        // Hacemos que funcione tanto si hacen clic en el botón como en el icono del botón
         const btn = e.target.closest('button');
         if(!btn) return;
 
