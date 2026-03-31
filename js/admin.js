@@ -84,7 +84,8 @@ let cardModalTitle;
 let cardForm;
 let cardId;
 let cardName;
-let cardCode; // NUEVO DOM PARA EL CÓDIGO
+let cardCode; 
+let cardExpansion; // NUEVO CAMPO
 let cardImage;
 let cardPrice;
 let cardStock;
@@ -280,33 +281,36 @@ function processScannedCardData() {
     
     // Estos son los datos que la futura API entregará
     cardName.value = 'Charizard VMAX (Escaneado)';
-    cardCode.value = '020/189'; // EL CÓDIGO ESCANEADO DE POKÉMON TCG
+    cardCode.value = '020/189'; 
+    cardExpansion.value = 'Darkness Ablaze'; // AHORA LA EXPANSIÓN VA AQUÍ
     cardPrice.value = '45.00';
     cardImage.value = 'https://assets.pokemon.com/assets/cms2/img/cards/web/swsh3/swsh3_en_20.png';
     
-    // Verificamos si la categoría existe, si no, la añadimos para que no de error
+    // Verificamos si el juego (Pokémon TCG) existe en Categorías
     if(cardCategory.options.length === 0) {
         const option = document.createElement('option');
-        option.value = 'Darkness Ablaze';
-        option.text = 'Darkness Ablaze';
+        option.value = 'Pokémon TCG';
+        option.text = 'Pokémon TCG';
         cardCategory.appendChild(option);
     } else {
-        let exists = Array.from(cardCategory.options).some(opt => opt.value === 'Darkness Ablaze');
+        let exists = Array.from(cardCategory.options).some(opt => opt.value === 'Pokémon TCG');
         if(!exists) {
             const option = document.createElement('option');
-            option.value = 'Darkness Ablaze';
-            option.text = 'Darkness Ablaze';
+            option.value = 'Pokémon TCG';
+            option.text = 'Pokémon TCG';
             cardCategory.appendChild(option);
         }
     }
-    cardCategory.value = 'Darkness Ablaze';
+    cardCategory.value = 'Pokémon TCG';
     
     // Efecto visual de que se llenaron solos
     cardName.style.backgroundColor = '#ecfdf5';
     cardCode.style.backgroundColor = '#ecfdf5';
+    cardExpansion.style.backgroundColor = '#ecfdf5';
     setTimeout(() => {
         cardName.style.backgroundColor = '';
         cardCode.style.backgroundColor = '';
+        cardExpansion.style.backgroundColor = '';
     }, 2000);
 }
 
@@ -396,7 +400,8 @@ async function loadCardsData() {
             ...card,
             precio: parseFloat(card.precio) || 0,
             stock: parseInt(card.stock) || 0,
-            codigo: card.codigo || '' // Aseguramos que el código exista en el objeto
+            codigo: card.codigo || '',
+            expansion: card.expansion || '' // Aseguramos que cargue la expansión
         }));
         renderCardsTable();
         updateDashboardStats();
@@ -434,9 +439,9 @@ function populateCategoryFiltersAndSelects() {
     if (!adminCategoryFilter || !adminSealedCategoryFilter || !cardCategory || !sealedProductCategory) return;
     const categoryNames = allCategories.map(cat => cat.name);
 
-    adminCategoryFilter.innerHTML = '<option value="">Todas las expansiones</option>';
+    adminCategoryFilter.innerHTML = '<option value="">Todas las categorías</option>';
     adminSealedCategoryFilter.innerHTML = '<option value="">Todos los tipos</option>';
-    cardCategory.innerHTML = '<option value="" disabled selected>Selecciona una expansión</option>';
+    cardCategory.innerHTML = '<option value="" disabled selected>Selecciona una categoría (Juego)</option>';
     sealedProductCategory.innerHTML = '<option value="" disabled selected>Selecciona un tipo</option>';
 
     categoryNames.forEach(category => {
@@ -503,7 +508,6 @@ function renderCardsTable() {
         tbody.innerHTML = '';
         cardsOnPage.forEach(card => {
             const row = tbody.insertRow();
-            // CÓDIGO AÑADIDO A LA VISTA DE LA TABLA CON ESTILO DE ETIQUETA
             const badgeCode = card.codigo ? `<span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; font-family: monospace; color: #475569; border: 1px solid #cbd5e1;">${card.codigo}</span>` : '<span style="color:#a0aec0; font-size: 0.85rem;">N/A</span>';
             
             row.innerHTML = `
@@ -511,6 +515,7 @@ function renderCardsTable() {
                 <td><img src="${card.imagen_url}" alt="${card.nombre}" onerror="this.src='https://placehold.co/50x50/2d3748/a0aec0?text=No+Img'"></td>
                 <td><strong>${card.nombre}</strong></td>
                 <td>${badgeCode}</td>
+                <td>${card.expansion || ''}</td>
                 <td>$${card.precio.toFixed(2)}</td>
                 <td>${card.stock}</td>
                 <td>${card.categoria}</td>
@@ -678,10 +683,11 @@ async function handleSaveCard(event) {
     event.preventDefault();
     const id = cardId.value;
     
-    // GUARDA EL NUEVO CÓDIGO
+    // GUARDA EL CÓDIGO Y LA EXPANSIÓN
     const data = {
         nombre: cardName.value,
-        codigo: cardCode.value, // DATO NUEVO
+        codigo: cardCode.value, 
+        expansion: cardExpansion.value, // NUEVO
         imagen_url: cardImage.value || '',
         precio: parseFloat(cardPrice.value).toFixed(2),
         stock: parseInt(cardStock.value),
@@ -795,7 +801,8 @@ document.addEventListener('DOMContentLoaded', () => {
     cardForm = document.getElementById('cardForm');
     cardId = document.getElementById('cardId');
     cardName = document.getElementById('cardName');
-    cardCode = document.getElementById('cardCode'); // NUEVO
+    cardCode = document.getElementById('cardCode'); 
+    cardExpansion = document.getElementById('cardExpansion'); // NUEVO EVENTO
     cardImage = document.getElementById('cardImage');
     cardPrice = document.getElementById('cardPrice');
     cardStock = document.getElementById('cardStock');
@@ -936,7 +943,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (card) {
                 cardId.value = card.id; 
                 cardName.value = card.nombre; 
-                cardCode.value = card.codigo || ''; // CARGA EL CÓDIGO AL EDITAR
+                cardCode.value = card.codigo || ''; 
+                cardExpansion.value = card.expansion || ''; // CARGA LA EXPANSIÓN AL EDITAR
                 cardImage.value = card.imagen_url || '';
                 cardPrice.value = card.precio; 
                 cardStock.value = card.stock; 
