@@ -1,673 +1,192 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
-
-/* ==========================================================================
-   Base
-   ========================================================================== */
-body {
-    font-family: 'Poppins', sans-serif;
-    background-color: #f4f7f9;
-    color: #333;
+/* --- ESTILOS GENERALES Y RESET --- */
+* {
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* ==========================================================================
-   Layout Principal del Panel de Administración
-   ========================================================================== */
+body {
+    background-color: #f4f7f6;
+    color: #333;
+}
+
+/* --- LAYOUT PRINCIPAL --- */
 .admin-container {
     display: flex;
     min-height: 100vh;
 }
 
-.main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.main-header {
-    background-color: #fff;
-    padding: 20px 30px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.main-header h1 {
-    font-size: 1.5em;
-    margin: 0;
-}
-
-.header-right-controls {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.user-info {
-    font-weight: bold;
-    color: #555;
-}
-
-.admin-section {
-    padding: 30px;
-    display: none; /* Por defecto, las secciones están ocultas */
-    flex-direction: column;
-    gap: 20px;
-    transition: opacity 0.3s ease;
-}
-
-.admin-section.active {
-    display: flex; /* La sección activa se muestra */
-}
-
-/* ==========================================================================
-   Sidebar (Menú de Navegación)
-   ========================================================================== */
 .sidebar {
-    width: 250px;
-    background-color: #2d3748;
-    color: #a0aec0;
-    padding: 20px;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.3s ease-in-out;
+    width: 260px;
+    background-color: #2c3e50;
+    color: white;
+    transition: all 0.3s ease;
 }
 
-.sidebar-header {
-    margin-bottom: 30px;
-    position: relative; /* Para posicionar el botón de cerrar */
+.main-content {
+    flex-grow: 1;
+    padding: 25px;
+    background-color: #f4f7f6;
 }
 
-.sidebar-header h3 {
-    text-align: center;
-    color: #fff;
-}
-
-.sidebar-nav ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-.sidebar-nav a {
-    display: block;
-    color: #a0aec0;
-    text-decoration: none;
-    padding: 12px 15px;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    transition: background-color 0.2s ease, color 0.2s ease;
+/* --- BOTONES CUADRADOS (NUEVOS) --- */
+.btn-square {
+    width: 45px;
+    height: 45px;
     display: flex;
     align-items: center;
-    gap: 10px;
-}
-
-.sidebar-nav a:hover,
-.sidebar-nav a.active {
-    background-color: #4a5568;
-    color: #fff;
-}
-
-/* ==========================================================================
-   Controles Generales y Botones
-   ========================================================================== */
-/* Botón de añadir (el botón verde grande) */
-.add-button {
-    background-color: #48bb78;
-    color: #fff;
-    padding: 8px 16px; /* Ajuste para un tamaño compacto */
-    border-radius: 8px;
+    justify-content: center;
     border: none;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.2s ease;
-    font-size: 0.9em; /* Tamaño de fuente más pequeño */
-    max-width: 250px; /* Limita el ancho para que no se estire */
-}
-
-.add-button:hover {
-    background-color: #38a169;
-}
-
-/* Estilos comunes para todos los botones de acción */
-.refresh-button,
-.pagination-btn,
-.edit-button,
-.delete-button,
-.confirm-button,
-.cancel-button,
-.edit-sealed-product-button, 
-.delete-sealed-product-button,
-.edit-category-button,
-.delete-category-button {
-    padding: 6px 10px; /* Ajustado para un tamaño más pequeño y compacto */
     border-radius: 8px;
-    border: none;
     cursor: pointer;
-    font-weight: bold;
+    font-size: 1.2rem;
     transition: all 0.2s ease;
-    font-size: 0.8em; /* Ajustado el tamaño de la fuente para que coincida */
-    text-decoration: none; /* Elimina el subrayado de los enlaces/botones */
-    display: inline-block; /* Asegura que los enlaces se comporten como bloques para el padding */
+    color: white;
 }
 
-/* MODIFICACIÓN: Estilos agrupados para todos los botones de editar y eliminar */
-.edit-button,
-.edit-sealed-product-button,
-.edit-category-button {
-    background-color: #ecc94b; /* Amarillo */
-    color: #fff;
+.btn-green {
+    background-color: #28a745;
 }
 
-.edit-button:hover,
-.edit-sealed-product-button:hover,
-.edit-category-button:hover {
-    background-color: #d69e2e;
+.btn-green:hover {
+    background-color: #218838;
 }
 
-.delete-button,
-.delete-sealed-product-button,
-.delete-category-button {
-    background-color: #e53e3e; /* Rojo */
-    color: #fff;
+.btn-blue {
+    background-color: #007bff;
 }
 
-.delete-button:hover,
-.delete-sealed-product-button:hover,
-.delete-category-button:hover {
-    background-color: #c53030;
+.btn-blue:hover {
+    background-color: #0069d9;
 }
 
-
-.refresh-button {
-    background-color: #e2e8f0;
-    color: #2d3748;
-}
-
-.refresh-button:hover {
-    background-color: #cbd5e0;
-}
-
-.confirm-button {
-    background-color: #48bb78;
-    color: #fff;
-}
-
-.confirm-button:hover {
-    background-color: #38a169;
-}
-
-.cancel-button {
-    background-color: #e2e8f0;
-    color: #2d3748;
-}
-
-.cancel-button:hover {
-    background-color: #cbd5e0;
-}
-
-.pagination-controls {
-    text-align: center;
-    margin-top: 20px;
-}
-
-.pagination-btn {
-    background-color: #e2e8f0;
-    color: #2d3748;
-    width: 32px; /* Ajustado para un tamaño más pequeño */
-    height: 32px; /* Ajustado para un tamaño más pequeño */
-    border-radius: 50%;
-    margin: 0 5px;
-    font-size: 1.2em; /* Ajustado el tamaño de la fuente */
-    padding: 0;
-}
-
-.pagination-btn:hover:not(:disabled) {
-    background-color: #cbd5e0;
-}
-
-.pagination-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* ==========================================================================
-   Dashboard
-   ========================================================================== */
-.dashboard-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-}
-
-.stat-card {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    text-align: center;
-}
-
-.stat-card h3 {
-    margin-top: 0;
-    color: #4a5568;
-    font-size: 1em;
-}
-
-.stat-card p {
-    font-size: 2.5em;
-    font-weight: bold;
-    color: #2d3748;
-}
-
-/* ==========================================================================
-   Tablas y Listas
-   ========================================================================== */
+/* --- TABLAS Y CONTENEDORES --- */
 .table-responsive {
+    width: 100%;
     overflow-x: auto;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    background-color: #fff;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 15px;
 }
 
-table thead {
-    background-color: #2d3748;
-    color: #fff;
+table th, table td {
+    padding: 12px;
     text-align: left;
+    border-bottom: 1px solid #eee;
 }
 
-table th,
-table td {
-    padding: 15px;
-    white-space: nowrap;
-    border-bottom: 1px solid #e2e8f0;
-    vertical-align: middle; /* Alinea todo verticalmente al centro */
-}
-
-table th:first-child,
-table td:first-child {
-    padding-left: 20px;
-}
-
-table th:last-child,
-table td:last-child {
-    padding-right: 20px;
-}
-
-/* NUEVO: Estilo para la primera columna (ID) para truncar texto largo */
-table td:first-child {
-    max-width: 150px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 0.9em;
-}
-
-
-table tbody tr:hover {
-    background-color: #f7fafc;
-}
-
-table img {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 8px;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 10px;
-}
-
-/* ==========================================================================
-   Modales
-   ========================================================================== */
+/* --- MODAL (ACTUALIZADO) --- */
 .admin-modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 2000;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto;
-    background-color: rgba(0, 0, 0, 0.6);
-    justify-content: center;
-    align-items: center;
-    backdrop-filter: blur(5px);
+    background-color: rgba(0,0,0,0.6);
+    backdrop-filter: blur(3px);
 }
 
 .admin-modal-content {
     background-color: #fff;
+    margin: 5% auto;
     padding: 30px;
-    border-radius: 12px;
     width: 90%;
-    max-width: 500px;
+    max-width: 550px;
+    border-radius: 12px;
     position: relative;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-    animation: fadeIn 0.3s ease-out;
-}
-
-.admin-modal-content h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    text-align: center;
-    color: #2d3748;
-}
-
-.admin-modal-content form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.admin-modal-content label {
-    font-weight: bold;
-    color: #4a5568;
-}
-
-.admin-modal-content input[type="text"],
-.admin-modal-content input[type="url"],
-.admin-modal-content input[type="number"],
-.admin-modal-content input[type="password"] {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #cbd5e0;
-    border-radius: 8px;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    box-sizing: border-box; /* Añadido para mejor manejo de tamaño */
-}
-
-.admin-modal-content input:focus {
-    outline: none;
-    border-color: #63b3ed;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
-}
-
-.admin-modal-content button[type="submit"] {
-    margin-top: 20px;
-    padding: 12px;
-    background-color: #48bb78;
-    color: #fff;
-    font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.admin-modal-content button[type="submit"]:hover {
-    background-color: #38a169;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
 .close-button {
-    color: #aaa;
     position: absolute;
+    right: 20px;
     top: 15px;
-    right: 25px;
-    font-size: 28px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+/* --- FORMULARIOS --- */
+form label {
+    display: block;
+    margin-top: 15px;
     font-weight: bold;
-    cursor: pointer;
+    color: #444;
 }
 
-.close-button:hover {
-    color: #333;
-}
-
-.modal-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ==========================================================================
-   Estilos para los Menús Desplegables (SELECT) - ¡Nuevos estilos aquí!
-   ========================================================================== */
-.admin-modal-content select,
-.admin-select-filter {
+form input, form select {
     width: 100%;
-    padding: 12px 15px;
-    padding-right: 40px; /* Espacio para el icono de la flecha */
-    border: 1px solid #cbd5e0;
-    border-radius: 8px;
-    font-family: 'Poppins', sans-serif;
-    font-size: 1em;
-    background-color: #fff;
-    cursor: pointer;
-    -webkit-appearance: none; /* Elimina la apariencia nativa en WebKit */
-    -moz-appearance: none; /* Elimina la apariencia nativa en Mozilla */
-    appearance: none; /* Elimina la apariencia nativa */
-    background-image: url('data:image/svg+xml;utf8,<svg fill="%234a5568" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 24px;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
 }
 
-.admin-modal-content select:focus,
-.admin-select-filter:focus {
-    outline: none;
-    border-color: #63b3ed;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
-}
-
-/* ==========================================================================
-   Búsqueda
-   ========================================================================== */
-.admin-search-input {
-    width: 100%;
+#saveCardBtn {
+    background-color: #ed1c24;
+    color: white;
+    border: none;
     padding: 12px;
-    border: 1px solid #cbd5e0;
-    border-radius: 8px;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    max-width: 400px;
-    margin-bottom: 20px;
+    width: 100%;
+    margin-top: 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
 }
 
-.admin-search-input:focus {
-    outline: none;
-    border-color: #63b3ed;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
-}
-
-/* ==========================================================================
-   Password Toggle Button
-   ========================================================================== */
-.password-container {
+/* --- ESCÁNER --- */
+.scanner-container {
     position: relative;
+    max-width: 500px;
+    margin: 20px auto;
+    border-radius: 15px;
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 3/4;
+    border: 4px solid #333;
 }
 
-/* Añade padding a la derecha al input de contraseña para que no se solape con el botón */
-.password-container input[type="password"],
-.password-container input[type="text"] {
-    padding-right: 45px !important;
+#video-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-/* CORRECCIÓN: Se cambió el nombre de la clase de .toggle-password-btn a .password-toggle-btn para que coincida con el HTML */
-.password-toggle-btn {
+.scanner-overlay {
     position: absolute;
-    right: 1px; /* Posiciona el botón dentro del borde del input */
     top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #4a5568;
-    height: 100%; /* El botón ocupa toda la altura del contenedor */
-    width: 40px; /* Ancho del área clickeable */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s ease;
-    font-size: 1.1em;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 70%;
+    border: 2px solid #ed1c24;
+    border-radius: 10px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
 }
 
-.password-toggle-btn:hover {
-    color: #2d3748;
-}
-
-/* ==========================================================================
-   NUEVO: Estilos para el Modal de Detalles del Pedido
-   ========================================================================== */
-#orderDetailsModal .admin-modal-content {
-    max-width: 700px; /* Un poco más ancho para los detalles */
-}
-
-#orderDetailsContent {
-    text-align: left;
-}
-
-.customer-details, .order-items, .order-summary {
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-#orderDetailsContent h4 {
-    color: #2d3748;
-    margin-bottom: 10px;
-}
-
-#orderDetailsContent p {
-    margin: 5px 0;
-}
-
-.order-items-list {
-    max-height: 200px;
-    overflow-y: auto;
-    padding-right: 10px; /* Espacio para la barra de scroll */
-}
-
-.order-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 10px;
-}
-
-.order-item img {
-    width: 50px;
-    height: 50px;
-    object-fit: contain;
-    border-radius: 8px;
-}
-
-.order-item-info {
-    flex-grow: 1;
-}
-
-.order-actions {
-    margin-top: 20px;
-    text-align: center;
-}
-
-.order-actions select {
-    margin-bottom: 10px;
-}
-
-/* ==========================================================================
-   Responsive Design
-   ========================================================================== */
-.sidebar-toggle-btn {
-    display: none; /* Oculto por defecto en desktop */
-    background: none;
-    border: none;
-    color: #4a5568;
-    font-size: 1.5em;
-    cursor: pointer;
-}
-
-.sidebar-overlay {
-    display: none;
-    position: fixed;
+.scanner-line {
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
+    height: 2px;
+    background: #ed1c24;
+    box-shadow: 0 0 15px #ed1c24;
+    animation: scan-anim 2s infinite linear;
 }
 
-/* NUEVO: Estilos para el botón de cerrar el sidebar */
-.close-sidebar-btn {
-    display: none; /* Oculto por defecto */
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background: none;
-    border: none;
-    color: #a0aec0;
-    font-size: 2rem;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-}
-
-.close-sidebar-btn:hover {
-    color: #fff;
-}
-
-
-@media (max-width: 768px) {
-    .admin-container {
-        flex-direction: column;
-    }
-
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100%;
-        transform: translateX(-100%);
-        z-index: 1000;
-        width: 250px;
-        padding-top: 20px; /* Reducido para dar espacio al botón de cerrar */
-    }
-
-    .sidebar.active {
-        transform: translateX(0);
-    }
-
-    .sidebar-toggle-btn {
-        display: block;
-    }
-    
-    .close-sidebar-btn {
-        display: block; /* Mostrar el botón de cerrar en móvil */
-    }
-
-    .sidebar-overlay.active {
-        display: block;
-    }
-
-    .desktop-only-title {
-        display: none;
-    }
-
-    .main-header h1 {
-        font-size: 1.2em;
-    }
+@keyframes scan-anim {
+    0% { top: 0; }
+    100% { top: 100%; }
 }
