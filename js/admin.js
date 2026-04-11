@@ -362,7 +362,19 @@ async function loadAllData() {
         // Cargar Cartas
         const cardSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'cards'));
         allCards = cardSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderCardsTable();
+        
+        // Ejecutar renderizado inicial (considerando si hay una búsqueda activa)
+        const searchInput = document.getElementById('inventorySearch');
+        const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+        if (searchTerm) {
+            const filtered = allCards.filter(c => 
+                c.nombre.toLowerCase().includes(searchTerm) || 
+                c.codigo.toLowerCase().includes(searchTerm)
+            );
+            renderCardsTable(filtered);
+        } else {
+            renderCardsTable();
+        }
 
         // Cargar Sellados
         const sealedSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'));
@@ -378,9 +390,15 @@ async function loadAllData() {
     } catch (e) { console.error("Error cargando datos:", e); }
 }
 
-function renderCardsTable() {
+function renderCardsTable(cardsToRender = allCards) {
     const tbody = document.querySelector('#cardsTable tbody'); if(!tbody) return; tbody.innerHTML = '';
-    allCards.forEach(c => {
+    
+    if (cardsToRender.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px; color: #94a3b8;">No se encontraron cartas que coincidan.</td></tr>';
+        return;
+    }
+
+    cardsToRender.forEach(c => {
         const row = tbody.insertRow();
         row.innerHTML = `
             <td><img src="${c.imagen_url}" width="40" style="border-radius:4px" onerror="this.src='https://placehold.co/40x50?text=Err'"></td>
@@ -473,6 +491,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('closeSidebar')?.addEventListener('click', () => toggleSidebar(false));
     sidebarOverlay?.addEventListener('click', () => toggleSidebar(false));
     document.getElementById('btnCompareSearch')?.addEventListener('click', handleMarketComparison);
+
+    // Lógica del buscador de inventario
+    document.getElementById('inventorySearch')?.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filtered = allCards.filter(c => 
+            c.nombre.toLowerCase().includes(searchTerm) || 
+            c.codigo.toLowerCase().includes(searchTerm)
+        );
+        renderCardsTable(filtered);
+    });
 
     // Auth Listeners
     onAuthStateChanged(auth, (user) => {
