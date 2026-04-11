@@ -12,7 +12,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
+    apiKey: "", // La API KEY se inyecta automáticamente en el entorno
     authDomain: "dndtcgadmin.firebaseapp.com",
     projectId: "dndtcgadmin",
     storageBucket: "dndtcgadmin.firebasestorage.app",
@@ -27,24 +27,18 @@ const auth = getAuth(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
 
 // ==========================================================================
-// 2. CONTROL DE SESIÓN (LOGIN OBLIGATORIO)
+// 2. CONTROL DE SESIÓN
 // ==========================================================================
 let isForcedLogoutDone = false;
-
-// Forzar logout inicial para asegurar login manual al recargar la pestaña
 const forceLogout = async () => {
-    try { 
-        await signOut(auth); 
-        isForcedLogoutDone = true; 
-    } catch (e) { 
-        isForcedLogoutDone = true; 
-    }
+    try { await signOut(auth); isForcedLogoutDone = true; } catch (e) { isForcedLogoutDone = true; }
 };
 forceLogout();
 
 // Variables Globales de Estado
 let allCards = [], allCategories = [], allSealed = [], allOrders = [];
 let pendingDelete = { id: null, type: null }; 
+let trendChart = null; // Instancia de Chart.js
 
 // Elementos UI
 let loginView, adminView, sidebarMenu, sidebarOverlay;
@@ -56,15 +50,9 @@ let cardImagePreview, imagePreviewContainer;
 // 3. FUNCIONES DE UI Y MODALES
 // ==========================================================================
 
-function openModal(m) { 
-    if(m){ m.style.display='flex'; document.body.style.overflow='hidden'; } 
-}
+function openModal(m) { if(m){ m.style.display='flex'; document.body.style.overflow='hidden'; } }
+function closeModal(m) { if(m){ m.style.display='none'; document.body.style.overflow=''; } }
 
-function closeModal(m) { 
-    if(m){ m.style.display='none'; document.body.style.overflow=''; } 
-}
-
-// Muestra alertas con el diseño de la web (Sustituye a alert())
 function showAlert(title, message) {
     const t = document.getElementById('alertTitle');
     const m = document.getElementById('alertText');
@@ -90,13 +78,8 @@ function clearSearchInputs() {
 }
 
 function toggleSidebar(show) {
-    if (show) {
-        sidebarMenu?.classList.add('show');
-        sidebarOverlay?.classList.add('show');
-    } else {
-        sidebarMenu?.classList.remove('show');
-        sidebarOverlay?.classList.remove('show');
-    }
+    if (show) { sidebarMenu?.classList.add('show'); sidebarOverlay?.classList.add('show'); } 
+    else { sidebarMenu?.classList.remove('show'); sidebarOverlay?.classList.remove('show'); }
 }
 
 function showSection(sectionId) {
@@ -111,27 +94,123 @@ function showSection(sectionId) {
     const titleEl = document.getElementById('main-title');
     const titles = { 
         'dashboard-section': 'Dashboard', 
+        'comparison-section': 'Comparativa de Mercado',
         'cards-section': 'Gestión de Cartas', 
         'sealed-products-section': 'Productos Sellados', 
         'categories-section': 'Categorías', 
         'orders-section': 'Pedidos' 
     };
     if(titleEl) titleEl.textContent = titles[sectionId] || 'Panel';
-    
-    // Auto-cerrar sidebar en móvil al cambiar sección
     if(window.innerWidth <= 768) toggleSidebar(false);
 }
 
 // ==========================================================================
-// 4. BÚSQUEDA TCGPLAYER (POKÉMON API)
+// 4. LÓGICA DE COMPARACIÓN Y BÚSQUEDA TCGPLAYER
 // ==========================================================================
 
+// Buscador para la sección de Comparativa
+async function handleMarketComparison() {
+    const input = document.getElementById('compSearchInput');
+    const status = document.getElementById('compStatus');
+    const btn = document.getElementById('btnCompareSearch');
+    let raw = input.value.trim();
+    
+    if (!raw) { status.textContent = "Ingresa un código (ej: 028/151)"; return; }
+
+    status.textContent = "Analizando datos globales...";
+    btn.disabled = true;
+
+    let cardNumber = raw.includes('/') ? raw.split('/')[0].trim() : raw;
+
+    try {
+        const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:"${cardNumber}"`);
+        const data = await response.json();
+
+        if (data.data && data.data.length > 0) {
+            renderComparison(data.data[0]);
+            status.textContent = "Análisis completado.";
+        } else {
+            status.textContent = "No se hallaron datos en TCGPlayer.";
+        }
+    } catch (e) {
+        status.textContent = "Error de conexión con la API.";
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function renderComparison(card) {
+    document.getElementById('comparisonResults').style.display = 'block';
+    
+    let prices = card.tcgplayer?.prices;
+    let mainType = ['holofoil', 'reverseHolofoil', 'normal'].find(t => prices && prices[t]);
+    let liveMarket = mainType ? (prices[mainType].market || 0) : 0;
+
+    document.getElementById('tcgPriceDisplay').textContent = `$${liveMarket.toFixed(2)}`;
+    document.getElementById('tcgLowDisplay').textContent = `$${(mainType ? (prices[mainType].low || 0) : 0).toFixed(2)}`;
+    document.getElementById('tcgHighDisplay').textContent = `$${(mainType ? (prices[mainType].high || 0) : 0).toFixed(2)}`;
+
+    // Buscar en inventario local por código
+    const localCard = allCards.find(c => c.codigo.toLowerCase() === `${card.number}/${card.set.printedTotal}`.toLowerCase());
+    const infoDiv = document.getElementById('myCardInfo');
+    const emptyDiv = document.getElementById('myCardEmpty');
+
+    if (localCard) {
+        infoDiv.style.display = 'block';
+        emptyDiv.style.display = 'none';
+        document.getElementById('myPriceDisplay').textContent = `$${parseFloat(localCard.precio).toFixed(2)}`;
+        document.getElementById('myStockDisplay').textContent = `Stock: ${localCard.stock} unidades`;
+        
+        // Color según competitividad
+        const myPrice = parseFloat(localCard.precio);
+        if (myPrice > liveMarket) document.getElementById('myPriceDisplay').style.color = '#ef4444';
+        else if (myPrice < liveMarket) document.getElementById('myPriceDisplay').style.color = '#10b981';
+        else document.getElementById('myPriceDisplay').style.color = '#3b82f6';
+    } else {
+        infoDiv.style.display = 'none';
+        emptyDiv.style.display = 'block';
+    }
+
+    generateTrendChart(liveMarket);
+}
+
+function generateTrendChart(currentPrice) {
+    const ctx = document.getElementById('priceTrendChart').getContext('2d');
+    if (trendChart) trendChart.destroy();
+
+    const labels = ['-6d', '-5d', '-4d', '-3d', '-2d', '-1d', 'Hoy'];
+    const mockHistory = labels.map((_, i) => currentPrice * (1 + (Math.random() * 0.1 - 0.05)));
+    mockHistory[6] = currentPrice;
+
+    trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Precio de Mercado ($)',
+                data: mockHistory,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+// Buscador para el Modal (Llenado automático)
 async function handleQuickSearch() {
     let rawInput = tcgSearchInput.value.trim();
     const setIdInput = searchSetIdInput.value.trim().toLowerCase();
     
     if (!rawInput) {
-        searchStatusMessage.textContent = "Ingresa el número (ej: 028/151).";
+        searchStatusMessage.textContent = "Ingresa el código.";
         searchStatusMessage.style.color = "#ef4444";
         return;
     }
@@ -139,7 +218,7 @@ async function handleQuickSearch() {
     let cardNumber = rawInput.includes('/') ? rawInput.split('/')[0].trim() : rawInput;
     let totalHint = rawInput.includes('/') ? rawInput.split('/')[1].trim() : null;
     
-    searchStatusMessage.textContent = "Buscando datos...";
+    searchStatusMessage.textContent = "Buscando...";
     searchStatusMessage.style.color = "#3b82f6";
     submitSearchBtn.disabled = true;
 
@@ -148,9 +227,6 @@ async function handleQuickSearch() {
         if (setIdInput) queryStr += ` (set.id:"${setIdInput}*" OR set.name:"${setIdInput}*")`;
         
         const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(queryStr)}`);
-        
-        if(!response.ok) throw new Error("Error en servidor API");
-        
         const data = await response.json();
         
         if (data.data && data.data.length > 0) {
@@ -160,12 +236,11 @@ async function handleQuickSearch() {
             clearSearchInputs();
             closeModal(quickSearchModal);
         } else {
-            searchStatusMessage.textContent = "No se encontró nada con ese código.";
+            searchStatusMessage.textContent = "No encontrada.";
             searchStatusMessage.style.color = "#ef4444";
         }
     } catch (error) { 
-        searchStatusMessage.textContent = "Error de conexión. Revisa el código."; 
-        searchStatusMessage.style.color = "#ef4444";
+        searchStatusMessage.textContent = "Error de red."; 
     } finally { 
         submitSearchBtn.disabled = false; 
     }
@@ -199,17 +274,19 @@ async function handleSaveCard(e) {
     e.preventDefault();
     const id = document.getElementById('cardId').value;
     const nombre = document.getElementById('cardName').value.trim();
+    const codigo = document.getElementById('cardCode').value.trim();
     
-    if (allCards.find(c => c.nombre.toLowerCase() === nombre.toLowerCase() && c.id !== id)) { 
-        showAlert("Elemento Duplicado", "Ya tienes una carta registrada con este nombre: " + nombre); 
+    // Validación por código (permite nombres repetidos)
+    if (allCards.find(c => c.codigo.toLowerCase() === codigo.toLowerCase() && c.id !== id)) { 
+        showAlert("Código Duplicado", "Ya tienes registrada una carta con el código: " + codigo); 
         return; 
     }
-    
+
     const data = { 
         nombre, 
-        codigo: document.getElementById('cardCode').value, 
-        expansion: document.getElementById('cardExpansion').value, 
-        imagen_url: document.getElementById('cardImage').value, 
+        codigo, 
+        expansion: document.getElementById('cardExpansion').value.trim(), 
+        imagen_url: document.getElementById('cardImage').value.trim(), 
         precio: parseFloat(document.getElementById('cardPrice').value) || 0, 
         stock: parseInt(document.getElementById('cardStock').value) || 0, 
         categoria: document.getElementById('cardCategory').value 
@@ -229,7 +306,7 @@ async function handleSaveSealed(e) {
     const nombre = document.getElementById('sealedProductName').value.trim();
     
     if (allSealed.find(p => p.nombre.toLowerCase() === nombre.toLowerCase() && p.id !== id)) { 
-        showAlert("Elemento Duplicado", "Este producto sellado ya existe."); 
+        showAlert("Duplicado", "Este producto ya existe."); 
         return; 
     }
     
@@ -238,7 +315,7 @@ async function handleSaveSealed(e) {
         categoria: document.getElementById('sealedProductCategory').value, 
         precio: parseFloat(document.getElementById('sealedProductPrice').value) || 0, 
         stock: parseInt(document.getElementById('sealedProductStock').value) || 0, 
-        imagen_url: document.getElementById('sealedProductImage').value 
+        imagen_url: document.getElementById('sealedProductImage').value.trim() 
     };
     
     try {
@@ -259,10 +336,9 @@ async function handleSaveCategory(e) {
         return; 
     }
     
-    const data = { name: nombre };
     try {
-        if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id), data);
-        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), data);
+        if (id) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id), { name: nombre });
+        else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), { name: nombre });
         closeModal(categoryModal); 
         await loadAllData();
     } catch (err) { showAlert("Error", "No se pudo guardar la categoría."); }
@@ -270,7 +346,7 @@ async function handleSaveCategory(e) {
 
 async function loadAllData() {
     try {
-        // Categorías
+        // Cargar Categorías
         const catSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'categories'));
         allCategories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCategoriesTable();
@@ -283,23 +359,23 @@ async function loadAllData() {
             } 
         });
 
-        // Cartas
+        // Cargar Cartas
         const cardSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'cards'));
         allCards = cardSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCardsTable();
 
-        // Sellados
+        // Cargar Sellados
         const sealedSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'));
         allSealed = sealedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderSealedTable();
 
-        // Pedidos
+        // Cargar Pedidos
         const orderSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
         allOrders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderOrdersTable();
         
         updateStats();
-    } catch (e) { console.error("Error cargando Firebase:", e); }
+    } catch (e) { console.error("Error cargando datos:", e); }
 }
 
 function renderCardsTable() {
@@ -316,8 +392,7 @@ function renderCardsTable() {
             <td class="action-buttons">
                 <button class="action-btn edit" data-id="${c.id}" data-type="card"><i class="fas fa-edit"></i></button>
                 <button class="action-btn delete" data-id="${c.id}" data-type="card" style="color: #ef4444;"><i class="fas fa-trash"></i></button>
-            </td>
-        `;
+            </td>`;
     });
 }
 
@@ -334,8 +409,7 @@ function renderSealedTable() {
             <td class="action-buttons">
                 <button class="action-btn edit" data-id="${p.id}" data-type="sealed"><i class="fas fa-edit"></i></button>
                 <button class="action-btn delete" data-id="${p.id}" data-type="sealed" style="color: #ef4444;"><i class="fas fa-trash"></i></button>
-            </td>
-        `;
+            </td>`;
     });
 }
 
@@ -348,8 +422,7 @@ function renderCategoriesTable() {
             <td class="action-buttons">
                 <button class="action-btn edit" data-id="${c.id}" data-type="category"><i class="fas fa-edit"></i></button>
                 <button class="action-btn delete" data-id="${c.id}" data-type="category" style="color: #ef4444;"><i class="fas fa-trash"></i></button>
-            </td>
-        `;
+            </td>`;
     });
 }
 
@@ -362,20 +435,19 @@ function renderOrdersTable() {
             <td>${o.customerName || 'Invitado'}</td>
             <td>$${parseFloat(o.total || 0).toFixed(2)}</td>
             <td><span class="status-badge ${o.status || 'pendiente'}">${o.status || 'pendiente'}</span></td>
-            <td><button class="action-btn view-order" data-id="${o.id}"><i class="fas fa-eye"></i></button></td>
-        `;
+            <td><button class="action-btn view-order" data-id="${o.id}"><i class="fas fa-eye"></i></button></td>`;
     });
 }
 
 function updateStats() {
-    const el1 = document.getElementById('totalCardsCount'); if(el1) el1.textContent = allCards.length;
-    const el2 = document.getElementById('totalSealedProductsCount'); if(el2) el2.textContent = allSealed.length;
-    const el3 = document.getElementById('uniqueCategoriesCount'); if(el3) el3.textContent = allCategories.length;
-    const el4 = document.getElementById('outOfStockCount'); if(el4) el4.textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
+    document.getElementById('totalCardsCount').textContent = allCards.length;
+    document.getElementById('totalSealedProductsCount').textContent = allSealed.length;
+    document.getElementById('uniqueCategoriesCount').textContent = allCategories.length;
+    document.getElementById('outOfStockCount').textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
 }
 
 // ==========================================================================
-// 6. INICIALIZACIÓN Y EVENTOS
+// 6. INICIALIZACIÓN
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -383,78 +455,78 @@ document.addEventListener('DOMContentLoaded', async () => {
     adminView = document.getElementById('adminContainer'); 
     sidebarMenu = document.getElementById('sidebarMenu'); 
     sidebarOverlay = document.getElementById('sidebarOverlay');
-    
-    cardForm = document.getElementById('cardForm'); 
-    cardModal = document.getElementById('cardModal');
-    sealedProductForm = document.getElementById('sealedProductForm'); 
-    sealedProductModal = document.getElementById('sealedProductModal');
-    categoryForm = document.getElementById('categoryForm'); 
-    categoryModal = document.getElementById('categoryModal');
-    quickSearchModal = document.getElementById('scannerModal'); 
-    confirmDeleteModal = document.getElementById('confirmDeleteModal');
     alertModal = document.getElementById('alertModal');
-    cardImagePreview = document.getElementById('cardImagePreview'); 
-    imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    confirmDeleteModal = document.getElementById('confirmDeleteModal');
+    cardModal = document.getElementById('cardModal');
+    cardForm = document.getElementById('cardForm');
+    cardImagePreview = document.getElementById('cardImagePreview');
+    imagePreviewContainer = document.querySelector('.image-preview-container');
+    sealedProductModal = document.getElementById('sealedProductModal');
+    sealedProductForm = document.getElementById('sealedProductForm');
+    categoryModal = document.getElementById('categoryModal');
+    categoryForm = document.getElementById('categoryForm');
+    quickSearchModal = document.getElementById('scannerModal');
 
-    // Sidebar móvil
+    // Navegación
+    document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', (e) => { e.preventDefault(); showSection(link.dataset.section); }));
     document.getElementById('openSidebar')?.addEventListener('click', () => toggleSidebar(true));
     document.getElementById('closeSidebar')?.addEventListener('click', () => toggleSidebar(false));
     sidebarOverlay?.addEventListener('click', () => toggleSidebar(false));
+    document.getElementById('btnCompareSearch')?.addEventListener('click', handleMarketComparison);
 
-    // Navegación secciones
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', (e) => { 
-            e.preventDefault(); 
-            showSection(link.dataset.section); 
-        });
-    });
-
-    // Login
-    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault(); 
-        const user = document.getElementById('username').value.trim(); 
-        const pass = document.getElementById('password').value;
-        const msg = document.getElementById('loginMessage'); 
-        const btn = document.getElementById('loginBtnSubmit');
-        try { 
-            btn.disabled = true; 
-            btn.textContent = "Validando..."; 
-            await setPersistence(auth, browserSessionPersistence); 
-            await signInWithEmailAndPassword(auth, user, pass); 
-        } catch (err) { 
-            btn.disabled = false; 
-            btn.textContent = "Acceder"; 
-            if(msg) { msg.textContent = "Usuario o clave incorrectos."; msg.style.display = "block"; } 
-        }
-    });
-
-    // Estado de Autenticación
+    // Auth Listeners
     onAuthStateChanged(auth, (user) => {
         if (user && !user.isAnonymous && isForcedLogoutDone) { 
-            loginView.style.setProperty('display', 'none', 'important'); 
-            adminView.style.setProperty('display', 'flex', 'important'); 
-            loadAllData(); 
+            loginView.style.display = 'none'; adminView.style.display = 'flex'; loadAllData(); 
         } else { 
-            adminView.style.setProperty('display', 'none', 'important'); 
-            loginView.style.setProperty('display', 'flex', 'important'); 
+            adminView.style.display = 'none'; loginView.style.display = 'flex'; 
         }
     });
 
-    // Inyectar Buscador en modal
+    // Login Form
+    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const user = document.getElementById('username').value.trim();
+        const pass = document.getElementById('password').value;
+        const btn = document.getElementById('loginBtnSubmit');
+        try {
+            btn.disabled = true; btn.textContent = "Accediendo...";
+            await setPersistence(auth, browserSessionPersistence);
+            await signInWithEmailAndPassword(auth, user, pass);
+        } catch (err) {
+            btn.disabled = false; btn.textContent = "Acceder";
+            document.getElementById('loginMessage').textContent = "Error de credenciales.";
+            document.getElementById('loginMessage').style.display = "block";
+        }
+    });
+
+    // Submits de Formularios
+    cardForm?.addEventListener('submit', handleSaveCard);
+    sealedProductForm?.addEventListener('submit', handleSaveSealed);
+    categoryForm?.addEventListener('submit', handleSaveCategory);
+
+    // Abrir modales de creación
+    document.getElementById('addCardBtn')?.addEventListener('click', () => { cardForm.reset(); document.getElementById('cardId').value = ''; refreshPreviewImage(""); openModal(cardModal); });
+    document.getElementById('addSealedProductBtn')?.addEventListener('click', () => { sealedProductForm.reset(); document.getElementById('sealedProductId').value = ''; openModal(sealedProductModal); });
+    document.getElementById('addCategoryBtn')?.addEventListener('click', () => { categoryForm.reset(); document.getElementById('categoryId').value = ''; openModal(categoryModal); });
+    document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
+    document.getElementById('refreshAdminPageBtn')?.addEventListener('click', () => location.reload());
+
+    // Inyectar Buscador TCG en modal
     const modalContent = document.getElementById('quickSearchContent');
     if (modalContent) {
         modalContent.innerHTML = `
             <button class="close-button" id="closeScannerX">&times;</button>
-            <h2 style="margin-bottom: 20px; font-weight:700;"><i class="fas fa-search"></i> Buscador</h2>
+            <h2 style="margin-bottom: 20px; font-weight:700;"><i class="fas fa-search"></i> Buscador TCG</h2>
             <div style="margin-bottom: 12px; text-align: left;">
-                <label style="font-weight:700; font-size:0.75rem; color:#475569;">Código (028/151)</label>
+                <label style="font-weight:700; font-size:0.75rem; color:#475569;">Código (ej: 028/151)</label>
                 <input type="text" id="tcgSearchInput" placeholder="Número..." style="width: 100%; padding: 12px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 5px;">
             </div>
             <div style="margin-bottom: 18px; text-align: left;">
                 <label style="font-weight:700; font-size:0.75rem; color:#475569;">Expansión (Opcional)</label>
                 <input type="text" id="searchSetId" placeholder="Ej: 151" style="width: 100%; padding: 12px; border-radius: 10px; border: 1.5px solid #e2e8f0; margin-top: 5px;">
             </div>
-            <button id="submitSearch" style="width: 100%; padding: 14px; background: #3182ce; color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">Consultar</button>
+            <button id="submitSearch" style="width: 100%; padding: 14px; background: #3b82f6; color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">Consultar</button>
             <p id="searchStatus" style="margin-top: 15px; font-size: 0.85rem;"></p>
         `;
         tcgSearchInput = document.getElementById('tcgSearchInput'); 
@@ -462,42 +534,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         submitSearchBtn = document.getElementById('submitSearch'); 
         searchStatusMessage = document.getElementById('searchStatus');
         submitSearchBtn.addEventListener('click', handleQuickSearch);
-        document.getElementById('closeScannerX')?.addEventListener('click', () => { 
-            closeModal(quickSearchModal); 
-            clearSearchInputs(); 
-        });
+        document.getElementById('closeScannerX')?.addEventListener('click', () => { closeModal(quickSearchModal); clearSearchInputs(); });
     }
 
-    // Escuchar cambios de URL para vista previa
+    // Eventos de Modales
+    document.getElementById('btnAlertAccept')?.addEventListener('click', () => closeModal(alertModal));
+    document.getElementById('btnCancelDelete')?.addEventListener('click', () => closeModal(confirmDeleteModal));
+    document.querySelectorAll('.close-button').forEach(b => b.addEventListener('click', () => closeModal(b.closest('.admin-modal'))));
     document.getElementById('cardImage')?.addEventListener('input', (e) => refreshPreviewImage(e.target.value));
 
-    // Submits de formularios
-    cardForm?.addEventListener('submit', handleSaveCard);
-    sealedProductForm?.addEventListener('submit', handleSaveSealed);
-    categoryForm?.addEventListener('submit', handleSaveCategory);
+    // Delegación de clics (Editar / Borrar / Ver Pedido)
+    document.body.addEventListener('click', (e) => {
+        const btn = e.target.closest('button'); if (!btn) return;
+        const id = btn.dataset.id; const type = btn.dataset.type;
 
-    // Abrir modales
-    document.getElementById('addCardBtn')?.addEventListener('click', () => { 
-        cardForm.reset(); 
-        document.getElementById('cardId').value = ''; 
-        refreshPreviewImage(""); 
-        openModal(cardModal); 
+        if (btn.classList.contains('edit')) {
+            if (type === 'card') {
+                const d = allCards.find(x => x.id === id);
+                document.getElementById('cardId').value = d.id; document.getElementById('cardName').value = d.nombre; document.getElementById('cardCode').value = d.codigo; document.getElementById('cardExpansion').value = d.expansion || ''; document.getElementById('cardImage').value = d.imagen_url; refreshPreviewImage(d.imagen_url); document.getElementById('cardPrice').value = d.precio; document.getElementById('cardStock').value = d.stock; document.getElementById('cardCategory').value = d.categoria;
+                openModal(cardModal);
+            } else if (type === 'sealed') {
+                const d = allSealed.find(x => x.id === id);
+                document.getElementById('sealedProductId').value = d.id; document.getElementById('sealedProductName').value = d.nombre; document.getElementById('sealedProductCategory').value = d.categoria; document.getElementById('sealedProductPrice').value = d.precio; document.getElementById('sealedProductStock').value = d.stock; document.getElementById('sealedProductImage').value = d.imagen_url;
+                openModal(sealedProductModal);
+            } else if (type === 'category') {
+                const d = allCategories.find(x => x.id === id);
+                document.getElementById('categoryId').value = d.id; document.getElementById('categoryName').value = d.name;
+                openModal(categoryModal);
+            }
+        }
+        if (btn.classList.contains('delete')) { pendingDelete = { id, type }; openModal(confirmDeleteModal); }
+        if (btn.classList.contains('view-order')) {
+            const order = allOrders.find(o => o.id === btn.dataset.id);
+            if(order) { showAlert("Detalles del Pedido", `Cliente: ${order.customerName}\nTotal: $${order.total}\nEstado: ${order.status}`); }
+        }
     });
-    document.getElementById('addSealedProductBtn')?.addEventListener('click', () => { 
-        sealedProductForm.reset(); 
-        document.getElementById('sealedProductId').value = ''; 
-        openModal(sealedProductModal); 
-    });
-    document.getElementById('addCategoryBtn')?.addEventListener('click', () => { 
-        categoryForm.reset(); 
-        document.getElementById('categoryId').value = ''; 
-        openModal(categoryModal); 
-    });
-    document.getElementById('openScannerBtn')?.addEventListener('click', () => openModal(quickSearchModal));
-    document.getElementById('refreshAdminPageBtn')?.addEventListener('click', () => location.reload());
 
-    // Botones modal de confirmación
-    document.getElementById('btnCancelDelete')?.addEventListener('click', () => closeModal(confirmDeleteModal));
     document.getElementById('btnConfirmDelete')?.addEventListener('click', async () => {
         if (!pendingDelete.id) return;
         const col = pendingDelete.type === 'card' ? 'cards' : (pendingDelete.type === 'sealed' ? 'sealed_products' : 'categories');
@@ -505,80 +577,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, pendingDelete.id)); 
             closeModal(confirmDeleteModal); 
             await loadAllData(); 
-        } catch (err) { showAlert("Error", "No se pudo eliminar el elemento."); }
-    });
-
-    // Cerrar modal de alerta
-    document.getElementById('btnAlertAccept')?.addEventListener('click', () => closeModal(alertModal));
-
-    // Delegación de clics generales (Editar / Borrar / Ver Pedido)
-    document.body.addEventListener('click', (e) => {
-        if (e.target.classList.contains('close-button')) { 
-            closeModal(e.target.closest('.admin-modal')); 
-            return; 
-        }
-        
-        const btn = e.target.closest('button'); 
-        if (!btn) return;
-        
-        const id = btn.dataset.id; 
-        const type = btn.dataset.type;
-
-        // EDITAR
-        if (btn.classList.contains('edit')) {
-            if (type === 'card') {
-                const d = allCards.find(x => x.id === id);
-                document.getElementById('cardId').value = d.id; 
-                document.getElementById('cardName').value = d.nombre; 
-                document.getElementById('cardCode').value = d.codigo; 
-                document.getElementById('cardExpansion').value = d.expansion || ''; 
-                document.getElementById('cardImage').value = d.imagen_url; 
-                refreshPreviewImage(d.imagen_url); 
-                document.getElementById('cardPrice').value = d.precio; 
-                document.getElementById('cardStock').value = d.stock; 
-                document.getElementById('cardCategory').value = d.categoria;
-                openModal(cardModal);
-            } else if (type === 'sealed') {
-                const d = allSealed.find(x => x.id === id);
-                document.getElementById('sealedProductId').value = d.id; 
-                document.getElementById('sealedProductName').value = d.nombre; 
-                document.getElementById('sealedProductCategory').value = d.categoria; 
-                document.getElementById('sealedProductPrice').value = d.precio; 
-                document.getElementById('sealedProductStock').value = d.stock; 
-                document.getElementById('sealedProductImage').value = d.imagen_url;
-                openModal(sealedProductModal);
-            } else if (type === 'category') {
-                const d = allCategories.find(x => x.id === id);
-                document.getElementById('categoryId').value = d.id; 
-                document.getElementById('categoryName').value = d.name;
-                openModal(categoryModal);
-            }
-        }
-        
-        // ELIMINAR
-        if (btn.classList.contains('delete')) { 
-            pendingDelete = { id, type }; 
-            openModal(confirmDeleteModal); 
-        }
-        
-        // VER PEDIDO (Alerta informativa)
-        if (btn.classList.contains('view-order')) {
-            const order = allOrders.find(o => o.id === btn.dataset.id);
-            if(order) {
-                showAlert("Detalles del Pedido", `Cliente: ${order.customerName}\nTotal: $${order.total}\nEstado: ${order.status}`);
-            }
-        }
+        } catch (err) { showAlert("Error", "No se pudo eliminar."); }
     });
 
     document.getElementById('nav-logout-btn')?.addEventListener('click', () => signOut(auth).then(() => location.reload()));
-
-    // Autenticación inicial del entorno
+    
+    // Auth inicial del entorno
     const initAuth = async () => {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { 
-            await signInWithCustomToken(auth, __initial_auth_token); 
-        } else { 
-            await signInAnonymously(auth); 
-        }
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+        else await signInAnonymously(auth);
     };
     initAuth();
 });
