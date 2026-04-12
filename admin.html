@@ -4,75 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DND TCG Admin - Panel Profesional</title>
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS Externo -->
+    <link rel="stylesheet" href="css/admin.css">
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-        body { background-color: #f1f5f9; color: #334155; overflow-x: hidden; }
-
-        /* --- LOGIN --- */
-        #loginModal { 
-            display: flex; position: fixed; top: 0; left: 0; 
-            width: 100vw; height: 100vh; background: linear-gradient(135deg, #f6f8fb 0%, #e9edf3 100%); 
-            z-index: 99999; align-items: center; justify-content: center;
-        }
-        .login-card {
-            background: white; padding: 45px; border-radius: 35px; width: 95%; max-width: 440px; 
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); text-align: center;
-        }
-        .login-icon {
-            width: 70px; height: 70px; background: #eff6ff; border-radius: 20px; 
-            display: flex; align-items: center; justify-content: center; margin: 0 auto 25px;
-        }
-        .login-field { position: relative; margin-bottom: 20px; text-align: left; }
-        .login-field i { position: absolute; left: 15px; top: 42px; color: #94a3b8; }
-        .login-field label { display: block; font-size: 0.75rem; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; }
-        .login-field input { width: 100%; padding: 14px 15px 14px 45px; border: 2px solid #e2e8f0; border-radius: 14px; font-size: 0.95rem; outline: none; background: #f8fafc; transition: 0.3s; }
-        .login-field input:focus { border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
-
-        /* --- LAYOUT --- */
-        .admin-container { display: none; min-height: 100vh; flex-direction: row; }
-        .sidebar { width: 260px; background: #1e293b; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; z-index: 1001; }
-        .sidebar-header { padding: 25px; border-bottom: 1px solid #334155; }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 15px 25px; color: #94a3b8; text-decoration: none; transition: 0.3s; cursor: pointer; }
-        .nav-link:hover, .nav-link.active { background: #334155; color: white; border-left: 4px solid #3b82f6; }
-
-        .main-content { flex: 1; padding: 20px; width: 100%; overflow-x: hidden; }
-        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-
-        /* --- DASHBOARD --- */
-        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-        .stat-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .stat-card h3 { font-size: 0.75rem; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
-        .stat-card p { font-size: 1.8rem; font-weight: 700; color: #1e293b; }
-
-        /* --- TABLAS --- */
-        .table-responsive { background: white; border-radius: 16px; overflow-x: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        th { background: #f8fafc; padding: 12px 15px; font-size: 0.7rem; text-transform: uppercase; color: #64748b; font-weight: 700; text-align: left; }
-        td { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
-
-        /* --- MODALES --- */
-        .admin-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 15px; }
-        .admin-modal-content { background: white; padding: 30px; border-radius: 28px; position: relative; width: 100%; max-width: 500px; max-height: 95vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
-        .admin-modal-content.wide { max-width: 880px; }
-        .close-button { position: absolute; top: 20px; right: 20px; font-size: 1.4rem; cursor: pointer; color: #94a3b8; border: none; background: none; }
-
-        .confirm-button { background: #3b82f6; color: white; border: none; padding: 14px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .add-button { background: #3b82f6; color: white; width: 42px; height: 42px; border-radius: 10px; border: none; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
-        .search-bar-container { position: relative; flex: 1; max-width: 300px; }
-        .search-bar-container i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
-        .search-bar-container input { width: 100%; padding: 10px 15px 10px 35px; border: 1.5px solid #e2e8f0; border-radius: 12px; outline: none; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
 </head>
 <body>
 
-    <!-- LOGIN -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- MODAL DE LOGIN -->
     <div id="loginModal">
         <div class="login-card">
             <div class="login-icon"><i class="fas fa-lock" style="color: #3b82f6; font-size: 1.8rem;"></i></div>
@@ -115,27 +60,43 @@
         <main class="main-content">
             <header class="main-header"><h2 id="main-title" style="font-weight: 800;">Dashboard</h2></header>
 
+            <!-- SECCIONES -->
             <section id="dashboard-section" class="admin-section active">
                 <div class="dashboard-stats">
                     <div class="stat-card"><h3>Total Cartas</h3><p id="totalCardsCount">0</p></div>
                     <div class="stat-card"><h3>Sin Stock</h3><p id="outOfStockCount" style="color: #ef4444;">0</p></div>
                     <div class="stat-card"><h3>Sellados</h3><p id="sealedCount">0</p></div>
+                    <div class="stat-card"><h3>Categorías</h3><p id="uniqueCategoriesCount">0</p></div>
                 </div>
             </section>
 
             <section id="cards-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px;">
-                    <div class="search-bar-container"><i class="fas fa-search"></i><input type="text" id="inventorySearch" placeholder="Nombre o código..."></div>
+                    <div class="search-bar-container">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="inventorySearch" placeholder="Nombre o código...">
+                    </div>
                     <div style="display: flex; gap: 10px;">
-                        <button class="confirm-button" style="background: #10b981;" onclick="window.openModalUI(document.getElementById('scannerModal'))"><i class="fas fa-search"></i> TCG Player</button>
-                        <button id="addCardBtn" class="add-button" onclick="window.openNewCardModal()"><i class="fas fa-plus"></i></button>
+                        <button class="confirm-button" style="background: #10b981;" onclick="window.openModalUI(document.getElementById('scannerModal'))">
+                            <i class="fas fa-search"></i> TCG Player
+                        </button>
+                        <button id="addCardBtn" class="add-button" onclick="window.openNewCardModal()">
+                            <i class="fas fa-plus"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="table-responsive"><table id="cardsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+                <div class="table-responsive">
+                    <table id="cardsTable">
+                        <thead>
+                            <tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </section>
 
             <section id="comparison-section" class="admin-section">
-                <div style="background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div class="comparison-container" style="background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                     <h3 style="margin-bottom: 15px;">Comparativa de Mercado</h3>
                     <div style="display: flex; gap: 12px; margin-bottom: 20px;">
                         <input type="text" id="compSearchInput" placeholder="Ej: 028/151" style="flex: 1; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 14px;">
@@ -152,7 +113,14 @@
                     <h3>Productos Sellados</h3>
                     <button class="add-button" onclick="window.openNewSealedModal()"><i class="fas fa-plus"></i></button>
                 </div>
-                <div class="table-responsive"><table id="sealedProductsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+                <div class="table-responsive">
+                    <table id="sealedProductsTable">
+                        <thead>
+                            <tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </section>
 
             <section id="categories-section" class="admin-section">
@@ -160,12 +128,26 @@
                     <h3>Categorías</h3>
                     <button class="add-button" onclick="window.openNewCategoryModal()"><i class="fas fa-plus"></i></button>
                 </div>
-                <div class="table-responsive" style="max-width: 600px;"><table id="categoriesTable"><thead><tr><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+                <div class="table-responsive" style="max-width: 600px;">
+                    <table id="categoriesTable">
+                        <thead>
+                            <tr><th>Nombre</th><th>Acciones</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </section>
 
             <section id="orders-section" class="admin-section">
                 <h3>Pedidos Recientes</h3>
-                <div class="table-responsive"><table id="ordersTable"><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+                <div class="table-responsive">
+                    <table id="ordersTable">
+                        <thead>
+                            <tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </section>
         </main>
     </div>
@@ -201,7 +183,7 @@
         </div>
     </div>
 
-    <!-- OTROS MODALES -->
+    <!-- MODALES DE APOYO -->
     <div id="sealedProductModal" class="admin-modal">
         <div class="admin-modal-content">
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('sealedProductModal'))">&times;</button>
@@ -247,6 +229,7 @@
         </div>
     </div>
 
+    <!-- Script Principal como Módulo -->
     <script type="module" src="js/admin.js"></script>
 </body>
 </html>
