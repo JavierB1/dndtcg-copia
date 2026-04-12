@@ -1,6 +1,3 @@
-// ==========================================================================
-// 1. CONFIGURACIÓN Y SERVICIOS DE FIREBASE (11.6.1)
-// ==========================================================================
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { 
     getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
@@ -10,6 +7,7 @@ import {
     getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
+// Configuración de Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
     authDomain: "dndtcgadmin.firebaseapp.com",
@@ -24,18 +22,27 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const appId = firebaseConfig.projectId;
 
-// ==========================================================================
-// 2. VARIABLES DE ESTADO
-// ==========================================================================
+// Variables de estado global
 let allCards = [], allCategories = [], allSealed = [], allOrders = [];
 let trendChart = null;
 let isForcedLogoutDone = false;
 
 // ==========================================================================
-// 3. UI HELPERS (VINCULADOS A WINDOW)
+// AYUDAS DE INTERFAZ (UI HELPERS)
 // ==========================================================================
-window.openModalUI = (m) => { if(m) { m.style.display = 'flex'; document.body.style.overflow = 'hidden'; } };
-window.closeModalUI = (m) => { if(m) { m.style.display = 'none'; document.body.style.overflow = ''; } };
+window.openModalUI = (m) => { 
+    if(m) { 
+        m.style.display = 'flex'; 
+        document.body.style.overflow = 'hidden'; 
+    } 
+};
+
+window.closeModalUI = (m) => { 
+    if(m) { 
+        m.style.display = 'none'; 
+        document.body.style.overflow = ''; 
+    } 
+};
 
 window.showAlertUI = (title, text) => {
     const t = document.getElementById('alertTitle');
@@ -50,13 +57,17 @@ window.refreshPreviewUI = (url) => {
     const icon = document.getElementById('placeholderIcon');
     if (img && icon) {
         if (url && url.startsWith('http')) {
-            img.src = url; img.style.display = 'block'; icon.style.display = 'none';
+            img.src = url; 
+            img.style.display = 'block'; 
+            icon.style.display = 'none';
         } else {
-            img.style.display = 'none'; icon.style.display = 'block';
+            img.style.display = 'none'; 
+            icon.style.display = 'block';
         }
     }
 };
 
+// Abrir modal de carta nueva (Limpieza total)
 window.openNewCardModal = () => {
     const form = document.getElementById('cardForm');
     if(form) form.reset();
@@ -65,13 +76,12 @@ window.openNewCardModal = () => {
     window.openModalUI(document.getElementById('cardModal'));
 };
 
-// Cambio solicitado: Limpieza del buscador TCG al abrir
+// Abrir buscador TCG (Limpieza total y prioridad de código)
 window.openTCGScanner = () => {
     const codeIn = document.getElementById('tcgSearchInput');
     const expIn = document.getElementById('tcgSetInput');
     const status = document.getElementById('searchStatus');
     
-    // Limpieza de datos anteriores
     if(codeIn) codeIn.value = '';
     if(expIn) expIn.value = '';
     if(status) status.textContent = '';
@@ -96,10 +106,15 @@ window.openNewCategoryModal = () => {
 window.logoutUI = () => signOut(auth).then(() => location.reload());
 
 // ==========================================================================
-// 4. CONTROL DE SESIÓN
+// CONTROL DE SESIÓN
 // ==========================================================================
 const forceLogout = async () => {
-    try { await signOut(auth); isForcedLogoutDone = true; } catch (e) { isForcedLogoutDone = true; }
+    try { 
+        await signOut(auth); 
+        isForcedLogoutDone = true; 
+    } catch (e) { 
+        isForcedLogoutDone = true; 
+    }
 };
 forceLogout();
 
@@ -117,21 +132,24 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ==========================================================================
-// 5. CARGA DE DATOS (REALTIME)
+// CARGA DE DATOS DESDE FIRESTORE
 // ==========================================================================
 function loadAllData() {
+    // Suscripción a Cartas
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'cards')), (snap) => {
         allCards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         filterAndRenderCards();
         updateStats();
     });
 
+    // Suscripción a Productos Sellados
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products')), (snap) => {
         allSealed = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderSealedTable();
         updateStats();
     });
 
+    // Suscripción a Categorías
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'categories')), (snap) => {
         allCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCategoriesTable();
@@ -139,6 +157,7 @@ function loadAllData() {
         updateStats();
     });
 
+    // Suscripción a Pedidos
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'orders')), (snap) => {
         allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderOrdersTable();
@@ -146,7 +165,7 @@ function loadAllData() {
 }
 
 // ==========================================================================
-// 6. RENDERIZADO DE TABLAS
+// RENDERIZADO DE TABLAS
 // ==========================================================================
 function filterAndRenderCards() {
     const term = document.getElementById('inventorySearch')?.value.toLowerCase();
@@ -157,7 +176,6 @@ function filterAndRenderCards() {
     renderCardsTable(filtered);
 }
 
-// Cambio solicitado: Agregar columna de expansión en la tabla
 function renderCardsTable(list) {
     const tbody = document.querySelector('#cardsTable tbody');
     if(!tbody) return;
@@ -172,8 +190,8 @@ function renderCardsTable(list) {
             <td style="font-weight:700; color:#3b82f6;">$${parseFloat(c.precio).toFixed(2)}</td>
             <td><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 8px; font-weight: 600;">${c.stock}</span></td>
             <td>
-                <button onclick="window.editCard('${c.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
-                <button onclick="window.deleteCard('${c.id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:12px;"><i class="fas fa-trash"></i></button>
+                <button onclick="window.editCard('${c.id}')" style="color:#3b82f6; border:none; background:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                <button onclick="window.deleteCard('${c.id}')" style="color:#ef4444; border:none; background:none; cursor:pointer; margin-left:12px;"><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -193,8 +211,8 @@ function renderSealedTable() {
             <td>$${parseFloat(p.precio).toFixed(2)}</td>
             <td>${p.stock}</td>
             <td>
-                <button onclick="window.editSealed('${p.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
-                <button onclick="window.deleteSealed('${p.id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:10px;"><i class="fas fa-trash"></i></button>
+                <button onclick="window.editSealed('${p.id}')" style="color:#3b82f6; border:none; background:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                <button onclick="window.deleteSealed('${p.id}')" style="color:#ef4444; border:none; background:none; cursor:pointer; margin-left:10px;"><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -210,8 +228,8 @@ function renderCategoriesTable() {
         tr.innerHTML = `
             <td>${c.name}</td>
             <td>
-                <button onclick="window.editCategory('${c.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
-                <button onclick="window.deleteCategory('${c.id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:10px;"><i class="fas fa-trash"></i></button>
+                <button onclick="window.editCategory('${c.id}')" style="color:#3b82f6; border:none; background:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                <button onclick="window.deleteCategory('${c.id}')" style="color:#ef4444; border:none; background:none; cursor:pointer; margin-left:10px;"><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -229,14 +247,14 @@ function renderOrdersTable() {
             <td>${o.customerName || 'Invitado'}</td>
             <td>$${parseFloat(o.total || 0).toFixed(2)}</td>
             <td>${o.status}</td>
-            <td><button onclick="window.viewOrder('${o.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer;"><i class="fas fa-eye"></i></button></td>
+            <td><button onclick="window.viewOrder('${o.id}')" style="color:#3b82f6; border:none; background:none; cursor:pointer;"><i class="fas fa-eye"></i></button></td>
         `;
         tbody.appendChild(tr);
     });
 }
 
 // ==========================================================================
-// 7. CRUD FUNCTIONS (WINDOW)
+// FUNCIONES CRUD
 // ==========================================================================
 window.editCard = (id) => {
     const card = allCards.find(c => c.id === id);
@@ -252,10 +270,9 @@ window.editCard = (id) => {
     window.openModalUI(document.getElementById('cardModal'));
 };
 
-window.deleteCard = async (id) => {
-    if (confirm("¿Eliminar carta definitivamente?")) {
-        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id));
-    }
+window.deleteCard = async (id) => { 
+    if (confirm("¿Eliminar carta definitivamente?")) 
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id)); 
 };
 
 window.editSealed = (id) => {
@@ -270,10 +287,9 @@ window.editSealed = (id) => {
     window.openModalUI(document.getElementById('sealedProductModal'));
 };
 
-window.deleteSealed = async (id) => {
-    if(confirm("¿Eliminar producto sellado?")) {
-        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id));
-    }
+window.deleteSealed = async (id) => { 
+    if(confirm("¿Eliminar producto?")) 
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id)); 
 };
 
 window.editCategory = (id) => {
@@ -284,33 +300,32 @@ window.editCategory = (id) => {
     window.openModalUI(document.getElementById('categoryModal'));
 };
 
-window.deleteCategory = async (id) => {
-    if(confirm("¿Eliminar categoría?")) {
-        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id));
-    }
+window.deleteCategory = async (id) => { 
+    if(confirm("¿Eliminar categoría?")) 
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id)); 
 };
 
-window.viewOrder = (id) => {
-    const o = allOrders.find(x => x.id === id);
-    if(o) window.showAlertUI("Detalle del Pedido", `Cliente: ${o.customerName}\nTotal: $${o.total}\nEstado: ${o.status}`);
+window.viewOrder = (id) => { 
+    const o = allOrders.find(x => x.id === id); 
+    if(o) window.showAlertUI("Detalle del Pedido", `Cliente: ${o.customerName}\nTotal: $${o.total}\nEstado: ${o.status}`); 
 };
 
 // ==========================================================================
-// 8. TCG PLAYER API
+// LÓGICA DE API TCGPLAYER
 // ==========================================================================
 window.handleTCGSearchUI = async () => {
-    const input = document.getElementById('tcgSearchInput');
-    const setInput = document.getElementById('tcgSetInput');
+    const codeIn = document.getElementById('tcgSearchInput');
+    const expIn = document.getElementById('tcgSetInput');
     const status = document.getElementById('searchStatus');
     const btn = document.getElementById('submitSearch');
-    if(!input?.value.trim()) return;
+    if(!codeIn?.value.trim()) return;
     
     btn.disabled = true;
     btn.textContent = "Buscando...";
     status.textContent = "";
     
-    let num = input.value.trim().split('/')[0];
-    let expansion = setInput?.value.trim();
+    let num = codeIn.value.trim().split('/')[0];
+    let expansion = expIn?.value.trim();
     
     try {
         let apiUrl = `https://api.pokemontcg.io/v2/cards?q=number:"${num}"`;
@@ -326,8 +341,7 @@ window.handleTCGSearchUI = async () => {
             document.getElementById('cardExpansion').value = c.set.name;
             document.getElementById('cardCode').value = `${c.number}/${c.set.printedTotal}`;
             document.getElementById('cardImage').value = c.images.large;
-            const p = c.tcgplayer?.prices;
-            const market = (p?.holofoil?.market || p?.normal?.market || 0);
+            const market = (c.tcgplayer?.prices?.holofoil?.market || c.tcgplayer?.prices?.normal?.market || 0);
             document.getElementById('cardPrice').value = market.toFixed(2);
             document.getElementById('cardStock').value = 1;
             window.refreshPreviewUI(c.images.large);
@@ -339,7 +353,7 @@ window.handleTCGSearchUI = async () => {
         }
     } catch (e) { 
         status.textContent = "Error de conexión."; 
-        status.style.color = "#ef4444";
+        status.style.color = "#ef4444"; 
     }
     btn.disabled = false;
     btn.textContent = "Consultar";
@@ -367,36 +381,38 @@ function renderChartUI(price) {
     if(trendChart) trendChart.destroy();
     trendChart = new Chart(ctx, {
         type: 'line',
-        data: {
-            labels: ['-6d', '-5d', '-4d', '-3d', '-2d', '-1d', 'Hoy'],
-            datasets: [{
-                label: 'Mercado ($)',
-                data: [0.98, 1.02, 0.95, 1.05, 1, 1.08, 1].map(f => price * f),
-                borderColor: '#3b82f6', fill: true, tension: 0.4, backgroundColor: 'rgba(59, 130, 246, 0.1)'
-            }]
+        data: { 
+            labels: ['-6d', '-5d', '-4d', '-3d', '-2d', '-1d', 'Hoy'], 
+            datasets: [{ 
+                label: 'Mercado ($)', 
+                data: [0.98, 1.02, 0.95, 1.05, 1, 1.08, 1].map(f => price * f), 
+                borderColor: '#3b82f6', 
+                fill: true, 
+                tension: 0.4, 
+                backgroundColor: 'rgba(59, 130, 246, 0.1)' 
+            }] 
         },
         options: { responsive: true, maintainAspectRatio: false }
     });
 }
 
 // ==========================================================================
-// 9. EVENT LISTENERS
+// EVENTOS PRINCIPALES
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     const qs = document.getElementById('quickSearchContent');
     if (qs) {
-        // Prioridad: Código arriba, Expansión abajo
         qs.innerHTML = `
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('scannerModal'))">&times;</button>
             <h2 style="margin-bottom:25px; font-weight:800; color: #1e293b;">Buscador TCGPlayer</h2>
             <div class="login-field" style="margin-bottom:12px;">
                 <label>Código de la Carta (Prioridad)</label>
-                <input type="text" id="tcgSearchInput" placeholder="Ej: 028/151">
+                <input type="text" id="tcgSearchInput">
                 <i class="fas fa-barcode"></i>
             </div>
             <div class="login-field" style="margin-bottom:20px;">
                 <label>Expansión (Opcional)</label>
-                <input type="text" id="tcgSetInput" placeholder="Ej: 151, Brilliant Stars...">
+                <input type="text" id="tcgSetInput">
                 <i class="fas fa-layer-group"></i>
             </div>
             <button id="submitSearch" class="confirm-button" style="width:100%;" onclick="window.handleTCGSearchUI()">Consultar</button>
@@ -409,17 +425,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = document.getElementById('username').value.trim();
         const pass = document.getElementById('password').value;
         const btn = document.getElementById('loginBtnSubmit');
-        const msg = document.getElementById('loginMessage');
-        
         btn.disabled = true;
         btn.textContent = "Verificando...";
-        
         try { 
             await setPersistence(auth, browserSessionPersistence);
             await signInWithEmailAndPassword(auth, email, pass); 
         } catch (err) {
             btn.disabled = false;
             btn.textContent = "Iniciar Sesión";
+            const msg = document.getElementById('loginMessage');
             if(msg) { msg.textContent = "Error: Credenciales no válidas."; msg.style.display = 'block'; }
         }
     });
@@ -427,13 +441,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cardForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('cardId').value;
-        const data = {
-            nombre: document.getElementById('cardName').value.trim(),
-            expansion: document.getElementById('cardExpansion').value.trim(),
-            codigo: document.getElementById('cardCode').value.trim(),
-            stock: parseInt(document.getElementById('cardStock').value) || 0,
-            precio: parseFloat(document.getElementById('cardPrice').value) || 0,
-            imagen_url: document.getElementById('cardImage').value.trim()
+        const data = { 
+            nombre: document.getElementById('cardName').value.trim(), 
+            expansion: document.getElementById('cardExpansion').value.trim(), 
+            codigo: document.getElementById('cardCode').value.trim(), 
+            stock: parseInt(document.getElementById('cardStock').value) || 0, 
+            precio: parseFloat(document.getElementById('cardPrice').value) || 0, 
+            imagen_url: document.getElementById('cardImage').value.trim() 
         };
         const path = `artifacts/${appId}/public/data/cards`;
         id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
@@ -443,12 +457,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('sealedProductForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('sealedProductId').value;
-        const data = {
-            nombre: document.getElementById('sealedProductName').value,
-            categoria: document.getElementById('sealedProductCategory').value,
-            precio: parseFloat(document.getElementById('sealedProductPrice').value),
-            stock: parseInt(document.getElementById('sealedProductStock').value),
-            imagen_url: document.getElementById('sealedProductImage').value
+        const data = { 
+            nombre: document.getElementById('sealedProductName').value, 
+            categoria: document.getElementById('sealedProductCategory').value, 
+            precio: parseFloat(document.getElementById('sealedProductPrice').value), 
+            stock: parseInt(document.getElementById('sealedProductStock').value), 
+            imagen_url: document.getElementById('sealedProductImage').value 
         };
         const path = `artifacts/${appId}/public/data/sealed_products`;
         id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
@@ -486,7 +500,6 @@ function updateStats() {
     const elSealed = document.getElementById('sealedCount');
     const elCats = document.getElementById('uniqueCategoriesCount');
     const elStock = document.getElementById('outOfStockCount');
-
     if (elCards) elCards.textContent = allCards.length;
     if (elSealed) elSealed.textContent = allSealed.length;
     if (elCats) elCats.textContent = allCategories.length;
