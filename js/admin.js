@@ -11,12 +11,21 @@ import {
     getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, onSnapshot, query 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-// CARGA DINÁMICA DE CREDENCIALES (Soluciona el error de invalid-api-key)
-const firebaseConfig = JSON.parse(__firebase_config);
+// Usamos credenciales estáticas para evitar el error de "ReferenceError: __firebase_config is not defined"
+const firebaseConfig = {
+    apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
+    authDomain: "dndtcgadmin.firebaseapp.com",
+    projectId: "dndtcgadmin",
+    storageBucket: "dndtcgadmin.firebasestorage.app",
+    messagingSenderId: "754642671504",
+    appId: "1:754642671504:web:c087cc703862cf8c228515",
+    measurementId: "G-T8KRZX5S7R"
+};
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+const appId = firebaseConfig.projectId;
 
 // ==========================================================================
 // 2. VARIABLES DE ESTADO Y CONTROL DE SESIÓN
@@ -32,7 +41,7 @@ let cardForm, cardModal, sealedProductForm, sealedProductModal, categoryForm, ca
 let searchStatusMessage, tcgSearchInput, searchSetIdInput, submitSearchBtn;
 let cardImagePreview, imagePreviewContainer;
 
-// Forzar logout inicial para asegurar login manual limpio
+// Forzar logout inicial para asegurar login manual limpio la primera vez
 const forceLogout = async () => {
     try { 
         await signOut(auth); 
@@ -161,7 +170,7 @@ function renderComparisonUI(card) {
     let mainType = ['holofoil', 'reverseHolofoil', 'normal'].find(t => prices && prices[t]);
     let liveMarket = mainType ? (prices[mainType].market || 0) : 0;
 
-    // Si tuviéramos elementos para mostrar precio vivo en la sección de comparativa:
+    // Elemento para mostrar precio vivo en la sección de comparativa:
     const tcgPriceEl = document.getElementById('tcgPriceDisplay');
     if(tcgPriceEl) tcgPriceEl.textContent = `$${liveMarket.toFixed(2)}`;
 
