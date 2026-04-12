@@ -36,7 +36,7 @@
         .admin-container { display: none; min-height: 100vh; flex-direction: row; }
         .sidebar { width: 260px; background: #1e293b; color: white; display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; z-index: 1001; }
         .sidebar-header { padding: 25px; border-bottom: 1px solid #334155; }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 15px 25px; color: #94a3b8; text-decoration: none; transition: 0.3s; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 15px 25px; color: #94a3b8; text-decoration: none; transition: 0.3s; cursor: pointer; }
         .nav-link:hover, .nav-link.active { background: #334155; color: white; border-left: 4px solid #3b82f6; }
 
         .main-content { flex: 1; padding: 20px; width: 100%; overflow-x: hidden; }
@@ -63,22 +63,16 @@
         .confirm-button { background: #3b82f6; color: white; border: none; padding: 14px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
         .add-button { background: #3b82f6; color: white; width: 42px; height: 42px; border-radius: 10px; border: none; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-        /* --- BUSCADORES --- */
         .search-bar-container { position: relative; flex: 1; max-width: 300px; }
         .search-bar-container i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
-        .search-bar-container input { width: 100%; padding: 10px 15px 10px 35px; border: 1.5px solid #e2e8f0; border-radius: 12px; outline: none; transition: 0.2s; }
+        .search-bar-container input { width: 100%; padding: 10px 15px 10px 35px; border: 1.5px solid #e2e8f0; border-radius: 12px; outline: none; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); position: fixed; }
-            .admin-modal-content.wide { max-width: 95%; }
-        }
     </style>
 </head>
 <body>
 
-    <!-- MODAL DE LOGIN -->
+    <!-- LOGIN -->
     <div id="loginModal">
         <div class="login-card">
             <div class="login-icon"><i class="fas fa-lock" style="color: #3b82f6; font-size: 1.8rem;"></i></div>
@@ -103,25 +97,24 @@
 
     <!-- PANEL ADMIN -->
     <div class="admin-container" id="adminContainer">
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebarMenu">
             <div class="sidebar-header"><h3 style="font-weight: 800;">DND TCG Admin</h3></div>
             <nav class="sidebar-nav">
-                <a href="#" data-section="dashboard-section" class="nav-link active"><i class="fas fa-chart-line"></i> Dashboard</a>
-                <a href="#" data-section="comparison-section" class="nav-link"><i class="fas fa-balance-scale"></i> Comparativa</a>
-                <a href="#" data-section="cards-section" class="nav-link"><i class="fas fa-clone"></i> Gestión de Cartas</a>
-                <a href="#" data-section="sealed-products-section" class="nav-link"><i class="fas fa-box"></i> Sellados</a>
-                <a href="#" data-section="categories-section" class="nav-link"><i class="fas fa-tags"></i> Categorías</a>
-                <a href="#" data-section="orders-section" class="nav-link"><i class="fas fa-shopping-cart"></i> Pedidos</a>
+                <a class="nav-link active" data-section="dashboard-section"><i class="fas fa-chart-line"></i> Dashboard</a>
+                <a class="nav-link" data-section="comparison-section"><i class="fas fa-balance-scale"></i> Comparativa</a>
+                <a class="nav-link" data-section="cards-section"><i class="fas fa-clone"></i> Gestión de Cartas</a>
+                <a class="nav-link" data-section="sealed-products-section"><i class="fas fa-box"></i> Sellados</a>
+                <a class="nav-link" data-section="categories-section"><i class="fas fa-tags"></i> Categorías</a>
+                <a class="nav-link" data-section="orders-section"><i class="fas fa-shopping-cart"></i> Pedidos</a>
             </nav>
             <div style="padding: 20px; border-top: 1px solid #334155;">
-                <a href="#" id="nav-logout-btn" style="color: #f87171; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 0.9rem;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+                <a id="nav-logout-btn" style="color: #f87171; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer;" onclick="window.logoutUI()"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
             </div>
         </aside>
 
         <main class="main-content">
             <header class="main-header"><h2 id="main-title" style="font-weight: 800;">Dashboard</h2></header>
 
-            <!-- SECCIÓN DASHBOARD -->
             <section id="dashboard-section" class="admin-section active">
                 <div class="dashboard-stats">
                     <div class="stat-card"><h3>Total Cartas</h3><p id="totalCardsCount">0</p></div>
@@ -130,25 +123,23 @@
                 </div>
             </section>
 
-            <!-- SECCIÓN CARTAS -->
             <section id="cards-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px;">
                     <div class="search-bar-container"><i class="fas fa-search"></i><input type="text" id="inventorySearch" placeholder="Nombre o código..."></div>
                     <div style="display: flex; gap: 10px;">
-                        <button id="openScannerBtn" class="confirm-button" style="background: #10b981;"><i class="fas fa-search"></i> TCG Player</button>
-                        <button id="addCardBtn" class="add-button">+</button>
+                        <button class="confirm-button" style="background: #10b981;" onclick="window.openModalUI(document.getElementById('scannerModal'))"><i class="fas fa-search"></i> TCG Player</button>
+                        <button id="addCardBtn" class="add-button" onclick="window.openNewCardModal()"><i class="fas fa-plus"></i></button>
                     </div>
                 </div>
                 <div class="table-responsive"><table id="cardsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
 
-            <!-- SECCIÓN COMPARATIVA -->
             <section id="comparison-section" class="admin-section">
                 <div style="background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                     <h3 style="margin-bottom: 15px;">Comparativa de Mercado</h3>
                     <div style="display: flex; gap: 12px; margin-bottom: 20px;">
                         <input type="text" id="compSearchInput" placeholder="Ej: 028/151" style="flex: 1; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 14px;">
-                        <button id="btnCompareSearch" class="confirm-button">Analizar</button>
+                        <button class="confirm-button" onclick="window.handleMarketComparisonUI()">Analizar</button>
                     </div>
                     <div id="comparisonResults" style="display: none;">
                         <canvas id="priceTrendChart" style="max-height: 300px; width: 100%;"></canvas>
@@ -156,11 +147,10 @@
                 </div>
             </section>
 
-            <!-- SECCIONES DE RELLENO (SELLADOS, CATEGORIAS, PEDIDOS) -->
             <section id="sealed-products-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                     <h3>Productos Sellados</h3>
-                    <button id="addSealedProductBtn" class="add-button">+</button>
+                    <button class="add-button" onclick="window.openNewSealedModal()"><i class="fas fa-plus"></i></button>
                 </div>
                 <div class="table-responsive"><table id="sealedProductsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
@@ -168,7 +158,7 @@
             <section id="categories-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                     <h3>Categorías</h3>
-                    <button id="addCategoryBtn" class="add-button">+</button>
+                    <button class="add-button" onclick="window.openNewCategoryModal()"><i class="fas fa-plus"></i></button>
                 </div>
                 <div class="table-responsive" style="max-width: 600px;"><table id="categoriesTable"><thead><tr><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
