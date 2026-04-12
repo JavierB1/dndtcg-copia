@@ -6,8 +6,6 @@
     <title>DND TCG Admin - Panel Profesional</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Librería para Gráficos -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
@@ -46,21 +44,12 @@
         .admin-section { display: none; animation: fadeIn 0.3s ease; }
         .admin-section.active { display: block; }
 
-        /* Dashboard y Stats */
+        /* Dashboard */
         .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .stat-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .stat-card h3 { font-size: 0.75rem; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
         .stat-card p { font-size: 1.8rem; font-weight: 700; color: #1e293b; }
 
-        /* Sección de Comparación */
-        .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 20px; }
-        .comparison-card { background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); position: relative; }
-        .comparison-card h4 { margin-bottom: 15px; font-weight: 700; font-size: 1rem; color: #1e293b; display: flex; align-items: center; gap: 8px; }
-        .price-badge { font-size: 2rem; font-weight: 800; color: #3b82f6; margin: 10px 0; }
-        .price-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 600; }
-        
-        .chart-container { background: white; padding: 20px; border-radius: 24px; margin-top: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        
         /* Tablas */
         .table-responsive { 
             background: white; border-radius: 16px; overflow-x: auto; 
@@ -84,7 +73,20 @@
         .admin-modal-content { background: white; padding: 30px; border-radius: 28px; position: relative; width: 100%; max-width: 500px; max-height: 95vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
         .admin-modal-content.wide { max-width: 880px; }
 
-        /* VISTA PREVIA LIMPIA */
+        /* Mensajes de Alerta */
+        .message-modal-content { text-align: center; padding: 20px; }
+        .message-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 15px; }
+        .icon-danger { background: #fee2e2; color: #ef4444; }
+        .icon-warning { background: #fef3c7; color: #d97706; }
+        .message-title { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+        .message-text { color: #64748b; margin-bottom: 25px; line-height: 1.4; font-size: 0.95rem; }
+        .message-actions { display: flex; gap: 10px; }
+        .btn-modal { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+        .btn-cancel { border: 1.5px solid #e2e8f0; background: white; color: #64748b; }
+        .btn-delete { background: #ef4444; color: white; }
+        .btn-accept { background: #3b82f6; color: white; }
+
+        /* VISTA PREVIA LIMPIA (ESTILO CONFIRMACIÓN) */
         .modal-body-layout { display: flex; gap: 40px; margin-top: 15px; align-items: center; }
         .form-side { flex: 1.2; }
         .preview-side { 
@@ -116,10 +118,12 @@
             z-index: 2;
         }
         .image-preview-container.active img { display: block; }
+        /* Ocultar icono cuando la imagen está activa */
         .image-preview-container.active .placeholder-icon { display: none; }
         .image-preview-container .placeholder-icon { font-size: 4rem; color: #e2e8f0; z-index: 1; }
 
         /* Formularios */
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
         .form-group { flex: 1; min-width: 140px; display: flex; flex-direction: column; margin-bottom: 12px; text-align: left; }
         .form-group label { font-size: 0.75rem; font-weight: 700; color: #64748b; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
         .form-group input, .form-group select { padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 0.9rem; outline: none; width: 100%; background: #ffffff; transition: 0.2s; }
@@ -139,9 +143,10 @@
             .sidebar-overlay.show { display: block; }
             .menu-toggle { display: block; }
             .main-content { padding: 15px; }
-            .comparison-grid { grid-template-columns: 1fr; }
             .modal-body-layout { flex-direction: column-reverse; align-items: stretch; }
             .preview-side { margin-bottom: 20px; min-height: auto; }
+            .form-row .form-group { flex: 1 1 100%; }
+            .stat-card p { font-size: 1.5rem; }
             .dashboard-stats { grid-template-columns: 1fr 1fr; }
         }
 
@@ -160,10 +165,19 @@
             </div>
             <h2 style="font-weight: 800; color: #1e293b; margin-bottom: 5px; font-size: 1.6rem;">DND TCG Admin</h2>
             <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 30px;">Ingresa para gestionar tu inventario</p>
+            
             <form id="loginForm">
-                <div class="form-group"><label>Correo Electrónico</label><input type="email" id="username" placeholder="admin@dndtcg.com" required></div>
-                <div class="form-group" style="margin-bottom: 25px;"><label>Contraseña</label><input type="password" id="password" placeholder="••••••••" required></div>
-                <button type="submit" id="loginBtnSubmit" class="confirm-button" style="width: 100%;">Acceder al Panel</button>
+                <div class="form-group">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="username" placeholder="admin@dndtcg.com" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 25px;">
+                    <label>Contraseña</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="loginBtnSubmit" class="confirm-button" style="width: 100%; padding: 16px; font-size: 1.1rem; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);">
+                    Acceder al Panel
+                </button>
             </form>
             <p id="loginMessage" style="color: #ef4444; margin-top: 15px; font-size: 0.85rem; display: none;"></p>
         </div>
@@ -178,7 +192,6 @@
             </div>
             <nav class="sidebar-nav">
                 <a href="#" data-section="dashboard-section" class="nav-link active"><i class="fas fa-chart-line"></i> Dashboard</a>
-                <a href="#" data-section="comparison-section" class="nav-link"><i class="fas fa-balance-scale"></i> Comparativa</a>
                 <a href="#" data-section="cards-section" class="nav-link"><i class="fas fa-clone"></i> Gestión de Cartas</a>
                 <a href="#" data-section="sealed-products-section" class="nav-link"><i class="fas fa-box"></i> Productos Sellados</a>
                 <a href="#" data-section="categories-section" class="nav-link"><i class="fas fa-tags"></i> Categorías</a>
@@ -198,7 +211,7 @@
                 <button id="refreshAdminPageBtn" class="action-btn" style="background: white; width: 40px; height: 40px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><i class="fas fa-sync-alt"></i></button>
             </header>
 
-            <!-- SECCIÓN DASHBOARD -->
+            <!-- SECCIONES -->
             <section id="dashboard-section" class="admin-section active">
                 <div class="dashboard-stats">
                     <div class="stat-card"><h3>Total Cartas</h3><p id="totalCardsCount">0</p></div>
@@ -208,47 +221,6 @@
                 </div>
             </section>
 
-            <!-- NUEVA SECCIÓN DE COMPARACIÓN -->
-            <section id="comparison-section" class="admin-section">
-                <div style="background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 25px;">
-                    <h3 style="font-weight: 700; margin-bottom: 15px;">Analizador de Mercado</h3>
-                    <div style="display: flex; gap: 12px;">
-                        <input type="text" id="compSearchInput" placeholder="Ej: 028/151" style="flex: 1; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 14px; font-size: 1rem; outline: none;">
-                        <button id="btnCompareSearch" class="confirm-button" style="padding: 14px 25px;">Analizar Carta</button>
-                    </div>
-                    <p id="compStatus" style="margin-top: 10px; font-size: 0.85rem; color: #64748b;"></p>
-                </div>
-
-                <div id="comparisonResults" style="display: none;">
-                    <div class="comparison-grid">
-                        <div class="comparison-card">
-                            <h4><i class="fas fa-store" style="color: #3b82f6;"></i> Mi Inventario</h4>
-                            <div id="myCardInfo">
-                                <span class="price-label">Tu Precio Actual</span>
-                                <div class="price-badge" id="myPriceDisplay">$0.00</div>
-                                <p style="font-size: 0.9rem; color: #64748b;" id="myStockDisplay">Stock: 0 unidades</p>
-                            </div>
-                            <div id="myCardEmpty" style="display: none; padding: 20px 0; color: #94a3b8; font-style: italic;">Esta carta no está en tu inventario.</div>
-                        </div>
-                        <div class="comparison-card">
-                            <h4><i class="fas fa-globe" style="color: #10b981;"></i> Mercado TCGPlayer</h4>
-                            <span class="price-label">Precio de Mercado (Live)</span>
-                            <div class="price-badge" id="tcgPriceDisplay" style="color: #10b981;">$0.00</div>
-                            <div style="display: flex; gap: 15px;">
-                                <div><span class="price-label">Mínimo</span><p id="tcgLowDisplay" style="font-weight: 700;">$0.00</p></div>
-                                <div><span class="price-label">Máximo</span><p id="tcgHighDisplay" style="font-weight: 700;">$0.00</p></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <h4 style="margin-bottom: 20px; font-weight: 700;"><i class="fas fa-chart-line" style="color: #3b82f6;"></i> Historial de Precios (Tendencia)</h4>
-                        <canvas id="priceTrendChart" style="max-height: 300px;"></canvas>
-                    </div>
-                </div>
-            </section>
-
-            <!-- GESTIÓN DE CARTAS -->
             <section id="cards-section" class="admin-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 10px;">
                     <h3 style="font-weight: 700;">Inventario de Cartas</h3>
@@ -308,7 +280,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE CARTA -->
+    <!-- MODAL DE CARTA (LIMPIO Y CENTRADO) -->
     <div id="cardModal" class="admin-modal">
         <div class="admin-modal-content wide">
             <button class="close-button">&times;</button>
@@ -342,10 +314,40 @@
         </div>
     </div>
 
-    <!-- BUSCADOR TCG PLAYER MODAL -->
+    <!-- MODALES ADICIONALES -->
+    <div id="sealedProductModal" class="admin-modal">
+        <div class="admin-modal-content">
+            <button class="close-button">&times;</button>
+            <h3 id="sealedProductModalTitle" style="text-align: center; margin-bottom: 20px;">Producto Sellado</h3>
+            <form id="sealedProductForm">
+                <input type="hidden" id="sealedProductId">
+                <div class="form-group"><label>Nombre</label><input type="text" id="sealedProductName" required></div>
+                <div class="form-group"><label>Categoría</label><select id="sealedProductCategory" required></select></div>
+                <div class="form-row"><div class="form-group"><label>Precio</label><input type="number" step="0.01" id="sealedProductPrice" required></div><div class="form-group"><label>Stock</label><input type="number" id="sealedProductStock" required></div></div>
+                <div class="form-group"><label>URL Imagen</label><input type="url" id="sealedProductImage"></div>
+                <button type="submit" class="confirm-button" style="width: 100%; margin-top: 15px;">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="categoryModal" class="admin-modal">
+        <div class="admin-modal-content">
+            <button class="close-button">&times;</button>
+            <h3 id="categoryModalTitle" style="text-align: center; margin-bottom: 20px;">Categoría</h3>
+            <form id="categoryForm">
+                <input type="hidden" id="categoryId">
+                <div class="form-group"><label>Nombre de Categoría</label><input type="text" id="categoryName" required></div>
+                <button type="submit" class="confirm-button" style="width: 100%; margin-top: 15px;">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- BUSCADOR TCG PLAYER -->
     <div id="scannerModal" class="admin-modal">
         <div class="admin-modal-content" style="max-width: 450px;">
-            <div id="quickSearchContent" style="position: relative;"></div>
+            <div id="quickSearchContent" style="position: relative;">
+                <!-- Contenido inyectado por JS -->
+            </div>
         </div>
     </div>
 
