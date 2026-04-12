@@ -217,13 +217,14 @@ function renderOrdersTable() {
 }
 
 // ==========================================================================
-// 7. CRUD FUNCTIONS
+// 7. CRUD FUNCTIONS (WINDOW)
 // ==========================================================================
 window.editCard = (id) => {
     const card = allCards.find(c => c.id === id);
     if (!card) return;
     document.getElementById('cardId').value = card.id;
     document.getElementById('cardName').value = card.nombre;
+    document.getElementById('cardExpansion').value = card.expansion || '';
     document.getElementById('cardCode').value = card.codigo;
     document.getElementById('cardStock').value = card.stock;
     document.getElementById('cardPrice').value = card.precio;
@@ -274,7 +275,7 @@ window.viewOrder = (id) => {
 // ==========================================================================
 window.handleTCGSearchUI = async () => {
     const input = document.getElementById('tcgSearchInput');
-    const setInput = document.getElementById('tcgSetInput'); // NUEVO: Campo de expansión
+    const setInput = document.getElementById('tcgSetInput'); // Campo de expansión
     const status = document.getElementById('searchStatus');
     const btn = document.getElementById('submitSearch');
     if(!input?.value.trim()) return;
@@ -295,6 +296,7 @@ window.handleTCGSearchUI = async () => {
             const c = data.data[0];
             document.getElementById('cardId').value = '';
             document.getElementById('cardName').value = c.name;
+            document.getElementById('cardExpansion').value = c.set.name; // Autocompletar expansión
             document.getElementById('cardCode').value = `${c.number}/${c.set.printedTotal}`;
             document.getElementById('cardImage').value = c.images.large;
             const p = c.tcgplayer?.prices;
@@ -373,12 +375,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = document.getElementById('cardId').value;
         const data = {
             nombre: document.getElementById('cardName').value.trim(),
+            expansion: document.getElementById('cardExpansion').value.trim(), // Guardar expansión
             codigo: document.getElementById('cardCode').value.trim(),
             stock: parseInt(document.getElementById('cardStock').value) || 0,
             precio: parseFloat(document.getElementById('cardPrice').value) || 0,
             imagen_url: document.getElementById('cardImage').value.trim()
         };
-        id ? await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id), data) : await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
+        const path = `artifacts/${appId}/public/data/cards`;
+        id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
         window.closeModalUI(document.getElementById('cardModal'));
     });
 
@@ -392,7 +396,8 @@ document.addEventListener('DOMContentLoaded', () => {
             stock: parseInt(document.getElementById('sealedProductStock').value),
             imagen_url: document.getElementById('sealedProductImage').value
         };
-        id ? await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id), data) : await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'), data);
+        const path = `artifacts/${appId}/public/data/sealed_products`;
+        id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
         window.closeModalUI(document.getElementById('sealedProductModal'));
     });
 
@@ -400,7 +405,8 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const id = document.getElementById('categoryId').value;
         const data = { name: document.getElementById('categoryName').value };
-        id ? await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id), data) : await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), data);
+        const path = `artifacts/${appId}/public/data/categories`;
+        id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
         window.closeModalUI(document.getElementById('categoryModal'));
     });
 
