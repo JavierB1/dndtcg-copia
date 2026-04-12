@@ -95,8 +95,9 @@
                 </div>
             </section>
 
+            <!-- SECCIONES RESTANTES MANTENIENDO IDS PARA JS -->
             <section id="comparison-section" class="admin-section">
-                <div class="comparison-container" style="background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div style="background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                     <h3 style="margin-bottom: 15px;">Comparativa de Mercado</h3>
                     <div style="display: flex; gap: 12px; margin-bottom: 20px;">
                         <input type="text" id="compSearchInput" placeholder="Ej: 028/151" style="flex: 1; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 14px;">
@@ -113,14 +114,7 @@
                     <h3>Productos Sellados</h3>
                     <button class="add-button" onclick="window.openNewSealedModal()"><i class="fas fa-plus"></i></button>
                 </div>
-                <div class="table-responsive">
-                    <table id="sealedProductsTable">
-                        <thead>
-                            <tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <div class="table-responsive"><table id="sealedProductsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
 
             <section id="categories-section" class="admin-section">
@@ -128,79 +122,97 @@
                     <h3>Categorías</h3>
                     <button class="add-button" onclick="window.openNewCategoryModal()"><i class="fas fa-plus"></i></button>
                 </div>
-                <div class="table-responsive" style="max-width: 600px;">
-                    <table id="categoriesTable">
-                        <thead>
-                            <tr><th>Nombre</th><th>Acciones</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <div class="table-responsive" style="max-width: 600px;"><table id="categoriesTable"><thead><tr><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
 
             <section id="orders-section" class="admin-section">
                 <h3>Pedidos Recientes</h3>
-                <div class="table-responsive">
-                    <table id="ordersTable">
-                        <thead>
-                            <tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <div class="table-responsive"><table id="ordersTable"><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
         </main>
     </div>
 
-    <!-- MODAL CARTA -->
+    <!-- MODAL CARTA (DISEÑO MEJORADO) -->
     <div id="cardModal" class="admin-modal">
         <div class="admin-modal-content wide">
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('cardModal'))">&times;</button>
-            <h3 id="cardModalTitle" style="font-weight: 800; text-align: center; margin-bottom: 20px;">Gestionar Carta</h3>
-            <div style="display: flex; gap: 30px; flex-wrap: wrap;">
-                <div style="flex: 1.2; min-width: 300px;">
+            <h3 id="cardModalTitle" style="font-weight: 800; text-align: center; margin-bottom: 25px; color: #1e293b; font-size: 1.5rem;">Gestionar Carta</h3>
+            
+            <div style="display: flex; gap: 40px; flex-wrap: wrap;">
+                <!-- COLUMNA FORMULARIO -->
+                <div style="flex: 1.1; min-width: 300px;">
                     <form id="cardForm">
                         <input type="hidden" id="cardId">
-                        <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <div class="login-field"><label>Nombre</label><input type="text" id="cardName" required></div>
-                            <div style="display: flex; gap: 10px;">
-                                <div class="login-field" style="flex: 1;"><label>Expansión</label><input type="text" id="cardExpansion" placeholder="Ej: 151"></div>
-                                <div class="login-field" style="flex: 1;"><label>Código</label><input type="text" id="cardCode" required></div>
+                        <div style="display: flex; flex-direction: column;">
+                            <div class="login-field">
+                                <label>Nombre de la Carta</label>
+                                <input type="text" id="cardName" placeholder="Ej: Sylveon ex" required>
+                                <i class="fas fa-signature"></i>
                             </div>
-                            <div style="display: flex; gap: 10px;">
-                                <div class="login-field" style="flex: 1;"><label>Precio ($)</label><input type="number" step="0.01" id="cardPrice" required></div>
-                                <div class="login-field" style="flex: 1;"><label>Stock</label><input type="number" id="cardStock" required></div>
+                            
+                            <div style="display: flex; gap: 15px;">
+                                <div class="login-field" style="flex: 1.2;">
+                                    <label>Expansión</label>
+                                    <input type="text" id="cardExpansion" placeholder="Prismatic Evolutions">
+                                    <i class="fas fa-layer-group"></i>
+                                </div>
+                                <div class="login-field" style="flex: 0.8;">
+                                    <label>Código</label>
+                                    <input type="text" id="cardCode" placeholder="41/131" required>
+                                    <i class="fas fa-barcode"></i>
+                                </div>
                             </div>
-                            <div class="login-field"><label>URL Imagen</label><input type="url" id="cardImage"></div>
-                            <button type="submit" class="confirm-button" style="width: 100%;">Guardar Carta</button>
+                            
+                            <div style="display: flex; gap: 15px;">
+                                <div class="login-field" style="flex: 1;">
+                                    <label>Precio ($)</label>
+                                    <input type="number" step="0.01" id="cardPrice" placeholder="0.00" required>
+                                    <i class="fas fa-tag"></i>
+                                </div>
+                                <div class="login-field" style="flex: 1;">
+                                    <label>Stock</label>
+                                    <input type="number" id="cardStock" placeholder="0" required>
+                                    <i class="fas fa-cubes"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="login-field">
+                                <label>URL de Imagen</label>
+                                <input type="url" id="cardImage" placeholder="https://...">
+                                <i class="fas fa-image"></i>
+                            </div>
+                            
+                            <button type="submit" class="confirm-button" style="width: 100%; margin-top: 10px; padding: 18px;">Guardar Cambios</button>
                         </div>
                     </form>
                 </div>
-                <div style="flex: 1; text-align: center; min-width: 250px;">
-                    <div id="imagePreviewContainer" style="min-height:300px; display:flex; align-items:center; justify-content:center; background:#f8fafc; border-radius:20px; border:1.5px solid #e2e8f0;">
-                        <i class="fas fa-image" id="placeholderIcon" style="font-size:4rem; color:#e2e8f0;"></i>
-                        <img id="cardImagePreview" src="" style="max-width:100%; max-height:350px; display:none; border-radius:14px;">
+
+                <!-- COLUMNA PREVIEW (CENTRADA) -->
+                <div style="flex: 1; min-width: 250px; display: flex; flex-direction: column;">
+                    <div id="imagePreviewContainer">
+                        <i class="fas fa-image" id="placeholderIcon"></i>
+                        <img id="cardImagePreview" src="">
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODALES DE APOYO -->
+    <!-- MODALES DE APOYO (SELLADOS, CATEGORIAS, ALERTAS, SCANNER) -->
     <div id="sealedProductModal" class="admin-modal">
         <div class="admin-modal-content">
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('sealedProductModal'))">&times;</button>
-            <h3 style="text-align: center; margin-bottom: 20px;">Producto Sellado</h3>
+            <h3 style="text-align: center; margin-bottom: 20px; font-weight: 800;">Producto Sellado</h3>
             <form id="sealedProductForm">
                 <input type="hidden" id="sealedProductId">
-                <div class="login-field"><label>Nombre</label><input type="text" id="sealedProductName" required></div>
-                <div class="login-field"><label>Categoría</label><select id="sealedProductCategory" style="width:100%; padding:14px; border-radius:14px; border:2px solid #e2e8f0;"></select></div>
+                <div class="login-field"><label>Nombre</label><input type="text" id="sealedProductName" required><i class="fas fa-box"></i></div>
+                <div class="login-field"><label>Categoría</label><select id="sealedProductCategory" style="padding-left:15px;"></select></div>
                 <div style="display:flex; gap:10px;">
-                    <div class="login-field" style="flex:1;"><label>Precio</label><input type="number" step="0.01" id="sealedProductPrice" required></div>
-                    <div class="login-field" style="flex:1;"><label>Stock</label><input type="number" id="sealedProductStock" required></div>
+                    <div class="login-field" style="flex:1;"><label>Precio</label><input type="number" step="0.01" id="sealedProductPrice" required><i class="fas fa-tag"></i></div>
+                    <div class="login-field" style="flex:1;"><label>Stock</label><input type="number" id="sealedProductStock" required><i class="fas fa-cubes"></i></div>
                 </div>
-                <div class="login-field"><label>URL Imagen</label><input type="url" id="sealedProductImage"></div>
-                <button type="submit" class="confirm-button" style="width: 100%;">Guardar</button>
+                <div class="login-field"><label>URL Imagen</label><input type="url" id="sealedProductImage"><i class="fas fa-image"></i></div>
+                <button type="submit" class="confirm-button" style="width: 100%;">Guardar Producto</button>
             </form>
         </div>
     </div>
@@ -208,11 +220,11 @@
     <div id="categoryModal" class="admin-modal">
         <div class="admin-modal-content">
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('categoryModal'))">&times;</button>
-            <h3 style="text-align: center; margin-bottom: 20px;">Categoría</h3>
+            <h3 style="text-align: center; margin-bottom: 20px; font-weight: 800;">Categoría</h3>
             <form id="categoryForm">
                 <input type="hidden" id="categoryId">
-                <div class="login-field"><label>Nombre</label><input type="text" id="categoryName" required></div>
-                <button type="submit" class="confirm-button" style="width: 100%;">Guardar</button>
+                <div class="login-field"><label>Nombre</label><input type="text" id="categoryName" required><i class="fas fa-tags"></i></div>
+                <button type="submit" class="confirm-button" style="width: 100%;">Guardar Categoría</button>
             </form>
         </div>
     </div>
@@ -220,14 +232,14 @@
     <div id="alertModal" class="admin-modal">
         <div class="admin-modal-content" style="text-align: center; max-width: 400px;">
             <i class="fas fa-exclamation-circle" style="font-size: 3rem; color: #f59e0b; margin-bottom: 15px;"></i>
-            <h3 id="alertTitle">Atención</h3>
-            <p id="alertText" style="margin: 15px 0 25px; color: #64748b;"></p>
+            <h3 id="alertTitle" style="font-weight: 800;">Atención</h3>
+            <p id="alertText" style="margin: 15px 0 25px; color: #64748b; line-height: 1.6;"></p>
             <button class="confirm-button" onclick="window.closeModalUI(document.getElementById('alertModal'))" style="width: 100%;">Entendido</button>
         </div>
     </div>
 
     <div id="scannerModal" class="admin-modal">
-        <div class="admin-modal-content" style="max-width: 450px;">
+        <div class="admin-modal-content" style="max-width: 450px; padding: 40px;">
             <div id="quickSearchContent" style="position: relative;"></div>
         </div>
     </div>
