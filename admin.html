@@ -13,16 +13,61 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background-color: #f1f5f9; color: #334155; overflow-x: hidden; }
 
-        /* Contenedores Principales */
-        .admin-container { display: none; min-height: 100vh; flex-direction: row; }
-        
+        /* --- LOGIN REDISEÑADO --- */
         #loginModal { 
             display: flex; position: fixed; top: 0; left: 0; 
             width: 100vw; height: 100vh; background: linear-gradient(135deg, #f6f8fb 0%, #e9edf3 100%); 
             z-index: 99999; align-items: center; justify-content: center;
         }
+        .login-card {
+            background: white; padding: 45px; border-radius: 35px; width: 95%; max-width: 440px; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); text-align: center;
+        }
+        .login-icon {
+            width: 70px; height: 70px; background: #eff6ff; border-radius: 20px; 
+            display: flex; align-items: center; justify-content: center; margin: 0 auto 25px;
+        }
+        .login-field {
+            position: relative;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .login-field i {
+            position: absolute;
+            left: 15px;
+            top: 42px;
+            color: #94a3b8;
+            transition: 0.3s;
+        }
+        .login-field label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .login-field input {
+            width: 100%;
+            padding: 14px 15px 14px 45px;
+            border: 2px solid #e2e8f0;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            color: #1e293b;
+            outline: none;
+            transition: 0.3s;
+            background: #f8fafc;
+        }
+        .login-field input:focus {
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+        .login-field input:focus + i { color: #3b82f6; }
 
-        /* Sidebar */
+        /* --- SIDEBAR Y LAYOUT --- */
+        .admin-container { display: none; min-height: 100vh; flex-direction: row; }
         .sidebar { 
             width: 260px; background: #1e293b; color: white; display: flex; 
             flex-direction: column; height: 100vh; position: sticky; top: 0;
@@ -38,7 +83,6 @@
             background: rgba(0,0,0,0.5); z-index: 1000; backdrop-filter: blur(2px);
         }
 
-        /* Contenido */
         .main-content { flex: 1; padding: 20px; width: 100%; max-width: 100vw; overflow-x: hidden; }
         .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 10px; }
         .menu-toggle { display: none; background: white; border: none; padding: 10px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -46,135 +90,31 @@
         .admin-section { display: none; animation: fadeIn 0.3s ease; }
         .admin-section.active { display: block; }
 
-        /* Dashboard y Stats */
+        /* --- DASHBOARD Y STATS --- */
         .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .stat-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .stat-card h3 { font-size: 0.75rem; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
         .stat-card p { font-size: 1.8rem; font-weight: 700; color: #1e293b; }
 
-        /* Sección de Comparación */
-        .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 20px; }
-        .comparison-card { background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); position: relative; }
-        .comparison-card h4 { margin-bottom: 15px; font-weight: 700; font-size: 1rem; color: #1e293b; display: flex; align-items: center; gap: 8px; }
-        .price-badge { font-size: 2rem; font-weight: 800; color: #3b82f6; margin: 10px 0; }
-        .price-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 600; }
-        
-        .chart-container { background: white; padding: 20px; border-radius: 24px; margin-top: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        
-        /* Tablas */
-        .table-responsive { 
-            background: white; border-radius: 16px; overflow-x: auto; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-top: 10px;
-            -webkit-overflow-scrolling: touch;
-        }
+        /* --- TABLAS --- */
+        .table-responsive { background: white; border-radius: 16px; overflow-x: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        th { background: #f8fafc; padding: 12px 15px; font-size: 0.7rem; text-transform: uppercase; color: #64748b; font-weight: 700; }
+        th { background: #f8fafc; padding: 12px 15px; font-size: 0.7rem; text-transform: uppercase; color: #64748b; font-weight: 700; text-align: left; }
         td { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
 
-        /* Modales */
-        .admin-modal { 
-            display: none; position: fixed; top: 0; left: 0; 
-            width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); 
-            z-index: 2000; align-items: center; justify-content: center; 
-            backdrop-filter: blur(4px); padding: 15px; 
-        }
+        /* --- BUSCADOR --- */
+        .search-bar-container { position: relative; flex: 1; max-width: 300px; }
+        .search-bar-container i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        .search-bar-container input { width: 100%; padding: 10px 15px 10px 35px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 0.85rem; outline: none; }
 
-        #alertModal, #confirmDeleteModal { z-index: 3000 !important; }
-
+        /* --- MODALES --- */
+        .admin-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 15px; }
         .admin-modal-content { background: white; padding: 30px; border-radius: 28px; position: relative; width: 100%; max-width: 500px; max-height: 95vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
         .admin-modal-content.wide { max-width: 880px; }
+        .close-button { position: absolute; top: 20px; right: 20px; font-size: 1.4rem; cursor: pointer; color: #94a3b8; border: none; background: none; transition: 0.2s; }
 
-        /* Estilos de Barra de Búsqueda de Inventario */
-        .search-bar-container {
-            position: relative;
-            flex: 1;
-            max-width: 300px;
-        }
-        .search-bar-container i {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 0.9rem;
-        }
-        .search-bar-container input {
-            width: 100%;
-            padding: 10px 15px 10px 35px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            outline: none;
-            transition: 0.2s;
-        }
-        .search-bar-container input:focus {
-            border-color: #3b82f6;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        /* VISTA PREVIA LIMPIA */
-        .modal-body-layout { display: flex; gap: 40px; margin-top: 15px; align-items: center; }
-        .form-side { flex: 1.2; }
-        .preview-side { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 350px;
-            position: relative;
-        }
-        .image-preview-container { 
-            width: 100%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            position: relative;
-            min-height: 300px;
-        }
-        .image-preview-container img { 
-            max-width: 100%; 
-            max-height: 380px; 
-            width: auto; 
-            height: auto; 
-            object-fit: contain; 
-            display: none;
-            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.25));
-            border-radius: 14px;
-            z-index: 2;
-        }
-        .image-preview-container.active img { display: block; }
-        .image-preview-container.active .placeholder-icon { display: none; }
-        .image-preview-container .placeholder-icon { font-size: 4rem; color: #e2e8f0; z-index: 1; }
-
-        /* Formularios */
-        .form-group { flex: 1; min-width: 140px; display: flex; flex-direction: column; margin-bottom: 12px; text-align: left; }
-        .form-group label { font-size: 0.75rem; font-weight: 700; color: #64748b; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .form-group input, .form-group select { padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 0.9rem; outline: none; width: 100%; background: #ffffff; transition: 0.2s; }
-        .form-group input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
-        
-        .add-button { background: #3b82f6; color: white; width: 42px; height: 42px; border-radius: 10px; border: none; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
         .confirm-button { background: #3b82f6; color: white; border: none; padding: 14px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 1rem; transition: 0.2s; }
-        .confirm-button:hover { background: #2563eb; transform: translateY(-1px); }
-        
-        .action-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #64748b; padding: 6px; }
-        .close-button { position: absolute; top: 20px; right: 20px; font-size: 1.4rem; cursor: pointer; color: #94a3b8; border: none; background: none; padding: 5px; z-index: 10; transition: 0.2s; }
-        .close-button:hover { color: #1e293b; transform: rotate(90deg); }
-
-        @media (max-width: 768px) {
-            .sidebar { position: fixed; left: 0; transform: translateX(-100%); height: 100vh; }
-            .sidebar.show { transform: translateX(0); }
-            .sidebar-overlay.show { display: block; }
-            .menu-toggle { display: block; }
-            .main-content { padding: 15px; }
-            .comparison-grid { grid-template-columns: 1fr; }
-            .modal-body-layout { flex-direction: column-reverse; align-items: stretch; }
-            .preview-side { margin-bottom: 20px; min-height: auto; }
-            .dashboard-stats { grid-template-columns: 1fr 1fr; }
-            .search-bar-container { max-width: none; width: 100%; order: 3; margin-top: 10px; }
-            .cards-header-actions { flex-wrap: wrap; }
-        }
+        .add-button { background: #3b82f6; color: white; width: 42px; height: 42px; border-radius: 10px; border: none; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -183,37 +123,38 @@
 
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- LOGIN -->
+    <!-- MODAL DE LOGIN (REDISEÑADO) -->
     <div id="loginModal">
-        <div style="background: white; padding: 40px; border-radius: 32px; width: 95%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); text-align: center;">
-            <div style="width: 60px; height: 60px; background: #eff6ff; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                <i class="fas fa-shield-alt" style="color: #3b82f6; font-size: 1.5rem;"></i>
-            </div>
-            <h2 style="font-weight: 800; color: #1e293b; margin-bottom: 5px; font-size: 1.6rem;">DND TCG Admin</h2>
-            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 30px;">Ingresa para gestionar tu inventario</p>
+        <div class="login-card">
+            <div class="login-icon"><i class="fas fa-lock" style="color: #3b82f6; font-size: 1.8rem;"></i></div>
+            <h2 style="font-weight: 800; color: #1e293b; margin-bottom: 5px; font-size: 1.7rem;">Acceso Admin</h2>
+            <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 35px;">Ingresa tus credenciales para continuar</p>
             <form id="loginForm">
-                <div class="form-group"><label>Correo Electrónico</label><input type="email" id="username" placeholder="admin@dndtcg.com" required></div>
-                <div class="form-group" style="margin-bottom: 25px;"><label>Contraseña</label><input type="password" id="password" placeholder="••••••••" required></div>
-                <button type="submit" id="loginBtnSubmit" class="confirm-button" style="width: 100%;">Acceder al Panel</button>
+                <div class="login-field">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="username" placeholder="admin@dndtcg.com" required>
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="login-field">
+                    <label>Contraseña</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                    <i class="fas fa-key"></i>
+                </div>
+                <button type="submit" id="loginBtnSubmit" class="confirm-button" style="width: 100%; margin-top: 10px; padding: 16px;">Iniciar Sesión</button>
             </form>
-            <p id="loginMessage" style="color: #ef4444; margin-top: 15px; font-size: 0.85rem; display: none;"></p>
+            <p id="loginMessage" style="color: #ef4444; margin-top: 20px; font-size: 0.85rem; display: none;"></p>
         </div>
     </div>
 
     <!-- PANEL ADMIN -->
     <div class="admin-container" id="adminContainer">
         <aside class="sidebar" id="sidebarMenu">
-            <div class="sidebar-header">
-                <h3 style="font-weight: 800; font-size: 1.25rem;">DND TCG Admin</h3>
-                <button class="menu-toggle" id="closeSidebar" style="background: none; box-shadow: none; color: white;"><i class="fas fa-times"></i></button>
-            </div>
+            <div class="sidebar-header"><h3 style="font-weight: 800;">DND TCG Admin</h3></div>
             <nav class="sidebar-nav">
                 <a href="#" data-section="dashboard-section" class="nav-link active"><i class="fas fa-chart-line"></i> Dashboard</a>
                 <a href="#" data-section="comparison-section" class="nav-link"><i class="fas fa-balance-scale"></i> Comparativa</a>
                 <a href="#" data-section="cards-section" class="nav-link"><i class="fas fa-clone"></i> Gestión de Cartas</a>
-                <a href="#" data-section="sealed-products-section" class="nav-link"><i class="fas fa-box"></i> Productos Sellados</a>
-                <a href="#" data-section="categories-section" class="nav-link"><i class="fas fa-tags"></i> Categorías</a>
-                <a href="#" data-section="orders-section" class="nav-link"><i class="fas fa-shopping-cart"></i> Pedidos</a>
+                <a href="#" data-section="sealed-products-section" class="nav-link"><i class="fas fa-box"></i> Sellados</a>
             </nav>
             <div style="padding: 20px; border-top: 1px solid #334155;">
                 <a href="#" id="nav-logout-btn" style="color: #f87171; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 0.9rem;"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
@@ -221,164 +162,82 @@
         </aside>
 
         <main class="main-content">
-            <header class="main-header">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <button class="menu-toggle" id="openSidebar"><i class="fas fa-bars"></i></button>
-                    <h2 id="main-title" style="font-weight: 800; color: #1e293b;">Dashboard</h2>
-                </div>
-                <button id="refreshAdminPageBtn" class="action-btn" style="background: white; width: 40px; height: 40px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><i class="fas fa-sync-alt"></i></button>
-            </header>
+            <header class="main-header"><h2 id="main-title" style="font-weight: 800;">Dashboard</h2></header>
 
-            <!-- SECCIONES -->
             <section id="dashboard-section" class="admin-section active">
                 <div class="dashboard-stats">
                     <div class="stat-card"><h3>Total Cartas</h3><p id="totalCardsCount">0</p></div>
-                    <div class="stat-card"><h3>Sellados</h3><p id="totalSealedProductsCount">0</p></div>
-                    <div class="stat-card"><h3>Categorías</h3><p id="uniqueCategoriesCount">0</p></div>
                     <div class="stat-card"><h3>Sin Stock</h3><p id="outOfStockCount" style="color: #ef4444;">0</p></div>
                 </div>
             </section>
 
-            <section id="comparison-section" class="admin-section">
-                <div style="background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 25px;">
-                    <h3 style="font-weight: 700; margin-bottom: 15px;">Analizador de Mercado</h3>
-                    <div style="display: flex; gap: 12px;">
-                        <input type="text" id="compSearchInput" placeholder="Ej: 028/151" style="flex: 1; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 14px; font-size: 1rem; outline: none;">
-                        <button id="btnCompareSearch" class="confirm-button" style="padding: 14px 25px;">Analizar Carta</button>
-                    </div>
-                    <p id="compStatus" style="margin-top: 10px; font-size: 0.85rem; color: #64748b;"></p>
-                </div>
-
-                <div id="comparisonResults" style="display: none;">
-                    <div class="comparison-grid">
-                        <div class="comparison-card">
-                            <h4><i class="fas fa-store" style="color: #3b82f6;"></i> Mi Inventario</h4>
-                            <div id="myCardInfo">
-                                <span class="price-label">Tu Precio Actual</span>
-                                <div class="price-badge" id="myPriceDisplay">$0.00</div>
-                                <p style="font-size: 0.9rem; color: #64748b;" id="myStockDisplay">Stock: 0 unidades</p>
-                            </div>
-                            <div id="myCardEmpty" style="display: none; padding: 20px 0; color: #94a3b8; font-style: italic;">Esta carta no está en tu inventario.</div>
-                        </div>
-                        <div class="comparison-card">
-                            <h4><i class="fas fa-globe" style="color: #10b981;"></i> Mercado TCGPlayer</h4>
-                            <span class="price-label">Precio de Mercado (Live)</span>
-                            <div class="price-badge" id="tcgPriceDisplay" style="color: #10b981;">$0.00</div>
-                            <div style="display: flex; gap: 15px;">
-                                <div><span class="price-label">Mínimo</span><p id="tcgLowDisplay" style="font-weight: 700;">$0.00</p></div>
-                                <div><span class="price-label">Máximo</span><p id="tcgHighDisplay" style="font-weight: 700;">$0.00</p></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <h4 style="margin-bottom: 20px; font-weight: 700;"><i class="fas fa-chart-line" style="color: #3b82f6;"></i> Historial de Precios (Tendencia)</h4>
-                        <canvas id="priceTrendChart" style="max-height: 300px;"></canvas>
-                    </div>
-                </div>
-            </section>
-
             <section id="cards-section" class="admin-section">
-                <div class="cards-header-actions" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px;">
-                    <h3 style="font-weight: 700; flex-shrink: 0;">Inventario de Cartas</h3>
-                    
-                    <!-- NUEVO BUSCADOR DE INVENTARIO -->
-                    <div class="search-bar-container">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="inventorySearch" placeholder="Buscar por nombre o código...">
-                    </div>
-
-                    <div style="display: flex; gap: 10px; flex-shrink: 0;">
-                        <button id="openScannerBtn" class="confirm-button" style="background: #10b981; padding: 12px 18px;"><i class="fas fa-search"></i> Buscador TCG</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px;">
+                    <div class="search-bar-container"><i class="fas fa-search"></i><input type="text" id="inventorySearch" placeholder="Buscar por nombre o código..."></div>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="openScannerBtn" class="confirm-button" style="background: #10b981;"><i class="fas fa-search"></i> Buscador TCG</button>
                         <button id="addCardBtn" class="add-button">+</button>
                     </div>
                 </div>
-                <div class="table-responsive"><table id="cardsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Expansión</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+                <div class="table-responsive"><table id="cardsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Código</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
 
-            <section id="sealed-products-section" class="admin-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                    <h3 style="font-weight: 700;">Productos Sellados</h3>
-                    <button id="addSealedProductBtn" class="add-button">+</button>
+            <section id="comparison-section" class="admin-section">
+                <div style="background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 25px;">
+                    <h3 style="margin-bottom: 15px;">Analizador de Mercado Pokémon</h3>
+                    <div style="display: flex; gap: 12px;">
+                        <input type="text" id="compSearchInput" placeholder="Ej: 028/151" style="flex: 1; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 14px;">
+                        <button id="btnCompareSearch" class="confirm-button">Analizar Carta</button>
+                    </div>
+                    <div id="comparisonResults" style="display: none; margin-top: 25px;">
+                        <canvas id="priceTrendChart" style="max-height: 300px; width: 100%;"></canvas>
+                    </div>
                 </div>
-                <div class="table-responsive"><table id="sealedProductsTable"><thead><tr><th>Imagen</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
-            </section>
-
-            <section id="categories-section" class="admin-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                    <h3 style="font-weight: 700;">Categorías</h3>
-                    <button id="addCategoryBtn" class="add-button">+</button>
-                </div>
-                <div class="table-responsive" style="max-width: 600px;"><table id="categoriesTable"><thead><tr><th>Nombre</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
-            </section>
-
-            <section id="orders-section" class="admin-section">
-                <h3 style="margin-bottom: 25px; font-weight: 700;">Pedidos Recientes</h3>
-                <div class="table-responsive"><table id="ordersTable"><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
             </section>
         </main>
     </div>
 
-    <!-- MODAL CONFIRMAR ELIMINACIÓN -->
-    <div id="confirmDeleteModal" class="admin-modal">
-        <div class="admin-modal-content message-modal-content">
-            <div class="message-icon icon-danger"><i class="fas fa-exclamation-triangle"></i></div>
-            <h3 class="message-title">¿Borrar elemento?</h3>
-            <p class="message-text">Esta acción es permanente y no se puede deshacer.</p>
-            <div class="message-actions">
-                <button class="btn-modal btn-cancel" id="btnCancelDelete">No, volver</button>
-                <button class="btn-modal btn-delete" id="btnConfirmDelete">Sí, borrar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL ALERTA PERSONALIZADO -->
-    <div id="alertModal" class="admin-modal">
-        <div class="admin-modal-content message-modal-content">
-            <div class="message-icon icon-warning"><i class="fas fa-exclamation-circle"></i></div>
-            <h3 class="message-title" id="alertTitle">Atención</h3>
-            <p class="message-text" id="alertText">El elemento ya existe.</p>
-            <div class="message-actions">
-                <button class="btn-modal btn-accept" id="btnAlertAccept" style="width: 100%;">Entendido</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DE CARTA -->
+    <!-- MODALES -->
     <div id="cardModal" class="admin-modal">
         <div class="admin-modal-content wide">
             <button class="close-button">&times;</button>
-            <h3 id="cardModalTitle" style="font-weight: 800; font-size: 1.4rem; margin-bottom: 15px; text-align: center;">Gestionar Carta</h3>
+            <h3 id="cardModalTitle" style="font-weight: 800; text-align: center; margin-bottom: 20px;">Gestionar Carta</h3>
             <div class="modal-body-layout">
-                <div class="form-side">
+                <div style="flex: 1.2;">
                     <form id="cardForm">
                         <input type="hidden" id="cardId">
-                        <div class="form-group"><label>Nombre de la Carta</label><input type="text" id="cardName" required></div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Código</label><input type="text" id="cardCode" placeholder="Ej: 028/151" required></div>
-                            <div class="form-group"><label>Expansión</label><input type="text" id="cardExpansion" required></div>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div style="display:flex; flex-direction:column;"><label style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Nombre</label><input type="text" id="cardName" style="padding:12px; border:1.5px solid #e2e8f0; border-radius:12px; font-size:0.9rem;" required></div>
+                            <div style="display:flex; gap:10px;">
+                                <div style="flex:1; display:flex; flex-direction:column;"><label style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Código</label><input type="text" id="cardCode" style="padding:12px; border:1.5px solid #e2e8f0; border-radius:12px; font-size:0.9rem;" required></div>
+                                <div style="flex:1; display:flex; flex-direction:column;"><label style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Stock</label><input type="number" id="cardStock" style="padding:12px; border:1.5px solid #e2e8f0; border-radius:12px; font-size:0.9rem;" required></div>
+                            </div>
+                            <div style="display:flex; flex-direction:column;"><label style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">Precio ($)</label><input type="number" step="0.01" id="cardPrice" style="padding:12px; border:1.5px solid #e2e8f0; border-radius:12px; font-size:0.9rem;" required></div>
+                            <div style="display:flex; flex-direction:column;"><label style="font-size:0.75rem; font-weight:700; color:#64748b; text-transform:uppercase;">URL Imagen</label><input type="url" id="cardImage" style="padding:12px; border:1.5px solid #e2e8f0; border-radius:12px; font-size:0.9rem;"></div>
+                            <button type="submit" class="confirm-button" style="width: 100%; margin-top: 10px;">Guardar Carta</button>
                         </div>
-                        <div class="form-group"><label>Categoría</label><select id="cardCategory" required></select></div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Precio ($)</label><input type="number" step="0.01" id="cardPrice" required></div>
-                            <div class="form-group"><label>Stock</label><input type="number" id="cardStock" required></div>
-                        </div>
-                        <div class="form-group"><label>URL Imagen</label><input type="url" id="cardImage" placeholder="https://..."></div>
-                        <button type="submit" class="confirm-button" style="width: 100%; margin-top: 15px;">Guardar Cambios</button>
                     </form>
                 </div>
-                <div class="preview-side">
-                    <div id="imagePreviewContainer" class="image-preview-container">
-                        <i class="fas fa-image placeholder-icon"></i>
-                        <img id="cardImagePreview" src="" alt="Preview">
+                <div style="flex: 1; text-align: center;">
+                    <div id="imagePreviewContainer" style="min-height:300px; display:flex; align-items:center; justify-content:center; background:#f8fafc; border-radius:20px; border:1.5px solid #e2e8f0;">
+                        <i class="fas fa-image" id="placeholderIcon" style="font-size:4rem; color:#e2e8f0;"></i>
+                        <img id="cardImagePreview" src="" style="max-width:100%; max-height:350px; display:none; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.1)); border-radius:14px;">
                     </div>
-                    <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Vista Previa</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- BUSCADOR TCG PLAYER MODAL -->
+    <div id="alertModal" class="admin-modal">
+        <div class="admin-modal-content" style="text-align: center; max-width: 400px;">
+            <i class="fas fa-exclamation-circle" style="font-size: 3rem; color: #f59e0b; margin-bottom: 15px;"></i>
+            <h3 id="alertTitle" style="font-weight: 800;">Atención</h3>
+            <p id="alertText" style="margin: 15px 0 25px; color: #64748b; line-height: 1.5;"></p>
+            <button class="confirm-button" id="btnAlertAccept" style="width: 100%;">Entendido</button>
+        </div>
+    </div>
+
+    <!-- SCANNER MODAL -->
     <div id="scannerModal" class="admin-modal">
         <div class="admin-modal-content" style="max-width: 450px;">
             <div id="quickSearchContent" style="position: relative;"></div>
