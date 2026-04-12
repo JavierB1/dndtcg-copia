@@ -4,14 +4,15 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { 
     getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
-    signInWithCustomToken, signInAnonymously 
+    setPersistence, browserSessionPersistence, signInWithCustomToken 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { 
     getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
+// Credenciales establecidas de dndtcgadmin
 const firebaseConfig = {
-    apiKey: "", // Se inyecta automáticamente
+    apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
     authDomain: "dndtcgadmin.firebaseapp.com",
     projectId: "dndtcgadmin",
     storageBucket: "dndtcgadmin.firebasestorage.app",
@@ -82,13 +83,20 @@ window.logoutUI = () => signOut(auth).then(() => location.reload());
 // 4. CONTROL DE SESIÓN
 // ==========================================================================
 const forceLogout = async () => {
-    try { await signOut(auth); isForcedLogoutDone = true; } catch (e) { isForcedLogoutDone = true; }
+    try { 
+        await signOut(auth); 
+        isForcedLogoutDone = true; 
+    } catch (e) { 
+        isForcedLogoutDone = true; 
+    }
 };
 forceLogout();
 
 onAuthStateChanged(auth, (user) => {
     const loginModal = document.getElementById('loginModal');
     const adminContainer = document.getElementById('adminContainer');
+    
+    // Solo permitimos el acceso si el usuario NO es anónimo y ya se forzó el logout inicial
     if (user && !user.isAnonymous && isForcedLogoutDone) {
         if (loginModal) loginModal.style.display = 'none';
         if (adminContainer) adminContainer.style.display = 'flex';
@@ -100,7 +108,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ==========================================================================
-// 5. CARGA DE DATOS
+// 5. CARGA DE DATOS (REALTIME)
 // ==========================================================================
 function loadAllData() {
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'cards')), (snap) => {
@@ -129,7 +137,7 @@ function loadAllData() {
 }
 
 // ==========================================================================
-// 6. RENDERIZADO
+// 6. RENDERIZADO DE TABLAS
 // ==========================================================================
 function filterAndRenderCards() {
     const term = document.getElementById('inventorySearch')?.value.toLowerCase();
@@ -275,7 +283,7 @@ window.viewOrder = (id) => {
 // ==========================================================================
 window.handleTCGSearchUI = async () => {
     const input = document.getElementById('tcgSearchInput');
-    const setInput = document.getElementById('tcgSetInput'); // Campo de expansión
+    const setInput = document.getElementById('tcgSetInput');
     const status = document.getElementById('searchStatus');
     const btn = document.getElementById('submitSearch');
     if(!input?.value.trim()) return;
@@ -288,7 +296,7 @@ window.handleTCGSearchUI = async () => {
     
     try {
         let apiUrl = `https://api.pokemontcg.io/v2/cards?q=number:"${num}"`;
-        if (expansion) apiUrl += ` set.name:"${expansion}*"`; // Búsqueda por expansión si se escribe
+        if (expansion) apiUrl += ` set.name:"${expansion}*"`;
         
         const res = await fetch(apiUrl);
         const data = await res.json();
@@ -296,7 +304,7 @@ window.handleTCGSearchUI = async () => {
             const c = data.data[0];
             document.getElementById('cardId').value = '';
             document.getElementById('cardName').value = c.name;
-            document.getElementById('cardExpansion').value = c.set.name; // Autocompletar expansión
+            document.getElementById('cardExpansion').value = c.set.name;
             document.getElementById('cardCode').value = `${c.number}/${c.set.printedTotal}`;
             document.getElementById('cardImage').value = c.images.large;
             const p = c.tcgplayer?.prices;
@@ -364,8 +372,18 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const email = document.getElementById('username').value.trim();
         const pass = document.getElementById('password').value;
-        try { await signInWithEmailAndPassword(auth, email, pass); } catch (err) {
-            const msg = document.getElementById('loginMessage');
+        const btn = document.getElementById('loginBtnSubmit');
+        const msg = document.getElementById('loginMessage');
+        
+        btn.disabled = true;
+        btn.textContent = "Verificando...";
+        
+        try { 
+            await setPersistence(auth, browserSessionPersistence);
+            await signInWithEmailAndPassword(auth, email, pass); 
+        } catch (err) {
+            btn.disabled = false;
+            btn.textContent = "Iniciar Sesión";
             if(msg) { msg.textContent = "Error: Credenciales no válidas."; msg.style.display = 'block'; }
         }
     });
@@ -375,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = document.getElementById('cardId').value;
         const data = {
             nombre: document.getElementById('cardName').value.trim(),
-            expansion: document.getElementById('cardExpansion').value.trim(), // Guardar expansión
+            expansion: document.getElementById('cardExpansion').value.trim(),
             codigo: document.getElementById('cardCode').value.trim(),
             stock: parseInt(document.getElementById('cardStock').value) || 0,
             precio: parseFloat(document.getElementById('cardPrice').value) || 0,
@@ -445,3 +463,11 @@ function updateCategorySelects() {
         allCategories.forEach(c => sel.appendChild(new Option(c.name, c.name)));
     }
 }
+
+// Inicialización de Auth del entorno Canvas (Prioridad)
+const initAuth = async () => {
+    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+    }
+};
+initAuth();
