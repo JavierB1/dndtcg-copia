@@ -164,10 +164,13 @@
                         <div style="display: flex; flex-direction: column; gap: 12px;">
                             <div class="login-field"><label>Nombre</label><input type="text" id="cardName" required></div>
                             <div style="display: flex; gap: 10px;">
+                                <div class="login-field" style="flex: 1;"><label>Expansión</label><input type="text" id="cardExpansion" placeholder="Ej: 151"></div>
                                 <div class="login-field" style="flex: 1;"><label>Código</label><input type="text" id="cardCode" required></div>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <div class="login-field" style="flex: 1;"><label>Precio ($)</label><input type="number" step="0.01" id="cardPrice" required></div>
                                 <div class="login-field" style="flex: 1;"><label>Stock</label><input type="number" id="cardStock" required></div>
                             </div>
-                            <div class="login-field"><label>Precio ($)</label><input type="number" step="0.01" id="cardPrice" required></div>
                             <div class="login-field"><label>URL Imagen</label><input type="url" id="cardImage"></div>
                             <button type="submit" class="confirm-button" style="width: 100%;">Guardar Carta</button>
                         </div>
