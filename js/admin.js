@@ -22,10 +22,10 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const appId = firebaseConfig.projectId;
 
-// Variables de estado global
 let allCards = [], allCategories = [], allSealed = [], allOrders = [];
 let trendChart = null;
 let isForcedLogoutDone = false;
+let confirmPromiseResolve = null; // Para manejar la respuesta del modal de confirmación
 
 // ==========================================================================
 // AYUDAS DE INTERFAZ (UI HELPERS)
@@ -42,6 +42,21 @@ window.closeModalUI = (m) => {
         m.style.display = 'none'; 
         document.body.style.overflow = ''; 
     } 
+};
+
+// NUEVA FUNCIÓN: Modal de Confirmación Estético
+window.showConfirmUI = (title, message) => {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmText').textContent = message;
+    window.openModalUI(document.getElementById('confirmModal'));
+    return new Promise((resolve) => {
+        confirmPromiseResolve = resolve;
+    });
+};
+
+window.confirmResolve = (val) => {
+    window.closeModalUI(document.getElementById('confirmModal'));
+    if (confirmPromiseResolve) confirmPromiseResolve(val);
 };
 
 window.showAlertUI = (title, text) => {
@@ -67,7 +82,6 @@ window.refreshPreviewUI = (url) => {
     }
 };
 
-// Abrir modal de carta nueva (Limpieza total)
 window.openNewCardModal = () => {
     const form = document.getElementById('cardForm');
     if(form) form.reset();
@@ -76,16 +90,13 @@ window.openNewCardModal = () => {
     window.openModalUI(document.getElementById('cardModal'));
 };
 
-// Abrir buscador TCG (Limpieza total y prioridad de código)
 window.openTCGScanner = () => {
     const codeIn = document.getElementById('tcgSearchInput');
     const expIn = document.getElementById('tcgSetInput');
     const status = document.getElementById('searchStatus');
-    
     if(codeIn) codeIn.value = '';
     if(expIn) expIn.value = '';
     if(status) status.textContent = '';
-    
     window.openModalUI(document.getElementById('scannerModal'));
 };
 
@@ -132,24 +143,21 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ==========================================================================
-// CARGA DE DATOS DESDE FIRESTORE
+// CARGA DE DATOS
 // ==========================================================================
 function loadAllData() {
-    // Suscripción a Cartas
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'cards')), (snap) => {
         allCards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         filterAndRenderCards();
         updateStats();
     });
 
-    // Suscripción a Productos Sellados
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products')), (snap) => {
         allSealed = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderSealedTable();
         updateStats();
     });
 
-    // Suscripción a Categorías
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'categories')), (snap) => {
         allCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCategoriesTable();
@@ -157,16 +165,12 @@ function loadAllData() {
         updateStats();
     });
 
-    // Suscripción a Pedidos
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'orders')), (snap) => {
         allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderOrdersTable();
     });
 }
 
-// ==========================================================================
-// RENDERIZADO DE TABLAS
-// ==========================================================================
 function filterAndRenderCards() {
     const term = document.getElementById('inventorySearch')?.value.toLowerCase();
     const filtered = allCards.filter(c => 
@@ -271,8 +275,11 @@ window.editCard = (id) => {
 };
 
 window.deleteCard = async (id) => { 
-    if (confirm("¿Eliminar carta definitivamente?")) 
+    // MODAL ESTÉTICO EN VEZ DE confirm()
+    const confirmed = await window.showConfirmUI("¿Eliminar carta?", "Esta acción eliminará la carta definitivamente de tu inventario y no se podrá deshacer.");
+    if (confirmed) {
         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id)); 
+    }
 };
 
 window.editSealed = (id) => {
@@ -288,8 +295,10 @@ window.editSealed = (id) => {
 };
 
 window.deleteSealed = async (id) => { 
-    if(confirm("¿Eliminar producto?")) 
+    const confirmed = await window.showConfirmUI("¿Eliminar producto?", "¿Deseas borrar este producto sellado? Esta acción es permanente.");
+    if(confirmed) {
         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id)); 
+    }
 };
 
 window.editCategory = (id) => {
@@ -301,8 +310,10 @@ window.editCategory = (id) => {
 };
 
 window.deleteCategory = async (id) => { 
-    if(confirm("¿Eliminar categoría?")) 
+    const confirmed = await window.showConfirmUI("¿Eliminar categoría?", "Al borrar la categoría, los productos asociados no se borrarán pero quedarán sin categoría asignada.");
+    if(confirmed) {
         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id)); 
+    }
 };
 
 window.viewOrder = (id) => { 
