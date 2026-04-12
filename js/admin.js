@@ -25,7 +25,7 @@ const appId = firebaseConfig.projectId;
 let allCards = [], allCategories = [], allSealed = [], allOrders = [];
 let trendChart = null;
 let isForcedLogoutDone = false;
-let confirmPromiseResolve = null; // Para manejar la respuesta del modal de confirmación
+let confirmPromiseResolve = null;
 
 // ==========================================================================
 // AYUDAS DE INTERFAZ (UI HELPERS)
@@ -44,7 +44,6 @@ window.closeModalUI = (m) => {
     } 
 };
 
-// NUEVA FUNCIÓN: Modal de Confirmación Estético
 window.showConfirmUI = (title, message) => {
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmText').textContent = message;
@@ -275,7 +274,6 @@ window.editCard = (id) => {
 };
 
 window.deleteCard = async (id) => { 
-    // MODAL ESTÉTICO EN VEZ DE confirm()
     const confirmed = await window.showConfirmUI("¿Eliminar carta?", "Esta acción eliminará la carta definitivamente de tu inventario y no se podrá deshacer.");
     if (confirmed) {
         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id)); 
@@ -452,14 +450,30 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cardForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('cardId').value;
+        const nombre = document.getElementById('cardName').value.trim();
+        const codigo = document.getElementById('cardCode').value.trim();
+
+        // VALIDACIÓN DE DUPLICADOS (NUEVO)
+        const duplicada = allCards.some(c => 
+            c.nombre.toLowerCase() === nombre.toLowerCase() && 
+            c.codigo.toLowerCase() === codigo.toLowerCase() && 
+            c.id !== id
+        );
+
+        if (duplicada) {
+            window.showAlertUI("Carta Duplicada", "Ya existe una carta con el mismo nombre y código en tu inventario. No es necesario agregarla nuevamente.");
+            return;
+        }
+
         const data = { 
-            nombre: document.getElementById('cardName').value.trim(), 
+            nombre: nombre, 
             expansion: document.getElementById('cardExpansion').value.trim(), 
-            codigo: document.getElementById('cardCode').value.trim(), 
+            codigo: codigo, 
             stock: parseInt(document.getElementById('cardStock').value) || 0, 
             precio: parseFloat(document.getElementById('cardPrice').value) || 0, 
             imagen_url: document.getElementById('cardImage').value.trim() 
         };
+        
         const path = `artifacts/${appId}/public/data/cards`;
         id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
         window.closeModalUI(document.getElementById('cardModal'));
