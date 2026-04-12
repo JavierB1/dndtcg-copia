@@ -26,12 +26,12 @@
             <form id="loginForm">
                 <div class="login-field">
                     <label>Correo Electrónico</label>
-                    <input type="email" id="username" placeholder="admin@dndtcg.com" required>
+                    <input type="email" id="username" required>
                     <i class="fas fa-envelope"></i>
                 </div>
                 <div class="login-field">
                     <label>Contraseña</label>
-                    <input type="password" id="password" placeholder="••••••••" required>
+                    <input type="password" id="password" required>
                     <i class="fas fa-key"></i>
                 </div>
                 <button type="submit" id="loginBtnSubmit" class="confirm-button" style="width: 100%; padding: 16px;">Iniciar Sesión</button>
@@ -60,7 +60,6 @@
         <main class="main-content">
             <header class="main-header"><h2 id="main-title" style="font-weight: 800;">Dashboard</h2></header>
 
-            <!-- SECCIONES -->
             <section id="dashboard-section" class="admin-section active">
                 <div class="dashboard-stats">
                     <div class="stat-card"><h3>Total Cartas</h3><p id="totalCardsCount">0</p></div>
@@ -74,7 +73,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px;">
                     <div class="search-bar-container">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="inventorySearch" placeholder="Nombre o código...">
+                        <input type="text" id="inventorySearch">
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <button class="confirm-button" style="background: #10b981;" onclick="window.openTCGScanner()">
@@ -107,7 +106,7 @@
                 <div style="background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                     <h3 style="margin-bottom: 15px;">Comparativa de Mercado</h3>
                     <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-                        <input type="text" id="compSearchInput" placeholder="Ej: 028/151" style="flex: 1; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 14px;">
+                        <input type="text" id="compSearchInput" style="flex: 1; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 14px;">
                         <button class="confirm-button" onclick="window.handleMarketComparisonUI()">Analizar</button>
                     </div>
                     <div id="comparisonResults" style="display: none;">
@@ -139,7 +138,7 @@
         </main>
     </div>
 
-    <!-- MODAL CARTA -->
+    <!-- MODAL CARTA SIN PLACEHOLDERS -->
     <div id="cardModal" class="admin-modal">
         <div class="admin-modal-content wide">
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('cardModal'))">&times;</button>
@@ -150,16 +149,16 @@
                     <form id="cardForm">
                         <input type="hidden" id="cardId">
                         <div style="display: flex; flex-direction: column;">
-                            <div class="login-field"><label>Nombre de la Carta</label><input type="text" id="cardName" placeholder="Ej: Sylveon ex" required><i class="fas fa-signature"></i></div>
+                            <div class="login-field"><label>Nombre de la Carta</label><input type="text" id="cardName" required><i class="fas fa-signature"></i></div>
                             <div style="display: flex; gap: 15px;">
-                                <div class="login-field" style="flex: 1;"><label>Código</label><input type="text" id="cardCode" placeholder="41/131" required><i class="fas fa-barcode"></i></div>
-                                <div class="login-field" style="flex: 1.2;"><label>Expansión</label><input type="text" id="cardExpansion" placeholder="Prismatic Evolutions"><i class="fas fa-layer-group"></i></div>
+                                <div class="login-field" style="flex: 1;"><label>Código</label><input type="text" id="cardCode" required><i class="fas fa-barcode"></i></div>
+                                <div class="login-field" style="flex: 1.2;"><label>Expansión</label><input type="text" id="cardExpansion"><i class="fas fa-layer-group"></i></div>
                             </div>
                             <div style="display: flex; gap: 15px;">
-                                <div class="login-field" style="flex: 1;"><label>Precio ($)</label><input type="number" step="0.01" id="cardPrice" placeholder="0.00" required><i class="fas fa-tag"></i></div>
-                                <div class="login-field" style="flex: 1;"><label>Stock</label><input type="number" id="cardStock" placeholder="0" required><i class="fas fa-cubes"></i></div>
+                                <div class="login-field" style="flex: 1;"><label>Precio ($)</label><input type="number" step="0.01" id="cardPrice" required><i class="fas fa-tag"></i></div>
+                                <div class="login-field" style="flex: 1;"><label>Stock</label><input type="number" id="cardStock" required><i class="fas fa-cubes"></i></div>
                             </div>
-                            <div class="login-field"><label>URL de Imagen</label><input type="url" id="cardImage" placeholder="https://..."><i class="fas fa-image"></i></div>
+                            <div class="login-field"><label>URL de Imagen</label><input type="url" id="cardImage"><i class="fas fa-image"></i></div>
                             <button type="submit" class="confirm-button" style="width: 100%; margin-top: 10px; padding: 18px;">Guardar Cambios</button>
                         </div>
                     </form>
@@ -180,7 +179,6 @@
         </div>
     </div>
 
-    <!-- OTROS MODALES -->
     <div id="sealedProductModal" class="admin-modal">
         <div class="admin-modal-content">
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('sealedProductModal'))">&times;</button>
@@ -195,6 +193,7 @@
             </form>
         </div>
     </div>
+    
     <div id="categoryModal" class="admin-modal">
         <div class="admin-modal-content">
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('categoryModal'))">&times;</button>
@@ -202,9 +201,9 @@
             <form id="categoryForm"><input type="hidden" id="categoryId"><div class="login-field"><label>Nombre</label><input type="text" id="categoryName" required><i class="fas fa-tags"></i></div><button type="submit" class="confirm-button" style="width: 100%;">Guardar Categoría</button></form>
         </div>
     </div>
+
     <div id="alertModal" class="admin-modal"><div class="admin-modal-content" style="text-align: center; max-width: 400px;"><i class="fas fa-exclamation-circle" style="font-size: 3rem; color: #f59e0b; margin-bottom: 15px;"></i><h3 id="alertTitle" style="font-weight: 800;">Atención</h3><p id="alertText" style="margin: 15px 0 25px; color: #64748b; line-height: 1.6;"></p><button class="confirm-button" onclick="window.closeModalUI(document.getElementById('alertModal'))" style="width: 100%;">Entendido</button></div></div>
 
-    <!-- Script Principal -->
     <script type="module" src="js/admin.js"></script>
 </body>
 </html>
