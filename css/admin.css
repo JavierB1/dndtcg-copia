@@ -36,7 +36,7 @@ body { background-color: #f1f5f9; color: #334155; overflow-x: hidden; }
 .admin-section { display: none !important; }
 .admin-section.active { display: block !important; animation: fadeIn 0.3s ease; }
 
-/* --- BARRA DE BÚSQUEDA PRINCIPAL --- */
+/* --- BARRA DE BÚSQUEDA --- */
 .search-bar-container { position: relative; flex: 1; max-width: 350px; }
 .search-bar-container i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9rem; pointer-events: none; }
 .search-bar-container input { 
