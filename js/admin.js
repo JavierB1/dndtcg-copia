@@ -4,20 +4,19 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { 
     getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
-    setPersistence, browserSessionPersistence, signInWithCustomToken, signInAnonymously
+    signInWithCustomToken, signInAnonymously 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { 
     getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
+    apiKey: "", // Se inyecta automáticamente
     authDomain: "dndtcgadmin.firebaseapp.com",
     projectId: "dndtcgadmin",
     storageBucket: "dndtcgadmin.firebasestorage.app",
     messagingSenderId: "754642671504",
-    appId: "1:754642671504:web:c087cc703862cf8c228515",
-    measurementId: "G-T8KRZX5S7R"
+    appId: "1:754642671504:web:c087cc703862cf8c228515"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -33,7 +32,7 @@ let trendChart = null;
 let isForcedLogoutDone = false;
 
 // ==========================================================================
-// 3. UI HELPERS (VINCULADOS A WINDOW PARA ONCLICK)
+// 3. UI HELPERS (VINCULADOS A WINDOW)
 // ==========================================================================
 window.openModalUI = (m) => { if(m) { m.style.display = 'flex'; document.body.style.overflow = 'hidden'; } };
 window.closeModalUI = (m) => { if(m) { m.style.display = 'none'; document.body.style.overflow = ''; } };
@@ -101,7 +100,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ==========================================================================
-// 5. CARGA DE DATOS (REALTIME)
+// 5. CARGA DE DATOS
 // ==========================================================================
 function loadAllData() {
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'cards')), (snap) => {
@@ -130,7 +129,7 @@ function loadAllData() {
 }
 
 // ==========================================================================
-// 6. RENDERIZADO DE TABLAS
+// 6. RENDERIZADO
 // ==========================================================================
 function filterAndRenderCards() {
     const term = document.getElementById('inventorySearch')?.value.toLowerCase();
@@ -218,7 +217,7 @@ function renderOrdersTable() {
 }
 
 // ==========================================================================
-// 7. CRUD FUNCTIONS (WINDOW)
+// 7. CRUD FUNCTIONS
 // ==========================================================================
 window.editCard = (id) => {
     const card = allCards.find(c => c.id === id);
@@ -271,19 +270,26 @@ window.viewOrder = (id) => {
 };
 
 // ==========================================================================
-// 8. TCG PLAYER API & MARKET
+// 8. TCG PLAYER API
 // ==========================================================================
 window.handleTCGSearchUI = async () => {
     const input = document.getElementById('tcgSearchInput');
+    const setInput = document.getElementById('tcgSetInput'); // NUEVO: Campo de expansión
     const status = document.getElementById('searchStatus');
     const btn = document.getElementById('submitSearch');
     if(!input?.value.trim()) return;
     btn.disabled = true;
     status.textContent = "Buscando...";
     status.style.color = "#3b82f6";
+    
     let num = input.value.trim().split('/')[0];
+    let expansion = setInput?.value.trim();
+    
     try {
-        const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:"${num}"`);
+        let apiUrl = `https://api.pokemontcg.io/v2/cards?q=number:"${num}"`;
+        if (expansion) apiUrl += ` set.name:"${expansion}*"`; // Búsqueda por expansión si se escribe
+        
+        const res = await fetch(apiUrl);
         const data = await res.json();
         if (data.data && data.data.length > 0) {
             const c = data.data[0];
@@ -340,30 +346,28 @@ function renderChartUI(price) {
 // 9. EVENT LISTENERS
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Inyección de contenido de búsqueda
     const qs = document.getElementById('quickSearchContent');
     if (qs) {
         qs.innerHTML = `
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('scannerModal'))">&times;</button>
             <h2 style="margin-bottom:20px; font-weight:800;">Buscador TCGPlayer</h2>
+            <div class="login-field"><label>Expansión (Opcional)</label><input type="text" id="tcgSetInput" placeholder="Ej: 151, Brilliant Stars..."></div>
             <div class="login-field"><label>Código Carta</label><input type="text" id="tcgSearchInput" placeholder="Ej: 028/151"></div>
             <button id="submitSearch" class="confirm-button" style="width:100%;" onclick="window.handleTCGSearchUI()">Consultar</button>
             <p id="searchStatus" style="margin-top:15px; text-align:center;"></p>
         `;
     }
 
-    // Login
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('username').value.trim();
         const pass = document.getElementById('password').value;
         try { await signInWithEmailAndPassword(auth, email, pass); } catch (err) {
             const msg = document.getElementById('loginMessage');
-            if(msg) { msg.textContent = "Acceso denegado."; msg.style.display = 'block'; }
+            if(msg) { msg.textContent = "Error: Credenciales no válidas."; msg.style.display = 'block'; }
         }
     });
 
-    // Guardar Carta
     document.getElementById('cardForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('cardId').value;
@@ -374,12 +378,10 @@ document.addEventListener('DOMContentLoaded', () => {
             precio: parseFloat(document.getElementById('cardPrice').value) || 0,
             imagen_url: document.getElementById('cardImage').value.trim()
         };
-        const path = `artifacts/${appId}/public/data/cards`;
-        id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
+        id ? await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id), data) : await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'cards'), data);
         window.closeModalUI(document.getElementById('cardModal'));
     });
 
-    // Guardar Sellado
     document.getElementById('sealedProductForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('sealedProductId').value;
@@ -390,24 +392,20 @@ document.addEventListener('DOMContentLoaded', () => {
             stock: parseInt(document.getElementById('sealedProductStock').value),
             imagen_url: document.getElementById('sealedProductImage').value
         };
-        const path = `artifacts/${appId}/public/data/sealed_products`;
-        id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
+        id ? await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id), data) : await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'), data);
         window.closeModalUI(document.getElementById('sealedProductModal'));
     });
 
-    // Guardar Categoría
     document.getElementById('categoryForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('categoryId').value;
         const data = { name: document.getElementById('categoryName').value };
-        const path = `artifacts/${appId}/public/data/categories`;
-        id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
+        id ? await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id), data) : await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'categories'), data);
         window.closeModalUI(document.getElementById('categoryModal'));
     });
 
     document.getElementById('inventorySearch')?.addEventListener('input', filterAndRenderCards);
 
-    // Navegación de Secciones (Sidebar)
     document.querySelectorAll('.nav-link').forEach(l => {
         l.addEventListener('click', (e) => {
             e.preventDefault();
