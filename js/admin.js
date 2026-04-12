@@ -32,7 +32,7 @@ let trendChart = null;
 let isForcedLogoutDone = false;
 
 // ==========================================================================
-// 3. UI HELPERS
+// 3. UI HELPERS (VINCULADOS A WINDOW)
 // ==========================================================================
 window.openModalUI = (m) => { if(m) { m.style.display = 'flex'; document.body.style.overflow = 'hidden'; } };
 window.closeModalUI = (m) => { if(m) { m.style.display = 'none'; document.body.style.overflow = ''; } };
@@ -65,14 +65,17 @@ window.openNewCardModal = () => {
     window.openModalUI(document.getElementById('cardModal'));
 };
 
+// Cambio solicitado: Limpieza del buscador TCG al abrir
 window.openTCGScanner = () => {
-    const inputCode = document.getElementById('tcgSearchInput');
-    const inputExp = document.getElementById('tcgSetInput');
+    const codeIn = document.getElementById('tcgSearchInput');
+    const expIn = document.getElementById('tcgSetInput');
     const status = document.getElementById('searchStatus');
-    // Limpieza al abrir
-    if(inputCode) inputCode.value = '';
-    if(inputExp) inputExp.value = '';
+    
+    // Limpieza de datos anteriores
+    if(codeIn) codeIn.value = '';
+    if(expIn) expIn.value = '';
     if(status) status.textContent = '';
+    
     window.openModalUI(document.getElementById('scannerModal'));
 };
 
@@ -114,7 +117,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ==========================================================================
-// 5. CARGA DE DATOS
+// 5. CARGA DE DATOS (REALTIME)
 // ==========================================================================
 function loadAllData() {
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'cards')), (snap) => {
@@ -143,7 +146,7 @@ function loadAllData() {
 }
 
 // ==========================================================================
-// 6. RENDERIZADO
+// 6. RENDERIZADO DE TABLAS
 // ==========================================================================
 function filterAndRenderCards() {
     const term = document.getElementById('inventorySearch')?.value.toLowerCase();
@@ -154,6 +157,7 @@ function filterAndRenderCards() {
     renderCardsTable(filtered);
 }
 
+// Cambio solicitado: Agregar columna de expansión en la tabla
 function renderCardsTable(list) {
     const tbody = document.querySelector('#cardsTable tbody');
     if(!tbody) return;
@@ -163,12 +167,13 @@ function renderCardsTable(list) {
         tr.innerHTML = `
             <td><img src="${c.imagen_url}" width="40" style="border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></td>
             <td style="font-weight:700; color: #1e293b;">${c.nombre}</td>
+            <td style="color: #64748b;">${c.expansion || '-'}</td>
             <td style="color: #64748b; font-family: monospace;">${c.codigo}</td>
             <td style="font-weight:700; color:#3b82f6;">$${parseFloat(c.precio).toFixed(2)}</td>
             <td><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 8px; font-weight: 600;">${c.stock}</span></td>
             <td>
-                <button onclick="window.editCard('${c.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer; font-size: 1.1rem;"><i class="fas fa-edit"></i></button>
-                <button onclick="window.deleteCard('${c.id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:12px; font-size: 1.1rem;"><i class="fas fa-trash"></i></button>
+                <button onclick="window.editCard('${c.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                <button onclick="window.deleteCard('${c.id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:12px;"><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -380,7 +385,7 @@ function renderChartUI(price) {
 document.addEventListener('DOMContentLoaded', () => {
     const qs = document.getElementById('quickSearchContent');
     if (qs) {
-        // REORDENADO: Código primero (prioridad), Expansión después (opcional)
+        // Prioridad: Código arriba, Expansión abajo
         qs.innerHTML = `
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('scannerModal'))">&times;</button>
             <h2 style="margin-bottom:25px; font-weight:800; color: #1e293b;">Buscador TCGPlayer</h2>
