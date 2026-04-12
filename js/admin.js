@@ -10,7 +10,6 @@ import {
     getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-// Credenciales establecidas de dndtcgadmin
 const firebaseConfig = {
     apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
     authDomain: "dndtcgadmin.firebaseapp.com",
@@ -51,28 +50,34 @@ window.refreshPreviewUI = (url) => {
     const icon = document.getElementById('placeholderIcon');
     if (img && icon) {
         if (url && url.startsWith('http')) {
-            img.src = url; img.style.display = 'block'; icon.style.display = 'none';
+            img.src = url; 
+            img.style.display = 'block'; 
+            icon.style.display = 'none';
         } else {
-            img.style.display = 'none'; icon.style.display = 'block';
+            img.style.display = 'none'; 
+            icon.style.display = 'block';
         }
     }
 };
 
 window.openNewCardModal = () => {
-    document.getElementById('cardForm').reset();
+    const form = document.getElementById('cardForm');
+    if(form) form.reset();
     document.getElementById('cardId').value = '';
     window.refreshPreviewUI('');
     window.openModalUI(document.getElementById('cardModal'));
 };
 
 window.openNewSealedModal = () => {
-    document.getElementById('sealedProductForm').reset();
+    const form = document.getElementById('sealedProductForm');
+    if(form) form.reset();
     document.getElementById('sealedProductId').value = '';
     window.openModalUI(document.getElementById('sealedProductModal'));
 };
 
 window.openNewCategoryModal = () => {
-    document.getElementById('categoryForm').reset();
+    const form = document.getElementById('categoryForm');
+    if(form) form.reset();
     document.getElementById('categoryId').value = '';
     window.openModalUI(document.getElementById('categoryModal'));
 };
@@ -96,7 +101,6 @@ onAuthStateChanged(auth, (user) => {
     const loginModal = document.getElementById('loginModal');
     const adminContainer = document.getElementById('adminContainer');
     
-    // Solo permitimos el acceso si el usuario NO es anónimo y ya se forzó el logout inicial
     if (user && !user.isAnonymous && isForcedLogoutDone) {
         if (loginModal) loginModal.style.display = 'none';
         if (adminContainer) adminContainer.style.display = 'flex';
@@ -143,7 +147,7 @@ function filterAndRenderCards() {
     const term = document.getElementById('inventorySearch')?.value.toLowerCase();
     const filtered = allCards.filter(c => 
         c.nombre.toLowerCase().includes(term || "") || 
-        c.codigo.toLowerCase().includes(term || "")
+        (c.codigo && c.codigo.toLowerCase().includes(term || ""))
     );
     renderCardsTable(filtered);
 }
@@ -155,14 +159,14 @@ function renderCardsTable(list) {
     list.forEach(c => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><img src="${c.imagen_url}" width="40" style="border-radius:8px;"></td>
-            <td style="font-weight:700;">${c.nombre}</td>
-            <td>${c.codigo}</td>
+            <td><img src="${c.imagen_url}" width="40" style="border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></td>
+            <td style="font-weight:700; color: #1e293b;">${c.nombre}</td>
+            <td style="color: #64748b; font-family: monospace;">${c.codigo}</td>
             <td style="font-weight:700; color:#3b82f6;">$${parseFloat(c.precio).toFixed(2)}</td>
-            <td>${c.stock}</td>
+            <td><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 8px; font-weight: 600;">${c.stock}</span></td>
             <td>
-                <button onclick="window.editCard('${c.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
-                <button onclick="window.deleteCard('${c.id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:12px;"><i class="fas fa-trash"></i></button>
+                <button onclick="window.editCard('${c.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer; font-size: 1.1rem;"><i class="fas fa-edit"></i></button>
+                <button onclick="window.deleteCard('${c.id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:12px; font-size: 1.1rem;"><i class="fas fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -242,7 +246,9 @@ window.editCard = (id) => {
 };
 
 window.deleteCard = async (id) => {
-    if (confirm("¿Eliminar carta?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id));
+    if (confirm("¿Eliminar carta definitivamente?")) {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id));
+    }
 };
 
 window.editSealed = (id) => {
@@ -258,7 +264,9 @@ window.editSealed = (id) => {
 };
 
 window.deleteSealed = async (id) => {
-    if(confirm("¿Eliminar producto?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id));
+    if(confirm("¿Eliminar producto sellado?")) {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id));
+    }
 };
 
 window.editCategory = (id) => {
@@ -270,12 +278,14 @@ window.editCategory = (id) => {
 };
 
 window.deleteCategory = async (id) => {
-    if(confirm("¿Eliminar categoría?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id));
+    if(confirm("¿Eliminar categoría? Esto no borrará los productos dentro de ella.")) {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id));
+    }
 };
 
 window.viewOrder = (id) => {
     const o = allOrders.find(x => x.id === id);
-    if(o) window.showAlertUI("Detalle Pedido", `Cliente: ${o.customerName}\nTotal: $${o.total}\nEstado: ${o.status}`);
+    if(o) window.showAlertUI("Detalle del Pedido", `Cliente: ${o.customerName}\nTotal: $${o.total}\nEstado: ${o.status}`);
 };
 
 // ==========================================================================
@@ -287,9 +297,10 @@ window.handleTCGSearchUI = async () => {
     const status = document.getElementById('searchStatus');
     const btn = document.getElementById('submitSearch');
     if(!input?.value.trim()) return;
+    
     btn.disabled = true;
-    status.textContent = "Buscando...";
-    status.style.color = "#3b82f6";
+    btn.textContent = "Buscando...";
+    status.textContent = "";
     
     let num = input.value.trim().split('/')[0];
     let expansion = setInput?.value.trim();
@@ -300,6 +311,7 @@ window.handleTCGSearchUI = async () => {
         
         const res = await fetch(apiUrl);
         const data = await res.json();
+        
         if (data.data && data.data.length > 0) {
             const c = data.data[0];
             document.getElementById('cardId').value = '';
@@ -314,9 +326,16 @@ window.handleTCGSearchUI = async () => {
             window.refreshPreviewUI(c.images.large);
             window.closeModalUI(document.getElementById('scannerModal'));
             window.openModalUI(document.getElementById('cardModal'));
-        } else { status.textContent = "No encontrada."; status.style.color = "#ef4444"; }
-    } catch (e) { status.textContent = "Error."; }
+        } else { 
+            status.textContent = "No se encontró ninguna carta con esos datos."; 
+            status.style.color = "#ef4444"; 
+        }
+    } catch (e) { 
+        status.textContent = "Error de conexión con TCGPlayer."; 
+        status.style.color = "#ef4444";
+    }
     btn.disabled = false;
+    btn.textContent = "Consultar";
 };
 
 window.handleMarketComparisonUI = async () => {
@@ -348,7 +367,8 @@ function renderChartUI(price) {
                 data: [0.98, 1.02, 0.95, 1.05, 1, 1.08, 1].map(f => price * f),
                 borderColor: '#3b82f6', fill: true, tension: 0.4, backgroundColor: 'rgba(59, 130, 246, 0.1)'
             }]
-        }
+        },
+        options: { responsive: true, maintainAspectRatio: false }
     });
 }
 
@@ -360,11 +380,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (qs) {
         qs.innerHTML = `
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('scannerModal'))">&times;</button>
-            <h2 style="margin-bottom:20px; font-weight:800;">Buscador TCGPlayer</h2>
-            <div class="login-field"><label>Expansión (Opcional)</label><input type="text" id="tcgSetInput" placeholder="Ej: 151, Brilliant Stars..."></div>
-            <div class="login-field"><label>Código Carta</label><input type="text" id="tcgSearchInput" placeholder="Ej: 028/151"></div>
+            <h2 style="margin-bottom:25px; font-weight:800; color: #1e293b;">Buscador TCGPlayer</h2>
+            <div class="login-field" style="margin-bottom:12px;">
+                <label>Expansión (Opcional)</label>
+                <input type="text" id="tcgSetInput" placeholder="Ej: 151, Brilliant Stars...">
+                <i class="fas fa-layer-group"></i>
+            </div>
+            <div class="login-field" style="margin-bottom:20px;">
+                <label>Código de la Carta</label>
+                <input type="text" id="tcgSearchInput" placeholder="Ej: 028/151">
+                <i class="fas fa-barcode"></i>
+            </div>
             <button id="submitSearch" class="confirm-button" style="width:100%;" onclick="window.handleTCGSearchUI()">Consultar</button>
-            <p id="searchStatus" style="margin-top:15px; text-align:center;"></p>
+            <p id="searchStatus" style="margin-top:15px; text-align:center; font-size: 0.85rem;"></p>
         `;
     }
 
@@ -429,6 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('inventorySearch')?.addEventListener('input', filterAndRenderCards);
+    document.getElementById('cardImage')?.addEventListener('input', (e) => window.refreshPreviewUI(e.target.value));
 
     document.querySelectorAll('.nav-link').forEach(l => {
         l.addEventListener('click', (e) => {
@@ -459,12 +488,11 @@ function updateStats() {
 function updateCategorySelects() {
     const sel = document.getElementById('sealedProductCategory');
     if(sel) {
-        sel.innerHTML = '<option value="" disabled selected>Selecciona</option>';
+        sel.innerHTML = '<option value="" disabled selected>Selecciona una categoría</option>';
         allCategories.forEach(c => sel.appendChild(new Option(c.name, c.name)));
     }
 }
 
-// Inicialización de Auth del entorno Canvas (Prioridad)
 const initAuth = async () => {
     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
         await signInWithCustomToken(auth, __initial_auth_token);
