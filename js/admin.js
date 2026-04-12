@@ -32,7 +32,7 @@ let trendChart = null;
 let isForcedLogoutDone = false;
 
 // ==========================================================================
-// 3. UI HELPERS (VINCULADOS A WINDOW)
+// 3. UI HELPERS
 // ==========================================================================
 window.openModalUI = (m) => { if(m) { m.style.display = 'flex'; document.body.style.overflow = 'hidden'; } };
 window.closeModalUI = (m) => { if(m) { m.style.display = 'none'; document.body.style.overflow = ''; } };
@@ -50,12 +50,9 @@ window.refreshPreviewUI = (url) => {
     const icon = document.getElementById('placeholderIcon');
     if (img && icon) {
         if (url && url.startsWith('http')) {
-            img.src = url; 
-            img.style.display = 'block'; 
-            icon.style.display = 'none';
+            img.src = url; img.style.display = 'block'; icon.style.display = 'none';
         } else {
-            img.style.display = 'none'; 
-            icon.style.display = 'block';
+            img.style.display = 'none'; icon.style.display = 'block';
         }
     }
 };
@@ -66,6 +63,17 @@ window.openNewCardModal = () => {
     document.getElementById('cardId').value = '';
     window.refreshPreviewUI('');
     window.openModalUI(document.getElementById('cardModal'));
+};
+
+window.openTCGScanner = () => {
+    const inputCode = document.getElementById('tcgSearchInput');
+    const inputExp = document.getElementById('tcgSetInput');
+    const status = document.getElementById('searchStatus');
+    // Limpieza al abrir
+    if(inputCode) inputCode.value = '';
+    if(inputExp) inputExp.value = '';
+    if(status) status.textContent = '';
+    window.openModalUI(document.getElementById('scannerModal'));
 };
 
 window.openNewSealedModal = () => {
@@ -88,19 +96,13 @@ window.logoutUI = () => signOut(auth).then(() => location.reload());
 // 4. CONTROL DE SESIÓN
 // ==========================================================================
 const forceLogout = async () => {
-    try { 
-        await signOut(auth); 
-        isForcedLogoutDone = true; 
-    } catch (e) { 
-        isForcedLogoutDone = true; 
-    }
+    try { await signOut(auth); isForcedLogoutDone = true; } catch (e) { isForcedLogoutDone = true; }
 };
 forceLogout();
 
 onAuthStateChanged(auth, (user) => {
     const loginModal = document.getElementById('loginModal');
     const adminContainer = document.getElementById('adminContainer');
-    
     if (user && !user.isAnonymous && isForcedLogoutDone) {
         if (loginModal) loginModal.style.display = 'none';
         if (adminContainer) adminContainer.style.display = 'flex';
@@ -112,7 +114,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ==========================================================================
-// 5. CARGA DE DATOS (REALTIME)
+// 5. CARGA DE DATOS
 // ==========================================================================
 function loadAllData() {
     onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'cards')), (snap) => {
@@ -141,7 +143,7 @@ function loadAllData() {
 }
 
 // ==========================================================================
-// 6. RENDERIZADO DE TABLAS
+// 6. RENDERIZADO
 // ==========================================================================
 function filterAndRenderCards() {
     const term = document.getElementById('inventorySearch')?.value.toLowerCase();
@@ -278,7 +280,7 @@ window.editCategory = (id) => {
 };
 
 window.deleteCategory = async (id) => {
-    if(confirm("¿Eliminar categoría? Esto no borrará los productos dentro de ella.")) {
+    if(confirm("¿Eliminar categoría?")) {
         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id));
     }
 };
@@ -327,11 +329,11 @@ window.handleTCGSearchUI = async () => {
             window.closeModalUI(document.getElementById('scannerModal'));
             window.openModalUI(document.getElementById('cardModal'));
         } else { 
-            status.textContent = "No se encontró ninguna carta con esos datos."; 
+            status.textContent = "No se encontró ninguna carta."; 
             status.style.color = "#ef4444"; 
         }
     } catch (e) { 
-        status.textContent = "Error de conexión con TCGPlayer."; 
+        status.textContent = "Error de conexión."; 
         status.style.color = "#ef4444";
     }
     btn.disabled = false;
@@ -378,18 +380,19 @@ function renderChartUI(price) {
 document.addEventListener('DOMContentLoaded', () => {
     const qs = document.getElementById('quickSearchContent');
     if (qs) {
+        // REORDENADO: Código primero (prioridad), Expansión después (opcional)
         qs.innerHTML = `
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('scannerModal'))">&times;</button>
             <h2 style="margin-bottom:25px; font-weight:800; color: #1e293b;">Buscador TCGPlayer</h2>
             <div class="login-field" style="margin-bottom:12px;">
+                <label>Código de la Carta (Prioridad)</label>
+                <input type="text" id="tcgSearchInput" placeholder="Ej: 028/151">
+                <i class="fas fa-barcode"></i>
+            </div>
+            <div class="login-field" style="margin-bottom:20px;">
                 <label>Expansión (Opcional)</label>
                 <input type="text" id="tcgSetInput" placeholder="Ej: 151, Brilliant Stars...">
                 <i class="fas fa-layer-group"></i>
-            </div>
-            <div class="login-field" style="margin-bottom:20px;">
-                <label>Código de la Carta</label>
-                <input type="text" id="tcgSearchInput" placeholder="Ej: 028/151">
-                <i class="fas fa-barcode"></i>
             </div>
             <button id="submitSearch" class="confirm-button" style="width:100%;" onclick="window.handleTCGSearchUI()">Consultar</button>
             <p id="searchStatus" style="margin-top:15px; text-align:center; font-size: 0.85rem;"></p>
