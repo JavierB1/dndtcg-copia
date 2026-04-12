@@ -4,7 +4,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { 
     getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
-    signInWithCustomToken, signInAnonymously 
+    setPersistence, browserSessionPersistence, signInWithCustomToken, signInAnonymously
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { 
     getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query 
@@ -32,12 +32,8 @@ let allCards = [], allCategories = [], allSealed = [], allOrders = [];
 let trendChart = null;
 let isForcedLogoutDone = false;
 
-// UI References
-const loginModal = document.getElementById('loginModal');
-const adminView = document.getElementById('adminContainer');
-
 // ==========================================================================
-// 3. VINCULACIÓN GLOBAL (IMPORTANTÍSIMO PARA BOTONES)
+// 3. UI HELPERS (VINCULADOS A WINDOW PARA ONCLICK)
 // ==========================================================================
 window.openModalUI = (m) => { if(m) { m.style.display = 'flex'; document.body.style.overflow = 'hidden'; } };
 window.closeModalUI = (m) => { if(m) { m.style.display = 'none'; document.body.style.overflow = ''; } };
@@ -55,12 +51,9 @@ window.refreshPreviewUI = (url) => {
     const icon = document.getElementById('placeholderIcon');
     if (img && icon) {
         if (url && url.startsWith('http')) {
-            img.src = url;
-            img.style.display = 'block';
-            icon.style.display = 'none';
+            img.src = url; img.style.display = 'block'; icon.style.display = 'none';
         } else {
-            img.style.display = 'none';
-            icon.style.display = 'block';
+            img.style.display = 'none'; icon.style.display = 'block';
         }
     }
 };
@@ -95,58 +88,42 @@ const forceLogout = async () => {
 forceLogout();
 
 onAuthStateChanged(auth, (user) => {
+    const loginModal = document.getElementById('loginModal');
+    const adminContainer = document.getElementById('adminContainer');
     if (user && !user.isAnonymous && isForcedLogoutDone) {
-        if(loginModal) loginModal.style.display = 'none';
-        if(adminView) adminView.style.display = 'flex';
+        if (loginModal) loginModal.style.display = 'none';
+        if (adminContainer) adminContainer.style.display = 'flex';
         loadAllData();
     } else {
-        if(adminView) adminView.style.display = 'none';
-        if(loginView) loginView.style.display = 'flex';
-    }
-});
-
-document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('loginBtnSubmit');
-    const msg = document.getElementById('loginMessage');
-    const email = document.getElementById('username').value.trim();
-    const pass = document.getElementById('password').value;
-    btn.disabled = true;
-    btn.textContent = "Verificando...";
-    try { await signInWithEmailAndPassword(auth, email, pass); } catch (err) {
-        btn.disabled = false;
-        btn.textContent = "Iniciar Sesión";
-        if(msg) { msg.textContent = "Error: Credenciales no válidas."; msg.style.display = 'block'; }
+        if (adminContainer) adminContainer.style.display = 'none';
+        if (loginModal) loginModal.style.display = 'flex';
     }
 });
 
 // ==========================================================================
-// 5. CARGA DE DATOS REALTIME
+// 5. CARGA DE DATOS (REALTIME)
 // ==========================================================================
 function loadAllData() {
-    const cardsCol = collection(db, 'artifacts', appId, 'public', 'data', 'cards');
-    onSnapshot(query(cardsCol), (snap) => {
+    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'cards')), (snap) => {
         allCards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         filterAndRenderCards();
         updateStats();
     });
 
-    const sealedCol = collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products');
-    onSnapshot(query(sealedCol), (snap) => {
+    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products')), (snap) => {
         allSealed = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderSealedTable();
         updateStats();
     });
 
-    const catCol = collection(db, 'artifacts', appId, 'public', 'data', 'categories');
-    onSnapshot(query(catCol), (snap) => {
+    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'categories')), (snap) => {
         allCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCategoriesTable();
         updateCategorySelects();
+        updateStats();
     });
 
-    const ordersCol = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
-    onSnapshot(query(ordersCol), (snap) => {
+    onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'orders')), (snap) => {
         allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderOrdersTable();
     });
@@ -241,7 +218,7 @@ function renderOrdersTable() {
 }
 
 // ==========================================================================
-// 7. CRUD WINDOW FUNCTIONS
+// 7. CRUD FUNCTIONS (WINDOW)
 // ==========================================================================
 window.editCard = (id) => {
     const card = allCards.find(c => c.id === id);
@@ -294,7 +271,7 @@ window.viewOrder = (id) => {
 };
 
 // ==========================================================================
-// 8. TCG PLAYER API & COMPARISON
+// 8. TCG PLAYER API & MARKET
 // ==========================================================================
 window.handleTCGSearchUI = async () => {
     const input = document.getElementById('tcgSearchInput');
@@ -322,15 +299,13 @@ window.handleTCGSearchUI = async () => {
             window.closeModalUI(document.getElementById('scannerModal'));
             window.openModalUI(document.getElementById('cardModal'));
         } else { status.textContent = "No encontrada."; status.style.color = "#ef4444"; }
-    } catch (e) { status.textContent = "Error de red."; }
+    } catch (e) { status.textContent = "Error."; }
     btn.disabled = false;
 };
 
 window.handleMarketComparisonUI = async () => {
     const input = document.getElementById('compSearchInput');
-    const status = document.getElementById('compStatus');
     if(!input?.value.trim()) return;
-    status.textContent = "Analizando...";
     let num = input.value.trim().split('/')[0];
     try {
         const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:"${num}"`);
@@ -340,9 +315,8 @@ window.handleMarketComparisonUI = async () => {
             const card = data.data[0];
             const market = (card.tcgplayer?.prices?.holofoil?.market || 10);
             renderChartUI(market);
-            status.textContent = "Completado.";
         }
-    } catch (e) { status.textContent = "Error."; }
+    } catch (e) { console.error(e); }
 };
 
 function renderChartUI(price) {
@@ -366,6 +340,7 @@ function renderChartUI(price) {
 // 9. EVENT LISTENERS
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
+    // Inyección de contenido de búsqueda
     const qs = document.getElementById('quickSearchContent');
     if (qs) {
         qs.innerHTML = `
@@ -377,6 +352,18 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
+    // Login
+    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('username').value.trim();
+        const pass = document.getElementById('password').value;
+        try { await signInWithEmailAndPassword(auth, email, pass); } catch (err) {
+            const msg = document.getElementById('loginMessage');
+            if(msg) { msg.textContent = "Acceso denegado."; msg.style.display = 'block'; }
+        }
+    });
+
+    // Guardar Carta
     document.getElementById('cardForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('cardId').value;
@@ -387,11 +374,12 @@ document.addEventListener('DOMContentLoaded', () => {
             precio: parseFloat(document.getElementById('cardPrice').value) || 0,
             imagen_url: document.getElementById('cardImage').value.trim()
         };
-        const ref = id ? doc(db, 'artifacts', appId, 'public', 'data', 'cards', id) : collection(db, 'artifacts', appId, 'public', 'data', 'cards');
-        id ? await updateDoc(ref, data) : await addDoc(ref, data);
+        const path = `artifacts/${appId}/public/data/cards`;
+        id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
         window.closeModalUI(document.getElementById('cardModal'));
     });
 
+    // Guardar Sellado
     document.getElementById('sealedProductForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('sealedProductId').value;
@@ -402,40 +390,48 @@ document.addEventListener('DOMContentLoaded', () => {
             stock: parseInt(document.getElementById('sealedProductStock').value),
             imagen_url: document.getElementById('sealedProductImage').value
         };
-        const ref = id ? doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id) : collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products');
-        id ? await updateDoc(ref, data) : await addDoc(ref, data);
+        const path = `artifacts/${appId}/public/data/sealed_products`;
+        id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
         window.closeModalUI(document.getElementById('sealedProductModal'));
     });
 
+    // Guardar Categoría
     document.getElementById('categoryForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('categoryId').value;
         const data = { name: document.getElementById('categoryName').value };
-        const ref = id ? doc(db, 'artifacts', appId, 'public', 'data', 'categories', id) : collection(db, 'artifacts', appId, 'public', 'data', 'categories');
-        id ? await updateDoc(ref, data) : await addDoc(ref, data);
+        const path = `artifacts/${appId}/public/data/categories`;
+        id ? await updateDoc(doc(db, path, id), data) : await addDoc(collection(db, path), data);
         window.closeModalUI(document.getElementById('categoryModal'));
     });
 
     document.getElementById('inventorySearch')?.addEventListener('input', filterAndRenderCards);
-    document.getElementById('cardImage')?.addEventListener('input', (e) => window.refreshPreviewUI(e.target.value));
 
+    // Navegación de Secciones (Sidebar)
     document.querySelectorAll('.nav-link').forEach(l => {
-        l.onclick = (e) => {
+        l.addEventListener('click', (e) => {
             e.preventDefault();
             document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
             l.classList.add('active');
             document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-            document.getElementById(l.dataset.section).classList.add('active');
-            document.getElementById('main-title').textContent = l.textContent.trim();
-        }
+            const section = document.getElementById(l.dataset.section);
+            if (section) section.classList.add('active');
+            const mainTitle = document.getElementById('main-title');
+            if (mainTitle) mainTitle.textContent = l.textContent.trim();
+        });
     });
 });
 
 function updateStats() {
-    document.getElementById('totalCardsCount').textContent = allCards.length;
-    document.getElementById('sealedCount').textContent = allSealed.length;
-    document.getElementById('uniqueCategoriesCount').textContent = allCategories.length;
-    document.getElementById('outOfStockCount').textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
+    const elCards = document.getElementById('totalCardsCount');
+    const elSealed = document.getElementById('sealedCount');
+    const elCats = document.getElementById('uniqueCategoriesCount');
+    const elStock = document.getElementById('outOfStockCount');
+
+    if (elCards) elCards.textContent = allCards.length;
+    if (elSealed) elSealed.textContent = allSealed.length;
+    if (elCats) elCats.textContent = allCategories.length;
+    if (elStock) elStock.textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
 }
 
 function updateCategorySelects() {
