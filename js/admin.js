@@ -4,10 +4,10 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { 
     getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
-    setPersistence, browserSessionPersistence, signInWithCustomToken, signInAnonymously
+    signInWithCustomToken, signInAnonymously 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { 
-    getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query 
+    getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query 
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -37,29 +37,54 @@ const loginModal = document.getElementById('loginModal');
 const adminView = document.getElementById('adminContainer');
 
 // ==========================================================================
-// 3. UI HELPERS (VINCULADOS A WINDOW PARA ONCLICK)
+// 3. VINCULACIÓN GLOBAL (IMPORTANTÍSIMO PARA BOTONES)
 // ==========================================================================
 window.openModalUI = (m) => { if(m) { m.style.display = 'flex'; document.body.style.overflow = 'hidden'; } };
 window.closeModalUI = (m) => { if(m) { m.style.display = 'none'; document.body.style.overflow = ''; } };
 
 window.showAlertUI = (title, text) => {
-    document.getElementById('alertTitle').textContent = title;
-    document.getElementById('alertText').textContent = text;
+    const t = document.getElementById('alertTitle');
+    const m = document.getElementById('alertText');
+    if(t) t.textContent = title;
+    if(m) m.textContent = text;
     window.openModalUI(document.getElementById('alertModal'));
 };
 
 window.refreshPreviewUI = (url) => {
     const img = document.getElementById('cardImagePreview');
     const icon = document.getElementById('placeholderIcon');
-    if (url && url.startsWith('http')) {
-        img.src = url;
-        img.style.display = 'block';
-        icon.style.display = 'none';
-    } else {
-        img.style.display = 'none';
-        icon.style.display = 'block';
+    if (img && icon) {
+        if (url && url.startsWith('http')) {
+            img.src = url;
+            img.style.display = 'block';
+            icon.style.display = 'none';
+        } else {
+            img.style.display = 'none';
+            icon.style.display = 'block';
+        }
     }
 };
+
+window.openNewCardModal = () => {
+    document.getElementById('cardForm').reset();
+    document.getElementById('cardId').value = '';
+    window.refreshPreviewUI('');
+    window.openModalUI(document.getElementById('cardModal'));
+};
+
+window.openNewSealedModal = () => {
+    document.getElementById('sealedProductForm').reset();
+    document.getElementById('sealedProductId').value = '';
+    window.openModalUI(document.getElementById('sealedProductModal'));
+};
+
+window.openNewCategoryModal = () => {
+    document.getElementById('categoryForm').reset();
+    document.getElementById('categoryId').value = '';
+    window.openModalUI(document.getElementById('categoryModal'));
+};
+
+window.logoutUI = () => signOut(auth).then(() => location.reload());
 
 // ==========================================================================
 // 4. CONTROL DE SESIÓN
@@ -76,7 +101,7 @@ onAuthStateChanged(auth, (user) => {
         loadAllData();
     } else {
         if(adminView) adminView.style.display = 'none';
-        if(loginModal) loginModal.style.display = 'flex';
+        if(loginView) loginView.style.display = 'flex';
     }
 });
 
@@ -86,49 +111,41 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
     const msg = document.getElementById('loginMessage');
     const email = document.getElementById('username').value.trim();
     const pass = document.getElementById('password').value;
-
     btn.disabled = true;
     btn.textContent = "Verificando...";
-    if(msg) msg.style.display = 'none';
-
-    try {
-        await signInWithEmailAndPassword(auth, email, pass);
-    } catch (err) {
+    try { await signInWithEmailAndPassword(auth, email, pass); } catch (err) {
         btn.disabled = false;
         btn.textContent = "Iniciar Sesión";
-        if(msg) {
-            msg.textContent = "Error: Credenciales no válidas.";
-            msg.style.display = 'block';
-        }
+        if(msg) { msg.textContent = "Error: Credenciales no válidas."; msg.style.display = 'block'; }
     }
 });
 
 // ==========================================================================
-// 5. CARGA DE DATOS (REALTIME)
+// 5. CARGA DE DATOS REALTIME
 // ==========================================================================
 function loadAllData() {
-    const cardsCol = collection(db, `artifacts/${appId}/public/data/cards`);
+    const cardsCol = collection(db, 'artifacts', appId, 'public', 'data', 'cards');
     onSnapshot(query(cardsCol), (snap) => {
         allCards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         filterAndRenderCards();
         updateStats();
     });
 
-    const sealedCol = collection(db, `artifacts/${appId}/public/data/sealed_products`);
+    const sealedCol = collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products');
     onSnapshot(query(sealedCol), (snap) => {
         allSealed = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderSealedTable();
         updateStats();
     });
 
-    const catCol = collection(db, `artifacts/${appId}/public/data/categories`);
+    const catCol = collection(db, 'artifacts', appId, 'public', 'data', 'categories');
     onSnapshot(query(catCol), (snap) => {
         allCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCategoriesTable();
         updateCategorySelects();
     });
 
-    const ordersCol = collection(db, `artifacts/${appId}/public/data/orders`);
+    const ordersCol = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
     onSnapshot(query(ordersCol), (snap) => {
         allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderOrdersTable();
@@ -224,9 +241,8 @@ function renderOrdersTable() {
 }
 
 // ==========================================================================
-// 7. CRUD FUNCTIONS (WINDOW SCOPED)
+// 7. CRUD WINDOW FUNCTIONS
 // ==========================================================================
-
 window.editCard = (id) => {
     const card = allCards.find(c => c.id === id);
     if (!card) return;
@@ -241,9 +257,7 @@ window.editCard = (id) => {
 };
 
 window.deleteCard = async (id) => {
-    if (confirm("¿Eliminar carta?")) {
-        await deleteDoc(doc(db, `artifacts/${appId}/public/data/cards`, id));
-    }
+    if (confirm("¿Eliminar carta?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cards', id));
 };
 
 window.editSealed = (id) => {
@@ -259,9 +273,7 @@ window.editSealed = (id) => {
 };
 
 window.deleteSealed = async (id) => {
-    if(confirm("¿Eliminar producto?")) {
-        await deleteDoc(doc(db, `artifacts/${appId}/public/data/sealed_products`, id));
-    }
+    if(confirm("¿Eliminar producto?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id));
 };
 
 window.editCategory = (id) => {
@@ -273,9 +285,7 @@ window.editCategory = (id) => {
 };
 
 window.deleteCategory = async (id) => {
-    if(confirm("¿Eliminar categoría?")) {
-        await deleteDoc(doc(db, `artifacts/${appId}/public/data/categories`, id));
-    }
+    if(confirm("¿Eliminar categoría?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'categories', id));
 };
 
 window.viewOrder = (id) => {
@@ -286,16 +296,14 @@ window.viewOrder = (id) => {
 // ==========================================================================
 // 8. TCG PLAYER API & COMPARISON
 // ==========================================================================
-window.handleTCGSearch = async () => {
+window.handleTCGSearchUI = async () => {
     const input = document.getElementById('tcgSearchInput');
     const status = document.getElementById('searchStatus');
     const btn = document.getElementById('submitSearch');
     if(!input?.value.trim()) return;
-
     btn.disabled = true;
     status.textContent = "Buscando...";
     status.style.color = "#3b82f6";
-
     let num = input.value.trim().split('/')[0];
     try {
         const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:"${num}"`);
@@ -313,18 +321,17 @@ window.handleTCGSearch = async () => {
             window.refreshPreviewUI(c.images.large);
             window.closeModalUI(document.getElementById('scannerModal'));
             window.openModalUI(document.getElementById('cardModal'));
-        } else {
-            status.textContent = "No encontrada.";
-            status.style.color = "#ef4444";
-        }
-    } catch (e) { status.textContent = "Error de conexión."; }
+        } else { status.textContent = "No encontrada."; status.style.color = "#ef4444"; }
+    } catch (e) { status.textContent = "Error de red."; }
     btn.disabled = false;
 };
 
-document.getElementById('btnCompareSearch')?.addEventListener('click', async () => {
+window.handleMarketComparisonUI = async () => {
     const input = document.getElementById('compSearchInput');
+    const status = document.getElementById('compStatus');
     if(!input?.value.trim()) return;
-    const num = input.value.trim().split('/')[0];
+    status.textContent = "Analizando...";
+    let num = input.value.trim().split('/')[0];
     try {
         const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:"${num}"`);
         const data = await res.json();
@@ -333,9 +340,10 @@ document.getElementById('btnCompareSearch')?.addEventListener('click', async () 
             const card = data.data[0];
             const market = (card.tcgplayer?.prices?.holofoil?.market || 10);
             renderChartUI(market);
+            status.textContent = "Completado.";
         }
-    } catch (e) { console.error(e); }
-});
+    } catch (e) { status.textContent = "Error."; }
+};
 
 function renderChartUI(price) {
     const ctx = document.getElementById('priceTrendChart')?.getContext('2d');
@@ -346,10 +354,9 @@ function renderChartUI(price) {
         data: {
             labels: ['-6d', '-5d', '-4d', '-3d', '-2d', '-1d', 'Hoy'],
             datasets: [{
-                label: 'Precio Mercado ($)',
-                data: [0.9, 1.1, 0.95, 1.05, 1, 1.1, 1].map(f => price * f),
-                borderColor: '#3b82f6',
-                fill: true, tension: 0.4, backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                label: 'Mercado ($)',
+                data: [0.98, 1.02, 0.95, 1.05, 1, 1.08, 1].map(f => price * f),
+                borderColor: '#3b82f6', fill: true, tension: 0.4, backgroundColor: 'rgba(59, 130, 246, 0.1)'
             }]
         }
     });
@@ -359,43 +366,17 @@ function renderChartUI(price) {
 // 9. EVENT LISTENERS
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Search Injection
     const qs = document.getElementById('quickSearchContent');
     if (qs) {
         qs.innerHTML = `
             <button class="close-button" onclick="window.closeModalUI(document.getElementById('scannerModal'))">&times;</button>
             <h2 style="margin-bottom:20px; font-weight:800;">Buscador TCGPlayer</h2>
             <div class="login-field"><label>Código Carta</label><input type="text" id="tcgSearchInput" placeholder="Ej: 028/151"></div>
-            <button id="submitSearch" class="confirm-button" style="width:100%;" onclick="window.handleTCGSearch()">Consultar</button>
+            <button id="submitSearch" class="confirm-button" style="width:100%;" onclick="window.handleTCGSearchUI()">Consultar</button>
             <p id="searchStatus" style="margin-top:15px; text-align:center;"></p>
         `;
     }
 
-    // Modal Triggers
-    document.getElementById('addCardBtn')?.addEventListener('click', () => {
-        document.getElementById('cardForm').reset();
-        document.getElementById('cardId').value = '';
-        window.refreshPreviewUI('');
-        window.openModalUI(document.getElementById('cardModal'));
-    });
-
-    document.getElementById('openScannerBtn')?.addEventListener('click', () => {
-        window.openModalUI(document.getElementById('scannerModal'));
-    });
-
-    document.getElementById('addSealedProductBtn')?.addEventListener('click', () => {
-        document.getElementById('sealedProductForm').reset();
-        document.getElementById('sealedProductId').value = '';
-        window.openModalUI(document.getElementById('sealedProductModal'));
-    });
-
-    document.getElementById('addCategoryBtn')?.addEventListener('click', () => {
-        document.getElementById('categoryForm').reset();
-        document.getElementById('categoryId').value = '';
-        window.openModalUI(document.getElementById('categoryModal'));
-    });
-
-    // Form Submits
     document.getElementById('cardForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('cardId').value;
@@ -406,9 +387,8 @@ document.addEventListener('DOMContentLoaded', () => {
             precio: parseFloat(document.getElementById('cardPrice').value) || 0,
             imagen_url: document.getElementById('cardImage').value.trim()
         };
-        const path = `artifacts/${appId}/public/data/cards`;
-        if(id) await updateDoc(doc(db, path, id), data);
-        else await addDoc(collection(db, path), data);
+        const ref = id ? doc(db, 'artifacts', appId, 'public', 'data', 'cards', id) : collection(db, 'artifacts', appId, 'public', 'data', 'cards');
+        id ? await updateDoc(ref, data) : await addDoc(ref, data);
         window.closeModalUI(document.getElementById('cardModal'));
     });
 
@@ -422,27 +402,23 @@ document.addEventListener('DOMContentLoaded', () => {
             stock: parseInt(document.getElementById('sealedProductStock').value),
             imagen_url: document.getElementById('sealedProductImage').value
         };
-        const path = `artifacts/${appId}/public/data/sealed_products`;
-        if(id) await updateDoc(doc(db, path, id), data);
-        else await addDoc(collection(db, path), data);
+        const ref = id ? doc(db, 'artifacts', appId, 'public', 'data', 'sealed_products', id) : collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products');
+        id ? await updateDoc(ref, data) : await addDoc(ref, data);
         window.closeModalUI(document.getElementById('sealedProductModal'));
     });
 
     document.getElementById('categoryForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('categoryId').value;
-        const name = document.getElementById('categoryName').value;
-        const path = `artifacts/${appId}/public/data/categories`;
-        if(id) await updateDoc(doc(db, path, id), { name });
-        else await addDoc(collection(db, path), { name });
+        const data = { name: document.getElementById('categoryName').value };
+        const ref = id ? doc(db, 'artifacts', appId, 'public', 'data', 'categories', id) : collection(db, 'artifacts', appId, 'public', 'data', 'categories');
+        id ? await updateDoc(ref, data) : await addDoc(ref, data);
         window.closeModalUI(document.getElementById('categoryModal'));
     });
 
     document.getElementById('inventorySearch')?.addEventListener('input', filterAndRenderCards);
-    document.getElementById('nav-logout-btn')?.addEventListener('click', () => signOut(auth).then(() => location.reload()));
     document.getElementById('cardImage')?.addEventListener('input', (e) => window.refreshPreviewUI(e.target.value));
 
-    // Nav Links
     document.querySelectorAll('.nav-link').forEach(l => {
         l.onclick = (e) => {
             e.preventDefault();
@@ -455,10 +431,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Extra Helpers
 function updateStats() {
     document.getElementById('totalCardsCount').textContent = allCards.length;
     document.getElementById('sealedCount').textContent = allSealed.length;
+    document.getElementById('uniqueCategoriesCount').textContent = allCategories.length;
     document.getElementById('outOfStockCount').textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
 }
 
