@@ -1,15 +1,14 @@
 // ==========================================================================
-// 1. CONFIGURACIÓN Y SERVICIOS DE FIREBASE
+// 1. CONFIGURACIÓN Y SERVICIOS DE FIREBASE (11.6.1)
 // ==========================================================================
-
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { 
     getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
     setPersistence, browserSessionPersistence, signInWithCustomToken, signInAnonymously
-} from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js';
+} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { 
-    getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc 
-} from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
+    getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query 
+} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyDjRTOnQ4d9-4l_W-EwRbYNQ8xkTLKbwsM",
@@ -24,320 +23,449 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
+const appId = firebaseConfig.projectId;
 
 // ==========================================================================
-// 2. CONTROL DE SESIÓN
+// 2. VARIABLES DE ESTADO
 // ==========================================================================
+let allCards = [], allCategories = [], allSealed = [], allOrders = [];
+let trendChart = null;
 let isForcedLogoutDone = false;
+
+// UI References
+const loginModal = document.getElementById('loginModal');
+const adminView = document.getElementById('adminContainer');
+
+// ==========================================================================
+// 3. UI HELPERS (VINCULADOS A WINDOW PARA ONCLICK)
+// ==========================================================================
+window.openModalUI = (m) => { if(m) { m.style.display = 'flex'; document.body.style.overflow = 'hidden'; } };
+window.closeModalUI = (m) => { if(m) { m.style.display = 'none'; document.body.style.overflow = ''; } };
+
+window.showAlertUI = (title, text) => {
+    document.getElementById('alertTitle').textContent = title;
+    document.getElementById('alertText').textContent = text;
+    window.openModalUI(document.getElementById('alertModal'));
+};
+
+window.refreshPreviewUI = (url) => {
+    const img = document.getElementById('cardImagePreview');
+    const icon = document.getElementById('placeholderIcon');
+    if (url && url.startsWith('http')) {
+        img.src = url;
+        img.style.display = 'block';
+        icon.style.display = 'none';
+    } else {
+        img.style.display = 'none';
+        icon.style.display = 'block';
+    }
+};
+
+// ==========================================================================
+// 4. CONTROL DE SESIÓN
+// ==========================================================================
 const forceLogout = async () => {
     try { await signOut(auth); isForcedLogoutDone = true; } catch (e) { isForcedLogoutDone = true; }
 };
 forceLogout();
 
-// Variables Globales de Estado
-let allCards = [], allCategories = [], allSealed = [], allOrders = [];
-let pendingDelete = { id: null, type: null }; 
-let trendChart = null; // Para el gráfico de Chart.js
-
-// Elementos UI
-let loginView, adminView, sidebarMenu, sidebarOverlay;
-let cardForm, cardModal, sealedProductForm, sealedProductModal, categoryForm, categoryModal, quickSearchModal, confirmDeleteModal, alertModal;
-let searchStatusMessage, tcgSearchInput, searchSetIdInput, submitSearchBtn;
-let cardImagePreview, imagePreviewContainer;
-
-// ==========================================================================
-// 3. FUNCIONES DE UI
-// ==========================================================================
-
-function openModal(m) { 
-    if(m){ m.style.display='flex'; document.body.style.overflow='hidden'; } 
-}
-
-function closeModal(m) { 
-    if(m){ m.style.display='none'; document.body.style.overflow=''; } 
-}
-
-function showAlert(title, message) {
-    const t = document.getElementById('alertTitle');
-    const m = document.getElementById('alertText');
-    if (t) t.textContent = title;
-    if (m) m.textContent = message;
-    openModal(alertModal);
-}
-
-function toggleSidebar(show) {
-    if (show) { sidebarMenu?.classList.add('show'); sidebarOverlay?.classList.add('show'); } 
-    else { sidebarMenu?.classList.remove('show'); sidebarOverlay?.classList.remove('show'); }
-}
-
-function showSection(sectionId) {
-    document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-    const target = document.getElementById(sectionId);
-    if(target) target.classList.add('active');
-
-    document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
-    const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
-    if(activeLink) activeLink.classList.add('active');
-    
-    const titleEl = document.getElementById('main-title');
-    const titles = { 
-        'dashboard-section': 'Dashboard', 
-        'comparison-section': 'Comparativa de Mercado',
-        'cards-section': 'Gestión de Cartas', 
-        'sealed-products-section': 'Productos Sellados', 
-        'categories-section': 'Categorías', 
-        'orders-section': 'Pedidos' 
-    };
-    if(titleEl) titleEl.textContent = titles[sectionId] || 'Panel';
-    if(window.innerWidth <= 768) toggleSidebar(false);
-}
-
-// ==========================================================================
-// 4. LÓGICA DE COMPARACIÓN (LIVE MARKET)
-// ==========================================================================
-
-async function handleMarketComparison() {
-    const input = document.getElementById('compSearchInput');
-    const status = document.getElementById('compStatus');
-    const btn = document.getElementById('btnCompareSearch');
-    let raw = input.value.trim();
-    
-    if (!raw) { status.textContent = "Ingresa un código (ej: 028/151)"; return; }
-
-    status.textContent = "Analizando datos globales...";
-    btn.disabled = true;
-
-    let cardNumber = raw.includes('/') ? raw.split('/')[0].trim() : raw;
-
-    try {
-        const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:"${cardNumber}"`);
-        const data = await response.json();
-
-        if (data.data && data.data.length > 0) {
-            const card = data.data[0];
-            renderComparison(card);
-            status.textContent = "Análisis completado con éxito.";
-        } else {
-            status.textContent = "No se encontró información en TCGPlayer.";
-        }
-    } catch (e) {
-        status.textContent = "Error de conexión.";
-    } finally {
-        btn.disabled = false;
-    }
-}
-
-function renderComparison(card) {
-    document.getElementById('comparisonResults').style.display = 'block';
-    
-    // 1. Datos TCGPlayer Live
-    let prices = card.tcgplayer?.prices;
-    let mainType = ['holofoil', 'reverseHolofoil', 'normal'].find(t => prices && prices[t]);
-    let liveMarket = mainType ? (prices[mainType].market || 0) : 0;
-    let liveLow = mainType ? (prices[mainType].low || 0) : 0;
-    let liveHigh = mainType ? (prices[mainType].high || 0) : 0;
-
-    document.getElementById('tcgPriceDisplay').textContent = `$${liveMarket.toFixed(2)}`;
-    document.getElementById('tcgLowDisplay').textContent = `$${liveLow.toFixed(2)}`;
-    document.getElementById('tcgHighDisplay').textContent = `$${liveHigh.toFixed(2)}`;
-
-    // 2. Datos Local (Mi Tienda)
-    const localCard = allCards.find(c => c.nombre.toLowerCase() === card.name.toLowerCase());
-    if (localCard) {
-        document.getElementById('myCardInfo').style.display = 'block';
-        document.getElementById('myCardEmpty').style.display = 'none';
-        document.getElementById('myPriceDisplay').textContent = `$${parseFloat(localCard.precio).toFixed(2)}`;
-        document.getElementById('myStockDisplay').textContent = `Stock: ${localCard.stock} unidades`;
-        
-        // Color basado en competitividad
-        if (localCard.precio > liveMarket) document.getElementById('myPriceDisplay').style.color = '#ef4444';
-        else if (localCard.precio < liveMarket) document.getElementById('myPriceDisplay').style.color = '#10b981';
-        else document.getElementById('myPriceDisplay').style.color = '#3b82f6';
+onAuthStateChanged(auth, (user) => {
+    if (user && !user.isAnonymous && isForcedLogoutDone) {
+        if(loginModal) loginModal.style.display = 'none';
+        if(adminView) adminView.style.display = 'flex';
+        loadAllData();
     } else {
-        document.getElementById('myCardInfo').style.display = 'none';
-        document.getElementById('myCardEmpty').style.display = 'block';
+        if(adminView) adminView.style.display = 'none';
+        if(loginModal) loginModal.style.display = 'flex';
     }
+});
 
-    // 3. Generar Gráfico de Tendencia (Simulado)
-    generateTrendChart(liveMarket);
-}
+document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtnSubmit');
+    const msg = document.getElementById('loginMessage');
+    const email = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value;
 
-function generateTrendChart(currentPrice) {
-    const ctx = document.getElementById('priceTrendChart').getContext('2d');
-    
-    if (trendChart) trendChart.destroy();
+    btn.disabled = true;
+    btn.textContent = "Verificando...";
+    if(msg) msg.style.display = 'none';
 
-    // Simulamos datos de los últimos 7 días
-    const labels = ['Hace 7d', 'Hace 6d', 'Hace 5d', 'Hace 4d', 'Hace 3d', 'Hace 2d', 'Hoy'];
-    const mockHistory = labels.map((_, i) => {
-        const factor = 1 + (Math.random() * 0.1 - 0.05); // +/- 5%
-        return currentPrice * factor;
-    });
-    mockHistory[6] = currentPrice;
-
-    trendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Precio de Mercado ($)',
-                data: mockHistory,
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                fill: true,
-                tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 4,
-                pointBackgroundColor: '#3b82f6'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: false, grid: { color: '#f1f5f9' } },
-                x: { grid: { display: false } }
-            }
-        }
-    });
-}
-
-// ==========================================================================
-// 5. CRUD Y CARGA DE DATOS
-// ==========================================================================
-
-async function loadAllData() {
     try {
-        const catSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'categories'));
-        allCategories = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderCategoriesTable();
-        
-        const cardSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'cards'));
-        allCards = cardSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderCardsTable();
+        await signInWithEmailAndPassword(auth, email, pass);
+    } catch (err) {
+        btn.disabled = false;
+        btn.textContent = "Iniciar Sesión";
+        if(msg) {
+            msg.textContent = "Error: Credenciales no válidas.";
+            msg.style.display = 'block';
+        }
+    }
+});
 
-        const sealedSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'sealed_products'));
-        allSealed = sealedSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderSealedTable();
-
-        const orderSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'orders'));
-        allOrders = orderSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderOrdersTable();
+// ==========================================================================
+// 5. CARGA DE DATOS (REALTIME)
+// ==========================================================================
+function loadAllData() {
+    const cardsCol = collection(db, `artifacts/${appId}/public/data/cards`);
+    onSnapshot(query(cardsCol), (snap) => {
+        allCards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        filterAndRenderCards();
         updateStats();
-    } catch (e) { console.error(e); }
+    });
+
+    const sealedCol = collection(db, `artifacts/${appId}/public/data/sealed_products`);
+    onSnapshot(query(sealedCol), (snap) => {
+        allSealed = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderSealedTable();
+        updateStats();
+    });
+
+    const catCol = collection(db, `artifacts/${appId}/public/data/categories`);
+    onSnapshot(query(catCol), (snap) => {
+        allCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderCategoriesTable();
+        updateCategorySelects();
+    });
+
+    const ordersCol = collection(db, `artifacts/${appId}/public/data/orders`);
+    onSnapshot(query(ordersCol), (snap) => {
+        allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderOrdersTable();
+    });
 }
 
-// ... (Resto de funciones de renderizado similares a las anteriores para mantener consistencia)
+// ==========================================================================
+// 6. RENDERIZADO DE TABLAS
+// ==========================================================================
+function filterAndRenderCards() {
+    const term = document.getElementById('inventorySearch')?.value.toLowerCase();
+    const filtered = allCards.filter(c => 
+        c.nombre.toLowerCase().includes(term || "") || 
+        c.codigo.toLowerCase().includes(term || "")
+    );
+    renderCardsTable(filtered);
+}
 
-function renderCardsTable() {
-    const tbody = document.querySelector('#cardsTable tbody'); if(!tbody) return; tbody.innerHTML = '';
-    allCards.forEach(c => {
-        const row = tbody.insertRow();
-        row.innerHTML = `<td><img src="${c.imagen_url}" width="40" style="border-radius:4px" onerror="this.src='https://placehold.co/40x50?text=Err'"></td><td><strong>${c.nombre}</strong></td><td>${c.codigo}</td><td>${c.expansion || '-'}</td><td>$${parseFloat(c.precio).toFixed(2)}</td><td>${c.stock}</td><td class="action-buttons"><button class="action-btn edit" data-id="${c.id}" data-type="card"><i class="fas fa-edit"></i></button><button class="action-btn delete" data-id="${c.id}" data-type="card" style="color: #ef4444;"><i class="fas fa-trash"></i></button></td>`;
+function renderCardsTable(list) {
+    const tbody = document.querySelector('#cardsTable tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    list.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><img src="${c.imagen_url}" width="40" style="border-radius:8px;"></td>
+            <td style="font-weight:700;">${c.nombre}</td>
+            <td>${c.codigo}</td>
+            <td style="font-weight:700; color:#3b82f6;">$${parseFloat(c.precio).toFixed(2)}</td>
+            <td>${c.stock}</td>
+            <td>
+                <button onclick="window.editCard('${c.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                <button onclick="window.deleteCard('${c.id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:12px;"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
+        tbody.appendChild(tr);
     });
 }
 
 function renderSealedTable() {
-    const tbody = document.querySelector('#sealedProductsTable tbody'); if(!tbody) return; tbody.innerHTML = '';
+    const tbody = document.querySelector('#sealedProductsTable tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
     allSealed.forEach(p => {
-        const row = tbody.insertRow();
-        row.innerHTML = `<td><img src="${p.imagen_url}" width="40" style="border-radius:4px" onerror="this.src='https://placehold.co/40x50?text=Err'"></td><td><strong>${p.nombre}</strong></td><td>${p.categoria}</td><td>$${parseFloat(p.precio).toFixed(2)}</td><td>${p.stock}</td><td class="action-buttons"><button class="action-btn edit" data-id="${p.id}" data-type="sealed"><i class="fas fa-edit"></i></button><button class="action-btn delete" data-id="${p.id}" data-type="sealed" style="color: #ef4444;"><i class="fas fa-trash"></i></button></td>`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><img src="${p.imagen_url}" width="40" style="border-radius:4px;"></td>
+            <td>${p.nombre}</td>
+            <td>${p.categoria}</td>
+            <td>$${parseFloat(p.precio).toFixed(2)}</td>
+            <td>${p.stock}</td>
+            <td>
+                <button onclick="window.editSealed('${p.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                <button onclick="window.deleteSealed('${p.id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:10px;"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
+        tbody.appendChild(tr);
     });
 }
 
 function renderCategoriesTable() {
-    const tbody = document.querySelector('#categoriesTable tbody'); if(!tbody) return; tbody.innerHTML = '';
+    const tbody = document.querySelector('#categoriesTable tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
     allCategories.forEach(c => {
-        const row = tbody.insertRow();
-        row.innerHTML = `<td><strong>${c.name}</strong></td><td class="action-buttons"><button class="action-btn edit" data-id="${c.id}" data-type="category"><i class="fas fa-edit"></i></button><button class="action-btn delete" data-id="${c.id}" data-type="category" style="color: #ef4444;"><i class="fas fa-trash"></i></button></td>`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${c.name}</td>
+            <td>
+                <button onclick="window.editCategory('${c.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                <button onclick="window.deleteCategory('${c.id}')" style="color:#ef4444; background:none; border:none; cursor:pointer; margin-left:10px;"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
+        tbody.appendChild(tr);
     });
 }
 
 function renderOrdersTable() {
-    const tbody = document.querySelector('#ordersTable tbody'); if(!tbody) return; tbody.innerHTML = '';
+    const tbody = document.querySelector('#ordersTable tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
     allOrders.forEach(o => {
-        const row = tbody.insertRow();
-        row.innerHTML = `<td>${o.id.substring(0,8)}</td><td>${o.customerName || 'Invitado'}</td><td>$${parseFloat(o.total || 0).toFixed(2)}</td><td><span class="status-badge ${o.status || 'pendiente'}">${o.status || 'pendiente'}</span></td><td><button class="action-btn view-order" data-id="${o.id}"><i class="fas fa-eye"></i></button></td>`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>#${o.id.substring(0,6)}</td>
+            <td>${o.customerName || 'Invitado'}</td>
+            <td>$${parseFloat(o.total || 0).toFixed(2)}</td>
+            <td>${o.status}</td>
+            <td><button onclick="window.viewOrder('${o.id}')" style="color:#3b82f6; background:none; border:none; cursor:pointer;"><i class="fas fa-eye"></i></button></td>
+        `;
+        tbody.appendChild(tr);
     });
 }
 
-function updateStats() {
-    const el1 = document.getElementById('totalCardsCount'); if(el1) el1.textContent = allCards.length;
-    const el2 = document.getElementById('totalSealedProductsCount'); if(el2) el2.textContent = allSealed.length;
-    const el3 = document.getElementById('uniqueCategoriesCount'); if(el3) el3.textContent = allCategories.length;
-    const el4 = document.getElementById('outOfStockCount'); if(el4) el4.textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
-}
-
 // ==========================================================================
-// 6. INICIALIZACIÓN
+// 7. CRUD FUNCTIONS (WINDOW SCOPED)
 // ==========================================================================
 
-document.addEventListener('DOMContentLoaded', async () => {
-    loginView = document.getElementById('loginModal'); 
-    adminView = document.getElementById('adminContainer'); 
-    sidebarMenu = document.getElementById('sidebarMenu'); 
-    sidebarOverlay = document.getElementById('sidebarOverlay');
-    alertModal = document.getElementById('alertModal');
-    confirmDeleteModal = document.getElementById('confirmDeleteModal');
-    cardModal = document.getElementById('cardModal');
-    cardForm = document.getElementById('cardForm');
-    cardImagePreview = document.getElementById('cardImagePreview');
-    imagePreviewContainer = document.querySelector('.image-preview-container');
+window.editCard = (id) => {
+    const card = allCards.find(c => c.id === id);
+    if (!card) return;
+    document.getElementById('cardId').value = card.id;
+    document.getElementById('cardName').value = card.nombre;
+    document.getElementById('cardCode').value = card.codigo;
+    document.getElementById('cardStock').value = card.stock;
+    document.getElementById('cardPrice').value = card.precio;
+    document.getElementById('cardImage').value = card.imagen_url;
+    window.refreshPreviewUI(card.imagen_url);
+    window.openModalUI(document.getElementById('cardModal'));
+};
 
-    // Navegación
-    document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        showSection(link.dataset.section); 
-    }));
+window.deleteCard = async (id) => {
+    if (confirm("¿Eliminar carta?")) {
+        await deleteDoc(doc(db, `artifacts/${appId}/public/data/cards`, id));
+    }
+};
 
-    // Sidebar móvil
-    document.getElementById('openSidebar')?.addEventListener('click', () => toggleSidebar(true));
-    document.getElementById('closeSidebar')?.addEventListener('click', () => toggleSidebar(false));
-    sidebarOverlay?.addEventListener('click', () => toggleSidebar(false));
+window.editSealed = (id) => {
+    const p = allSealed.find(x => x.id === id);
+    if(!p) return;
+    document.getElementById('sealedProductId').value = p.id;
+    document.getElementById('sealedProductName').value = p.nombre;
+    document.getElementById('sealedProductCategory').value = p.categoria;
+    document.getElementById('sealedProductPrice').value = p.precio;
+    document.getElementById('sealedProductStock').value = p.stock;
+    document.getElementById('sealedProductImage').value = p.imagen_url;
+    window.openModalUI(document.getElementById('sealedProductModal'));
+};
 
-    // Botón Comparar
-    document.getElementById('btnCompareSearch')?.addEventListener('click', handleMarketComparison);
+window.deleteSealed = async (id) => {
+    if(confirm("¿Eliminar producto?")) {
+        await deleteDoc(doc(db, `artifacts/${appId}/public/data/sealed_products`, id));
+    }
+};
 
-    // Auth Listeners
-    onAuthStateChanged(auth, (user) => {
-        if (user && !user.isAnonymous && isForcedLogoutDone) { 
-            loginView.style.display = 'none'; adminView.style.display = 'flex'; loadAllData(); 
-        } else { 
-            adminView.style.display = 'none'; loginView.style.display = 'flex'; 
+window.editCategory = (id) => {
+    const c = allCategories.find(x => x.id === id);
+    if(!c) return;
+    document.getElementById('categoryId').value = c.id;
+    document.getElementById('categoryName').value = c.name;
+    window.openModalUI(document.getElementById('categoryModal'));
+};
+
+window.deleteCategory = async (id) => {
+    if(confirm("¿Eliminar categoría?")) {
+        await deleteDoc(doc(db, `artifacts/${appId}/public/data/categories`, id));
+    }
+};
+
+window.viewOrder = (id) => {
+    const o = allOrders.find(x => x.id === id);
+    if(o) window.showAlertUI("Detalle Pedido", `Cliente: ${o.customerName}\nTotal: $${o.total}\nEstado: ${o.status}`);
+};
+
+// ==========================================================================
+// 8. TCG PLAYER API & COMPARISON
+// ==========================================================================
+window.handleTCGSearch = async () => {
+    const input = document.getElementById('tcgSearchInput');
+    const status = document.getElementById('searchStatus');
+    const btn = document.getElementById('submitSearch');
+    if(!input?.value.trim()) return;
+
+    btn.disabled = true;
+    status.textContent = "Buscando...";
+    status.style.color = "#3b82f6";
+
+    let num = input.value.trim().split('/')[0];
+    try {
+        const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:"${num}"`);
+        const data = await res.json();
+        if (data.data && data.data.length > 0) {
+            const c = data.data[0];
+            document.getElementById('cardId').value = '';
+            document.getElementById('cardName').value = c.name;
+            document.getElementById('cardCode').value = `${c.number}/${c.set.printedTotal}`;
+            document.getElementById('cardImage').value = c.images.large;
+            const p = c.tcgplayer?.prices;
+            const market = (p?.holofoil?.market || p?.normal?.market || 0);
+            document.getElementById('cardPrice').value = market.toFixed(2);
+            document.getElementById('cardStock').value = 1;
+            window.refreshPreviewUI(c.images.large);
+            window.closeModalUI(document.getElementById('scannerModal'));
+            window.openModalUI(document.getElementById('cardModal'));
+        } else {
+            status.textContent = "No encontrada.";
+            status.style.color = "#ef4444";
         }
-    });
+    } catch (e) { status.textContent = "Error de conexión."; }
+    btn.disabled = false;
+};
 
-    // Login Form
-    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const user = document.getElementById('username').value.trim();
-        const pass = document.getElementById('password').value;
-        const btn = document.getElementById('loginBtnSubmit');
-        try {
-            btn.disabled = true; btn.textContent = "Accediendo...";
-            await setPersistence(auth, browserSessionPersistence);
-            await signInWithEmailAndPassword(auth, user, pass);
-        } catch (err) {
-            btn.disabled = false; btn.textContent = "Acceder";
-            document.getElementById('loginMessage').textContent = "Error de credenciales.";
-            document.getElementById('loginMessage').style.display = "block";
+document.getElementById('btnCompareSearch')?.addEventListener('click', async () => {
+    const input = document.getElementById('compSearchInput');
+    if(!input?.value.trim()) return;
+    const num = input.value.trim().split('/')[0];
+    try {
+        const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=number:"${num}"`);
+        const data = await res.json();
+        if(data.data && data.data.length > 0) {
+            document.getElementById('comparisonResults').style.display = 'block';
+            const card = data.data[0];
+            const market = (card.tcgplayer?.prices?.holofoil?.market || 10);
+            renderChartUI(market);
         }
-    });
-
-    // Modales y Cerrar
-    document.getElementById('btnAlertAccept')?.addEventListener('click', () => closeModal(alertModal));
-    document.getElementById('btnCancelDelete')?.addEventListener('click', () => closeModal(confirmDeleteModal));
-    document.querySelectorAll('.close-button').forEach(b => b.addEventListener('click', () => closeModal(b.closest('.admin-modal'))));
-
-    // Logout
-    document.getElementById('nav-logout-btn')?.addEventListener('click', () => signOut(auth).then(() => location.reload()));
-
-    // Init Auth
-    const initAuth = async () => {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-        else await signInAnonymously(auth);
-    };
-    initAuth();
+    } catch (e) { console.error(e); }
 });
+
+function renderChartUI(price) {
+    const ctx = document.getElementById('priceTrendChart')?.getContext('2d');
+    if(!ctx) return;
+    if(trendChart) trendChart.destroy();
+    trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['-6d', '-5d', '-4d', '-3d', '-2d', '-1d', 'Hoy'],
+            datasets: [{
+                label: 'Precio Mercado ($)',
+                data: [0.9, 1.1, 0.95, 1.05, 1, 1.1, 1].map(f => price * f),
+                borderColor: '#3b82f6',
+                fill: true, tension: 0.4, backgroundColor: 'rgba(59, 130, 246, 0.1)'
+            }]
+        }
+    });
+}
+
+// ==========================================================================
+// 9. EVENT LISTENERS
+// ==========================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Search Injection
+    const qs = document.getElementById('quickSearchContent');
+    if (qs) {
+        qs.innerHTML = `
+            <button class="close-button" onclick="window.closeModalUI(document.getElementById('scannerModal'))">&times;</button>
+            <h2 style="margin-bottom:20px; font-weight:800;">Buscador TCGPlayer</h2>
+            <div class="login-field"><label>Código Carta</label><input type="text" id="tcgSearchInput" placeholder="Ej: 028/151"></div>
+            <button id="submitSearch" class="confirm-button" style="width:100%;" onclick="window.handleTCGSearch()">Consultar</button>
+            <p id="searchStatus" style="margin-top:15px; text-align:center;"></p>
+        `;
+    }
+
+    // Modal Triggers
+    document.getElementById('addCardBtn')?.addEventListener('click', () => {
+        document.getElementById('cardForm').reset();
+        document.getElementById('cardId').value = '';
+        window.refreshPreviewUI('');
+        window.openModalUI(document.getElementById('cardModal'));
+    });
+
+    document.getElementById('openScannerBtn')?.addEventListener('click', () => {
+        window.openModalUI(document.getElementById('scannerModal'));
+    });
+
+    document.getElementById('addSealedProductBtn')?.addEventListener('click', () => {
+        document.getElementById('sealedProductForm').reset();
+        document.getElementById('sealedProductId').value = '';
+        window.openModalUI(document.getElementById('sealedProductModal'));
+    });
+
+    document.getElementById('addCategoryBtn')?.addEventListener('click', () => {
+        document.getElementById('categoryForm').reset();
+        document.getElementById('categoryId').value = '';
+        window.openModalUI(document.getElementById('categoryModal'));
+    });
+
+    // Form Submits
+    document.getElementById('cardForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('cardId').value;
+        const data = {
+            nombre: document.getElementById('cardName').value.trim(),
+            codigo: document.getElementById('cardCode').value.trim(),
+            stock: parseInt(document.getElementById('cardStock').value) || 0,
+            precio: parseFloat(document.getElementById('cardPrice').value) || 0,
+            imagen_url: document.getElementById('cardImage').value.trim()
+        };
+        const path = `artifacts/${appId}/public/data/cards`;
+        if(id) await updateDoc(doc(db, path, id), data);
+        else await addDoc(collection(db, path), data);
+        window.closeModalUI(document.getElementById('cardModal'));
+    });
+
+    document.getElementById('sealedProductForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('sealedProductId').value;
+        const data = {
+            nombre: document.getElementById('sealedProductName').value,
+            categoria: document.getElementById('sealedProductCategory').value,
+            precio: parseFloat(document.getElementById('sealedProductPrice').value),
+            stock: parseInt(document.getElementById('sealedProductStock').value),
+            imagen_url: document.getElementById('sealedProductImage').value
+        };
+        const path = `artifacts/${appId}/public/data/sealed_products`;
+        if(id) await updateDoc(doc(db, path, id), data);
+        else await addDoc(collection(db, path), data);
+        window.closeModalUI(document.getElementById('sealedProductModal'));
+    });
+
+    document.getElementById('categoryForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('categoryId').value;
+        const name = document.getElementById('categoryName').value;
+        const path = `artifacts/${appId}/public/data/categories`;
+        if(id) await updateDoc(doc(db, path, id), { name });
+        else await addDoc(collection(db, path), { name });
+        window.closeModalUI(document.getElementById('categoryModal'));
+    });
+
+    document.getElementById('inventorySearch')?.addEventListener('input', filterAndRenderCards);
+    document.getElementById('nav-logout-btn')?.addEventListener('click', () => signOut(auth).then(() => location.reload()));
+    document.getElementById('cardImage')?.addEventListener('input', (e) => window.refreshPreviewUI(e.target.value));
+
+    // Nav Links
+    document.querySelectorAll('.nav-link').forEach(l => {
+        l.onclick = (e) => {
+            e.preventDefault();
+            document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
+            l.classList.add('active');
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(l.dataset.section).classList.add('active');
+            document.getElementById('main-title').textContent = l.textContent.trim();
+        }
+    });
+});
+
+// Extra Helpers
+function updateStats() {
+    document.getElementById('totalCardsCount').textContent = allCards.length;
+    document.getElementById('sealedCount').textContent = allSealed.length;
+    document.getElementById('outOfStockCount').textContent = allCards.filter(c => parseInt(c.stock) <= 0).length;
+}
+
+function updateCategorySelects() {
+    const sel = document.getElementById('sealedProductCategory');
+    if(sel) {
+        sel.innerHTML = '<option value="" disabled selected>Selecciona</option>';
+        allCategories.forEach(c => sel.appendChild(new Option(c.name, c.name)));
+    }
+}
