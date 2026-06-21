@@ -21,7 +21,7 @@
             --verde-ok: #10b981;
             --verde-claro: #ecfdf5;
             --borde: #e2e8f0;
-            --gold-glow: rgba(245, 158, 11, 0.15);
+            --gold-glow: rgba(245, 158, 11, 0.12);
         }
 
         * {
@@ -186,6 +186,7 @@
             scroll-snap-type: x mandatory;
             cursor: grab;
             user-select: none;
+            justify-content: flex-start; /* Se ajustará dinámicamente mediante JS */
         }
 
         .carousel-container:active {
@@ -211,7 +212,7 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            box-shadow: 0 8px 16px var(--gold-glow);
+            box-shadow: 0 6px 12px var(--gold-glow);
             transition: transform 0.2s;
         }
 
@@ -460,7 +461,7 @@
             z-index: 5;
         }
 
-        /* --- BARRA FLOTANTE MÓVIL (PULGAR ABAJO) --- */
+        /* --- BARRA FLOTANTE MÓVIL (CARRITO) --- */
         .mobile-cart-bar {
             position: fixed;
             bottom: 16px;
@@ -787,12 +788,12 @@
     </nav>
 
     <!-- CARRUSEL DE CARTAS MÁS CARAS (Joyas del Mazo) -->
-    <section class="carousel-section">
+    <section class="carousel-section" id="carouselSection" style="display: none;">
         <div class="carousel-title-container">
             <span class="carousel-title">
                 <i class="fas fa-crown"></i> Joyas del Inventario
             </span>
-            <div class="carousel-controls">
+            <div class="carousel-controls" id="carouselControls" style="display: none;">
                 <button class="carousel-arrow" id="btnPrevCarousel" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
                 <button class="carousel-arrow" id="btnNextCarousel" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>
             </div>
@@ -901,7 +902,7 @@
         const auth = getAuth(app);
 
         // ID del Proyecto de Firebase como appId para las rutas anidadas
-        const appId = firebaseConfig.projectId; // Evaluará a "dndtcgadmin"
+        const appId = firebaseConfig.projectId; // dndtcgadmin
 
         // Variables de Memoria de la Aplicación
         let products = [];
@@ -916,6 +917,8 @@
         // DOM Referencias
         const productsGrid = document.getElementById('productsGrid');
         const carouselContainer = document.getElementById('carouselContainer');
+        const carouselSection = document.getElementById('carouselSection');
+        const carouselControls = document.getElementById('carouselControls');
         const categoriesContainer = document.getElementById('categoriesContainer');
         const searchInput = document.getElementById('searchInput');
         const cartTotalValue = document.getElementById('cartTotalValue');
@@ -952,8 +955,8 @@
                 console.error("Error al autenticar de forma anónima:", err);
             }
             
-            // Suscripción independiente a Categorías (Anidada en artifacts/dndtcgadmin/public/data/categories)
-            onSnapshot(collection(db, "artifacts", appId, "public/data/categories"), (snap) => {
+            // Suscripción independiente a Categorías (Corregida con la ruta dividida exacta del Admin)
+            onSnapshot(collection(db, "artifacts", appId, "public", "data", "categories"), (snap) => {
                 categories = [];
                 console.log(`[Firebase Diagnostics] categories: Recibidos ${snap.size} documentos`);
                 snap.forEach(d => categories.push(d.data()));
@@ -962,8 +965,8 @@
                 handleFirebaseError(error, "categories");
             });
 
-            // Suscripción independiente a Cartas (Anidada en artifacts/dndtcgadmin/public/data/cards)
-            onSnapshot(collection(db, "artifacts", appId, "public/data/cards"), (snap1) => {
+            // Suscripción independiente a Cartas (Corregida con la ruta dividida exacta del Admin)
+            onSnapshot(collection(db, "artifacts", appId, "public", "data", "cards"), (snap1) => {
                 cardsList = [];
                 console.log(`[Firebase Diagnostics] cards: Recibidos ${snap1.size} documentos`);
                 snap1.forEach(d => cardsList.push({ id: d.id, type: 'single', ...d.data() }));
@@ -973,8 +976,8 @@
                 handleFirebaseError(error, "cards");
             });
 
-            // Suscripción independiente a Producto Sellado (Anidada en artifacts/dndtcgadmin/public/data/sealedProducts)
-            onSnapshot(collection(db, "artifacts", appId, "public/data/sealedProducts"), (snap2) => {
+            // Suscripción independiente a Producto Sellado (Corregida con la ruta dividida exacta del Admin)
+            onSnapshot(collection(db, "artifacts", appId, "public", "data", "sealedProducts"), (snap2) => {
                 sealedList = [];
                 console.log(`[Firebase Diagnostics] sealedProducts: Recibidos ${snap2.size} documentos`);
                 snap2.forEach(d => sealedList.push({ id: d.id, type: 'sealed', ...d.data() }));
@@ -1006,9 +1009,11 @@
                 .slice(0, 8);
 
             if (expensiveCards.length === 0) {
-                carouselContainer.innerHTML = `<div class="spinner-container">No hay cartas destacadas actualmente.</div>`;
+                carouselSection.style.display = 'none';
                 return;
             }
+
+            carouselSection.style.display = 'block';
 
             expensiveCards.forEach(p => {
                 const img = p.imageUrl || 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=200';
@@ -1028,12 +1033,26 @@
                 carouselContainer.appendChild(card);
             });
 
+            // Ajustar visualización del carrusel según la cantidad de items
+            setTimeout(() => {
+                const maxScrollLeft = carouselContainer.scrollWidth - carouselContainer.clientWidth;
+                if (maxScrollLeft <= 0) {
+                    // Si todo cabe, ocultamos flechas y centramos elementos
+                    carouselControls.style.display = 'none';
+                    carouselContainer.style.justifyContent = 'center';
+                } else {
+                    // Si hay scroll, mostramos flechas y alineamos a la izquierda para el carrusel
+                    carouselControls.style.display = 'flex';
+                    carouselContainer.style.justifyContent = 'flex-start';
+                }
+            }, 100);
+
             // Inicializar autoplay y arrastre del carrusel
             initCarouselDragAndAutoplay();
         }
 
         // ==========================================
-        // 2.1 LÓGICA DE DRAG & AUTOPLAY INFINITO DEL CARRUSEL
+        // 2.1 LÓGICA DE DRAG & AUTOPLAY INFINITO ADAPTATIVO
         // ==========================================
         let autoplayTimer;
         
@@ -1093,6 +1112,9 @@
 
             autoplayTimer = setInterval(() => {
                 const maxScrollLeft = carousel.scrollWidth - carousel.clientWidth;
+                
+                // Si no hay desbordamiento (cabe todo), no hacemos scroll automático
+                if (maxScrollLeft <= 0) return;
                 
                 // Si ya llegó al final de la lista, regresa suavemente al inicio
                 if (carousel.scrollLeft >= maxScrollLeft - 15) {
@@ -1307,7 +1329,8 @@
                 await runTransaction(db, async (transaction) => {
                     for (const item of cart) {
                         const coll = item.type === 'single' ? 'cards' : 'sealedProducts';
-                        const ref = doc(db, "artifacts", appId, "public/data", coll, item.id);
+                        // Referencia corregida para la transacción con ruta separada exacta
+                        const ref = doc(db, "artifacts", appId, "public", "data", coll, item.id);
                         const snap = await transaction.get(ref);
 
                         const currentStock = parseInt(snap.data().stock || 0);
@@ -1319,7 +1342,7 @@
                     }
 
                     // Registrar en la colección de órdenes correcta: artifacts/{appId}/public/data/orders
-                    await addDoc(collection(db, "artifacts", appId, "public/data", "orders"), {
+                    await addDoc(collection(db, "artifacts", appId, "public", "data", "orders"), {
                         cliente: name,
                         metodoEntrega: deliv === 'shipping' ? 'Envío' : 'Punto de Entrega',
                         direccion: address,
