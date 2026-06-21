@@ -1,3 +1,4 @@
+html:Catálogo Premium Simplificado con Carrusel:index.html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -185,12 +186,12 @@
             padding: 4px 4px 12px;
             -webkit-overflow-scrolling: touch;
             scroll-snap-type: x mandatory;
-            cursor: grab; /* Cursor de arrastre inicial */
+            cursor: grab;
             user-select: none;
         }
 
         .carousel-container:active {
-            cursor: grabbing; /* Cursor de arrastre activo */
+            cursor: grabbing;
         }
 
         .carousel-container::-webkit-scrollbar {
@@ -206,7 +207,7 @@
             flex: 0 0 160px;
             scroll-snap-align: start;
             background-color: var(--blanco);
-            border: 2px solid #fef3c7; /* Color oro suave */
+            border: 2px solid #fef3c7;
             border-radius: 20px;
             padding: 10px;
             display: flex;
@@ -235,7 +236,7 @@
             max-width: 90%;
             max-height: 90%;
             object-fit: contain;
-            pointer-events: none; /* Previene el molesto arrastre de imagen nativo */
+            pointer-events: none;
             -webkit-user-drag: none;
         }
 
@@ -708,6 +709,25 @@
             font-size: 0.85rem;
         }
 
+        .database-empty-box {
+            grid-column: 1 / -1;
+            background-color: #f0fdf4;
+            border: 2px dashed var(--verde-ok);
+            color: var(--texto-oscuro);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin: 16px auto;
+            max-width: 600px;
+            font-size: 0.9rem;
+        }
+
+        .database-empty-box h3 {
+            font-weight: 800;
+            color: var(--verde-ok);
+            margin-bottom: 8px;
+        }
+
         .error-container {
             grid-column: 1 / -1;
             background-color: #fef2f2;
@@ -785,7 +805,7 @@
             </div>
         </div>
         <div class="carousel-container" id="carouselContainer">
-            <div class="spinner-container">Cargando las joyas del mazo...</div>
+            <div class="spinner-container">Conectando base de datos en tiempo real...</div>
         </div>
     </section>
 
@@ -869,7 +889,6 @@
     <!-- Toast aviso rápido -->
     <div id="toastBox" class="toast-box"></div>
 
-    <!-- LOGICA FIREBASE Y EVENTOS DE INTERFAZ -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
@@ -888,7 +907,10 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        // Variables de Memoria de la Aplicación
         let products = [];
+        let cardsList = [];
+        let sealedList = [];
         let categories = [];
         let cart = [];
 
@@ -915,7 +937,7 @@
                     <div class="error-container">
                         <h3>🔒 Error de Permisos en Firebase</h3>
                         <p>Tu base de datos Firestore está rechazando las lecturas públicas. Por favor ingresa a las <strong>Reglas (Rules)</strong> de Firestore en tu Firebase Console y configúralas para permitir lecturas públicas.</p>
-                        <code>// Copia esto en tus reglas de Firestore:\nmatch /cards/{doc} { allow read: if true; }\nmatch /sealedProducts/{doc} { allow read: if true; }\nmatch /categories/{doc} { allow read: if true; }</code>
+                        <code>// Copia esto en tus reglas de Firestore:\nmatch /public/data/cards/{doc} { allow read: if true; }\nmatch /public/data/sealedProducts/{doc} { allow read: if true; }\nmatch /public/data/categories/{doc} { allow read: if true; }</code>
                     </div>
                 `;
                 carouselContainer.innerHTML = `<div style="text-align:center; padding:10px; color:#b91c1c; font-size:0.8rem; font-weight:700;">No se pudieron cargar las Joyas debido a reglas de Firebase.</div>`;
@@ -924,6 +946,9 @@
             }
         }
 
+        // ==========================================
+        // 1. INICIALIZACIÓN Y CONSULTAS INDEPENDIENTES
+        // ==========================================
         async function init() {
             try {
                 await signInAnonymously(auth);
@@ -931,43 +956,56 @@
                 console.error("Error al autenticar de forma anónima:", err);
             }
             
-            onSnapshot(collection(db, "categories"), (snap) => {
+            // Suscripción independiente a Categorías (Anidada en public/data/categories)
+            onSnapshot(collection(db, "public/data/categories"), (snap) => {
                 categories = [];
+                console.log(`[Firebase Diagnostics] categories: Recibidos ${snap.size} documentos`);
                 snap.forEach(d => categories.push(d.data()));
                 renderCategoriesUI();
             }, (error) => {
                 handleFirebaseError(error, "categories");
             });
 
-            onSnapshot(collection(db, "cards"), (snap1) => {
-                let cardsList = [];
+            // Suscripción independiente a Cartas (Anidada en public/data/cards)
+            onSnapshot(collection(db, "public/data/cards"), (snap1) => {
+                cardsList = [];
+                console.log(`[Firebase Diagnostics] cards: Recibidos ${snap1.size} documentos`);
                 snap1.forEach(d => cardsList.push({ id: d.id, type: 'single', ...d.data() }));
-
-                onSnapshot(collection(db, "sealedProducts"), (snap2) => {
-                    let sealedList = [];
-                    snap2.forEach(d => sealedList.push({ id: d.id, type: 'sealed', ...d.data() }));
-
-                    products = [...cardsList, ...sealedList];
-                    
-                    renderCarouselUI(); // Construir carrusel de las 8 más caras
-                    renderProductsUI(); // Construir grilla principal
-                }, (error) => {
-                    handleFirebaseError(error, "sealedProducts");
-                });
+                
+                mergeAndRender();
             }, (error) => {
                 handleFirebaseError(error, "cards");
             });
+
+            // Suscripción independiente a Producto Sellado (Anidada en public/data/sealedProducts)
+            onSnapshot(collection(db, "public/data/sealedProducts"), (snap2) => {
+                sealedList = [];
+                console.log(`[Firebase Diagnostics] sealedProducts: Recibidos ${snap2.size} documentos`);
+                snap2.forEach(d => sealedList.push({ id: d.id, type: 'sealed', ...d.data() }));
+                
+                mergeAndRender();
+            }, (error) => {
+                handleFirebaseError(error, "sealedProducts");
+            });
+        }
+
+        // Unificar los datos de manera limpia para evitar bloqueos por colecciones vacías
+        function mergeAndRender() {
+            products = [...cardsList, ...sealedList];
+            
+            renderCarouselUI(); 
+            renderProductsUI(); 
         }
 
         // ==========================================
-        // 1. CARGA Y GESTIÓN DEL CARRUSEL DE JOYAS
+        // 2. CARGA Y GESTIÓN DEL CARRUSEL DE JOYAS
         // ==========================================
         function renderCarouselUI() {
             carouselContainer.innerHTML = '';
             
-            // Filtrar solo Cartas ('single'), ordenar por precio descendente y agarrar las primeras 8
+            // Filtrar solo Cartas ('single') con precio mayor a 0, ordenar por precio de mayor a menor y tomar las 8 principales
             const expensiveCards = products
-                .filter(p => p.type === 'single' && parseInt(p.stock || 0) > 0)
+                .filter(p => p.type === 'single')
                 .sort((a, b) => parseFloat(b.price || 0) - parseFloat(a.price || 0))
                 .slice(0, 8);
 
@@ -994,12 +1032,12 @@
                 carouselContainer.appendChild(card);
             });
 
-            // Inicializar la interactividad del carrusel
+            // Inicializar autoplay y arrastre del carrusel
             initCarouselDragAndAutoplay();
         }
 
         // ==========================================
-        // 1.1 LÓGICA DE DRAG & AUTOPLAY INFINITO DEL CARRUSEL
+        // 2.1 LÓGICA DE DRAG & AUTOPLAY INFINITO DEL CARRUSEL
         // ==========================================
         let autoplayTimer;
         
@@ -1016,7 +1054,7 @@
                 isDragging = true;
                 startX = e.pageX - carousel.offsetLeft;
                 scrollLeft = carousel.scrollLeft;
-                stopAutoplay(); // Pausar cuando se interactúa
+                stopAutoplay();
             });
 
             carousel.addEventListener('mouseleave', () => {
@@ -1035,7 +1073,7 @@
                 if (!isDragging) return;
                 e.preventDefault();
                 const x = e.pageX - carousel.offsetLeft;
-                const walk = (x - startX) * 2.5; // Velocidad de arrastre
+                const walk = (x - startX) * 2.5; 
                 carousel.scrollLeft = scrollLeft - walk;
             });
 
@@ -1060,17 +1098,17 @@
             autoplayTimer = setInterval(() => {
                 const maxScrollLeft = carousel.scrollWidth - carousel.clientWidth;
                 
-                // Si ya llegó al final, regresa al inicio de manera fluida
+                // Si ya llegó al final de la lista, regresa suavemente al inicio
                 if (carousel.scrollLeft >= maxScrollLeft - 15) {
                     carousel.scrollTo({ left: 0, behavior: 'smooth' });
                 } else {
                     const card = carousel.querySelector('.carousel-card');
                     if (card) {
-                        const cardWidth = card.offsetWidth + 12; // Ancho + espacio entre tarjetas
+                        const cardWidth = card.offsetWidth + 12; 
                         carousel.scrollBy({ left: cardWidth, behavior: 'smooth' });
                     }
                 }
-            }, 3000); // Cada 3 segundos
+            }, 3000); // Avanzar cada 3 segundos
         }
 
         function stopAutoplay() {
@@ -1080,7 +1118,7 @@
         }
 
         // ==========================================
-        // 2. FILTRADO Y RENDERIZADO DE LA TIENDA
+        // 3. FILTRADO Y RENDERIZADO DE LA TIENDA
         // ==========================================
         function renderCategoriesUI() {
             categoriesContainer.innerHTML = '';
@@ -1092,6 +1130,7 @@
             categoriesContainer.appendChild(allBtn);
 
             categories.forEach(cat => {
+                if (!cat.name) return;
                 const btn = document.createElement('button');
                 btn.className = `cat-chip ${activeCategory === cat.name ? 'active' : ''}`;
                 btn.textContent = cat.name;
@@ -1113,6 +1152,18 @@
 
             const sVal = searchInput.value.toLowerCase().trim();
             if (sVal) list = list.filter(p => (p.name || '').toLowerCase().includes(sVal));
+
+            // Si no hay productos porque la base de datos está vacía, mostramos una guía amigable
+            if (products.length === 0) {
+                productsGrid.innerHTML = `
+                    <div class="database-empty-box">
+                        <h3>🔌 Conexión Establecida</h3>
+                        <p>Tu base de datos Firebase está conectada correctamente, pero tus colecciones de Firestore están vacías de momento.</p>
+                        <p style="font-size:0.8rem; color:var(--texto-gris); margin-top:8px;">Abre tu panel de control (<code>admin.html</code>) o tu Firebase Console y añade algunos documentos a tus colecciones de <strong>cards</strong> o <strong>sealedProducts</strong> para verlos aquí.</p>
+                    </div>
+                `;
+                return;
+            }
 
             if(list.length === 0) {
                 productsGrid.innerHTML = `<div class="spinner-container">No hay cartas ni productos de este tipo listos de momento.</div>`;
@@ -1146,7 +1197,7 @@
         }
 
         // ==========================================
-        // 3. LOGICA OPERATIVA DEL CARRITO
+        // 4. LÓGICA OPERATIVA DEL CARRITO
         // ==========================================
         window.addItem = function(id) {
             const prod = products.find(p => p.id === id);
@@ -1218,7 +1269,7 @@
             document.getElementById('mobileCartBar').classList.add('show');
         }
 
-        // Selección intuitiva de entrega
+        // Selección de entrega
         document.getElementsByName('delivType').forEach(r => {
             r.addEventListener('change', () => {
                 if (r.value === 'shipping') {
@@ -1259,7 +1310,7 @@
 
                 await runTransaction(db, async (transaction) => {
                     for (const item of cart) {
-                        const coll = item.type === 'single' ? 'cards' : 'sealedProducts';
+                        const coll = item.type === 'single' ? 'public/data/cards' : 'public/data/sealedProducts';
                         const ref = doc(db, coll, item.id);
                         const snap = await transaction.get(ref);
 
@@ -1271,7 +1322,8 @@
                         finalTotal += item.price * item.quantity;
                     }
 
-                    await addDoc(collection(db, "pedidos"), {
+                    // Registrar en la colección correcta: public/data/orders
+                    await addDoc(collection(db, "public/data/orders"), {
                         cliente: name,
                         metodoEntrega: deliv === 'shipping' ? 'Envío' : 'Punto de Entrega',
                         direccion: address,
@@ -1329,7 +1381,7 @@
             startAutoplay();
         };
 
-        // UI Event Listeners Rápidos
+        // Eventos de selección de Pestañas
         document.getElementById('tabSingles').onclick = () => { 
             activeType = 'single'; 
             document.getElementById('tabSingles').classList.add('active'); 
