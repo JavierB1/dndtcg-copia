@@ -1,4 +1,3 @@
-html:Catálogo Premium Simplificado con Carrusel:index.html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -124,7 +123,6 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
             .cart-btn-desktop { display: block; }
         }
 
-        /* --- STREAMING_CHUNK: Diseño del carrusel de cartas top... --- */
         /* --- SECCIÓN PRINCIPAL: CARRUSEL DE JOYAS TCG --- */
         .carousel-section {
             max-width: 1100px;
@@ -268,7 +266,6 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
             gap: 2px;
         }
 
-        /* --- STREAMING_CHUNK: Filtros gigantes de inicio... --- */
         /* --- FILTROS DE INICIO (BOTONES GIGANTES) --- */
         .filter-section {
             max-width: 1100px;
@@ -340,7 +337,6 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
             border-color: var(--azul-botones);
         }
 
-        /* --- STREAMING_CHUNK: Grilla de productos adaptada... --- */
         /* --- GRILLA DE PRODUCTOS (2 columnas en celular, 4 en laptop) --- */
         .main-container {
             max-width: 1100px;
@@ -464,7 +460,6 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
             z-index: 5;
         }
 
-        /* --- STREAMING_CHUNK: Barra de carrito inferior táctil... --- */
         /* --- BARRA FLOTANTE MÓVIL (PULGAR ABAJO) --- */
         .mobile-cart-bar {
             position: fixed;
@@ -499,7 +494,6 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
             margin-left: 6px;
         }
 
-        /* --- STREAMING_CHUNK: Panel lateral del carrito... --- */
         /* --- PANELES DEL CARRITO (DRAWER) --- */
         .cart-drawer {
             position: fixed;
@@ -613,7 +607,6 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
             cursor: pointer;
         }
 
-        /* --- STREAMING_CHUNK: Formulario y pasarela de entrega... --- */
         /* --- SECCIÓN DE ENTREGA --- */
         .cart-footer {
             padding: 16px;
@@ -907,6 +900,9 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        // ID del Proyecto de Firebase como appId para las rutas anidadas
+        const appId = firebaseConfig.projectId; // Evaluará a "dndtcgadmin"
+
         // Variables de Memoria de la Aplicación
         let products = [];
         let cardsList = [];
@@ -937,7 +933,7 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
                     <div class="error-container">
                         <h3>🔒 Error de Permisos en Firebase</h3>
                         <p>Tu base de datos Firestore está rechazando las lecturas públicas. Por favor ingresa a las <strong>Reglas (Rules)</strong> de Firestore en tu Firebase Console y configúralas para permitir lecturas públicas.</p>
-                        <code>// Copia esto en tus reglas de Firestore:\nmatch /public/data/cards/{doc} { allow read: if true; }\nmatch /public/data/sealedProducts/{doc} { allow read: if true; }\nmatch /public/data/categories/{doc} { allow read: if true; }</code>
+                        <code>// Copia esto en tus reglas de Firestore:\nmatch /artifacts/{appId}/public/data/cards/{doc} { allow read: if true; }\nmatch /artifacts/{appId}/public/data/sealedProducts/{doc} { allow read: if true; }\nmatch /artifacts/{appId}/public/data/categories/{doc} { allow read: if true; }</code>
                     </div>
                 `;
                 carouselContainer.innerHTML = `<div style="text-align:center; padding:10px; color:#b91c1c; font-size:0.8rem; font-weight:700;">No se pudieron cargar las Joyas debido a reglas de Firebase.</div>`;
@@ -956,8 +952,8 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
                 console.error("Error al autenticar de forma anónima:", err);
             }
             
-            // Suscripción independiente a Categorías (Anidada en public/data/categories)
-            onSnapshot(collection(db, "public/data/categories"), (snap) => {
+            // Suscripción independiente a Categorías (Anidada en artifacts/dndtcgadmin/public/data/categories)
+            onSnapshot(collection(db, "artifacts", appId, "public/data/categories"), (snap) => {
                 categories = [];
                 console.log(`[Firebase Diagnostics] categories: Recibidos ${snap.size} documentos`);
                 snap.forEach(d => categories.push(d.data()));
@@ -966,8 +962,8 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
                 handleFirebaseError(error, "categories");
             });
 
-            // Suscripción independiente a Cartas (Anidada en public/data/cards)
-            onSnapshot(collection(db, "public/data/cards"), (snap1) => {
+            // Suscripción independiente a Cartas (Anidada en artifacts/dndtcgadmin/public/data/cards)
+            onSnapshot(collection(db, "artifacts", appId, "public/data/cards"), (snap1) => {
                 cardsList = [];
                 console.log(`[Firebase Diagnostics] cards: Recibidos ${snap1.size} documentos`);
                 snap1.forEach(d => cardsList.push({ id: d.id, type: 'single', ...d.data() }));
@@ -977,8 +973,8 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
                 handleFirebaseError(error, "cards");
             });
 
-            // Suscripción independiente a Producto Sellado (Anidada en public/data/sealedProducts)
-            onSnapshot(collection(db, "public/data/sealedProducts"), (snap2) => {
+            // Suscripción independiente a Producto Sellado (Anidada en artifacts/dndtcgadmin/public/data/sealedProducts)
+            onSnapshot(collection(db, "artifacts", appId, "public/data/sealedProducts"), (snap2) => {
                 sealedList = [];
                 console.log(`[Firebase Diagnostics] sealedProducts: Recibidos ${snap2.size} documentos`);
                 snap2.forEach(d => sealedList.push({ id: d.id, type: 'sealed', ...d.data() }));
@@ -1310,8 +1306,8 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
 
                 await runTransaction(db, async (transaction) => {
                     for (const item of cart) {
-                        const coll = item.type === 'single' ? 'public/data/cards' : 'public/data/sealedProducts';
-                        const ref = doc(db, coll, item.id);
+                        const coll = item.type === 'single' ? 'cards' : 'sealedProducts';
+                        const ref = doc(db, "artifacts", appId, "public/data", coll, item.id);
                         const snap = await transaction.get(ref);
 
                         const currentStock = parseInt(snap.data().stock || 0);
@@ -1322,8 +1318,8 @@ html:Catálogo Premium Simplificado con Carrusel:index.html
                         finalTotal += item.price * item.quantity;
                     }
 
-                    // Registrar en la colección correcta: public/data/orders
-                    await addDoc(collection(db, "public/data/orders"), {
+                    // Registrar en la colección de órdenes correcta: artifacts/{appId}/public/data/orders
+                    await addDoc(collection(db, "artifacts", appId, "public/data", "orders"), {
                         cliente: name,
                         metodoEntrega: deliv === 'shipping' ? 'Envío' : 'Punto de Entrega',
                         direccion: address,
