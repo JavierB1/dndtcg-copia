@@ -1,5 +1,6 @@
 // ==========================================================================
 // DECK & DRIFT TCG - LÓGICA DE TIENDA (PÚBLICA)
+// Optimizado para interacciones rápidas y bloqueos de scroll en móviles
 // ==========================================================================
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
@@ -45,14 +46,16 @@ const btnAllTypes = document.getElementById('btnAllTypes');
 const btnSinglesType = document.getElementById('btnSinglesType');
 const btnSealedType = document.getElementById('btnSealedType');
 
-// Elementos del Drawer de Carrito
+// Elementos del Drawer de Carrito (Acciones de Escritorio y Barra Flotante Móvil)
 const cartBtn = document.getElementById('cartBtn');
+const mobileFloatingCartBtn = document.getElementById('mobileFloatingCartBtn');
 const cartDrawer = document.getElementById('cartDrawer');
 const cartOverlay = document.getElementById('cartOverlay');
 const closeCartBtn = document.getElementById('closeCartBtn');
 const cartItemsContainer = document.getElementById('cartItemsContainer');
 const cartTotalValue = document.getElementById('cartTotalValue');
 const cartBadge = document.getElementById('cartBadge');
+const mobileCartBadge = document.getElementById('mobileCartBadge');
 
 // Formulario de Checkout
 const checkoutForm = document.getElementById('checkoutForm');
@@ -134,7 +137,7 @@ function renderCategories() {
     // Botón para limpiar filtro de categorías
     const allCatBtn = document.createElement('button');
     allCatBtn.className = `category-btn ${!currentCategoryFilter ? 'active' : ''}`;
-    allCatBtn.innerHTML = `<span><i class="fas fa-tags"></i> Todas las Categorías</span>`;
+    allCatBtn.innerHTML = `<span><i class="fas fa-tags"></i> Todas</span>`;
     allCatBtn.addEventListener('click', () => {
         currentCategoryFilter = '';
         document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
@@ -205,7 +208,7 @@ function renderProducts() {
     }
 
     // Actualizar encabezados
-    resultsCountEl.textContent = `${list.length} artículos encontrados`;
+    resultsCountEl.textContent = `${list.length} ítems`;
     let typeName = 'Todos los Productos';
     if (currentTypeFilter === 'single') typeName = 'Cartas Singles';
     if (currentTypeFilter === 'sealed') typeName = 'Producto Sellado';
@@ -215,13 +218,13 @@ function renderProducts() {
         productsGrid.innerHTML = `
             <div class="loading-spinner-container">
                 <i class="fas fa-search" style="font-size: 2.5rem; color: var(--text-muted);"></i>
-                <p>No se encontraron productos que coincidan con la selección.</p>
+                <p>No se encontraron productos.</p>
             </div>
         `;
         return;
     }
 
-    // Pintar tarjetas
+    // Pintar tarjetas (Optimizadas para visualización táctil doble columna en móvil)
     list.forEach(prod => {
         const stock = parseInt(prod.stock || 0);
         const card = document.createElement('div');
@@ -232,7 +235,7 @@ function renderProducts() {
         if (stock <= 0) {
             badgeHTML = `<span class="stock-badge out">Agotado</span>`;
         } else if (stock <= 3) {
-            badgeHTML = `<span class="stock-badge low">Últimas ${stock}</span>`;
+            badgeHTML = `<span class="stock-badge low">Quedan ${stock}</span>`;
         } else {
             badgeHTML = `<span class="stock-badge available">Disponible</span>`;
         }
@@ -266,7 +269,7 @@ function renderProducts() {
                         <input type="number" id="qtyInput_${prod.id}" value="1" min="1" max="${stock}" class="qty-input" readonly>
                         <button class="qty-btn" onclick="window.adjustLocalQty('${prod.id}', 1, ${stock})">+</button>
                     </div>
-                    <button class="add-cart-btn" onclick="window.triggerAddToCart('${prod.id}')"><i class="fas fa-cart-plus"></i></button>
+                    <button class="add-cart-btn" onclick="window.triggerAddToCart('${prod.id}')" aria-label="Agregar al carrito"><i class="fas fa-cart-plus"></i></button>
                 `}
             </div>
         `;
@@ -352,7 +355,7 @@ window.changeCartQty = function(id, delta) {
 window.removeFromCart = function(id) {
     cart = cart.filter(item => item.id !== id);
     updateCartUI();
-    showToast("Producto removido del carrito.", "info");
+    showToast("Producto removido.", "info");
 };
 
 // Sincronizar stock del carrito cuando cambie en la BD de Firebase en segundo plano
@@ -400,6 +403,9 @@ function updateCartUI() {
         `;
         cartTotalValue.textContent = '$0.00';
         cartBadge.textContent = '0';
+        mobileCartBadge.textContent = '0';
+        // Ocultar botón flotante en móvil si el carrito está vacío
+        mobileFloatingCartBtn.classList.remove('show');
         return;
     }
 
@@ -439,6 +445,9 @@ function updateCartUI() {
 
     cartTotalValue.textContent = `$${totalSum.toFixed(2)}`;
     cartBadge.textContent = badgeCount;
+    mobileCartBadge.textContent = badgeCount;
+    // Mostrar botón flotante en móviles si tiene ítems
+    mobileFloatingCartBtn.classList.add('show');
 }
 
 // ==========================================
@@ -518,7 +527,7 @@ checkoutForm.addEventListener('submit', async (e) => {
 
         // Abrir Modal de éxito local
         successModal.classList.add('open');
-        cartDrawer.classList.remove('open');
+        closeCart();
 
         // Construir mensaje detallado de WhatsApp para el comerciante
         let msg = `*NUEVO PEDIDO - DECK & DRIFT TCG*\n\n`;
@@ -574,10 +583,21 @@ customerDelivery.addEventListener('change', () => {
 // 5. EVENTOS GENERALES DE LA INTERFAZ
 // ==========================================
 
-// Drawer del Carrito
-cartBtn.addEventListener('click', () => cartDrawer.classList.add('open'));
-closeCartBtn.addEventListener('click', () => cartDrawer.classList.remove('open'));
-cartOverlay.addEventListener('click', () => cartDrawer.classList.remove('open'));
+// Abrir y Cerrar Carrito con Bloqueo de Scroll para pantallas táctiles/celulares
+function openCart() {
+    cartDrawer.classList.add('open');
+    document.body.classList.add('no-scroll');
+}
+
+function closeCart() {
+    cartDrawer.classList.remove('open');
+    document.body.classList.remove('no-scroll');
+}
+
+cartBtn.addEventListener('click', openCart);
+mobileFloatingCartBtn.addEventListener('click', openCart);
+closeCartBtn.addEventListener('click', closeCart);
+cartOverlay.addEventListener('click', closeCart);
 
 // Filtros de Tipo de Producto
 btnAllTypes.addEventListener('click', () => {
