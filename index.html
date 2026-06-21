@@ -928,6 +928,20 @@
         const optPickup = document.getElementById('optPickup');
         const optShipping = document.getElementById('optShipping');
 
+        function getProductProps(p) {
+            return {
+                id: p.id,
+                name: p.nombre || p.name || "Sin Nombre",
+                price: parseFloat(p.precio !== undefined ? p.precio : (p.price !== undefined ? p.price : 0)),
+                img: p.imagenUrl || p.imagen || p.imageUrl || p.image || 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=200',
+                stock: parseInt(p.stock !== undefined ? p.stock : 0),
+                category: p.categoria || p.category || "General",
+                type: p.type || "single",
+                expansion: p.expansion || p.expansión || "",
+                code: p.codigo || p.code || ""
+            };
+        }
+
         // Función para renderizar el error de permisos en pantalla en vez de dejar "Cargando..."
         function handleFirebaseError(error, context) {
             console.error(`Error en ${context}:`, error);
@@ -1005,7 +1019,11 @@
             // Filtrar solo Cartas ('single') con precio mayor a 0, ordenar por precio de mayor a menor y tomar las 8 principales
             const expensiveCards = products
                 .filter(p => p.type === 'single')
-                .sort((a, b) => parseFloat(b.price || 0) - parseFloat(a.price || 0))
+                .sort((a, b) => {
+                    const priceA = getProductProps(a).price;
+                    const priceB = getProductProps(b).price;
+                    return priceB - priceA;
+                })
                 .slice(0, 8);
 
             if (expensiveCards.length === 0) {
@@ -1016,18 +1034,18 @@
             carouselSection.style.display = 'block';
 
             expensiveCards.forEach(p => {
-                const img = p.imageUrl || 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=200';
+                const props = getProductProps(p);
                 const card = document.createElement('div');
                 card.className = 'carousel-card';
                 card.innerHTML = `
                     <span class="crown-tag"><i class="fas fa-crown"></i> Top</span>
                     <div class="carousel-img-box">
-                        <img src="${img}" onerror="this.src='https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=200'">
+                        <img src="${props.img}" onerror="this.src='https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=200'">
                     </div>
-                    <h4 class="carousel-name">${p.name}</h4>
+                    <h4 class="carousel-name">${props.name}</h4>
                     <div class="card-bottom-row">
-                        <span class="price-text">$${parseFloat(p.price || 0).toFixed(2)}</span>
-                        <button class="add-btn" onclick="window.addItem('${p.id}')">+</button>
+                        <span class="price-text">$${props.price.toFixed(2)}</span>
+                        <button class="add-btn" onclick="window.addItem('${props.id}')">+</button>
                     </div>
                 `;
                 carouselContainer.appendChild(card);
@@ -1148,11 +1166,12 @@
             categoriesContainer.appendChild(allBtn);
 
             categories.forEach(cat => {
-                if (!cat.name) return;
+                const catName = cat.nombre || cat.name;
+                if (!catName) return;
                 const btn = document.createElement('button');
-                btn.className = `cat-chip ${activeCategory === cat.name ? 'active' : ''}`;
-                btn.textContent = cat.name;
-                btn.onclick = () => { activeCategory = cat.name; toggleChips(btn); renderProductsUI(); };
+                btn.className = `cat-chip ${activeCategory === catName ? 'active' : ''}`;
+                btn.textContent = catName;
+                btn.onclick = () => { activeCategory = catName; toggleChips(btn); renderProductsUI(); };
                 categoriesContainer.appendChild(btn);
             });
         }
@@ -1166,10 +1185,14 @@
             productsGrid.innerHTML = '';
             
             let list = products.filter(p => p.type === activeType);
-            if (activeCategory) list = list.filter(p => p.category === activeCategory);
+            if (activeCategory) {
+                list = list.filter(p => getProductProps(p).category === activeCategory);
+            }
 
             const sVal = searchInput.value.toLowerCase().trim();
-            if (sVal) list = list.filter(p => (p.name || '').toLowerCase().includes(sVal));
+            if (sVal) {
+                list = list.filter(p => getProductProps(p).name.toLowerCase().includes(sVal));
+            }
 
             // Si no hay productos porque la base de datos está vacía, mostramos una guía amigable
             if (products.length === 0) {
@@ -1189,24 +1212,23 @@
             }
 
             list.forEach(p => {
-                const stock = parseInt(p.stock || 0);
+                const props = getProductProps(p);
                 const card = document.createElement('div');
                 card.className = 'product-card';
 
-                let badge = stock <= 0 ? `<span class="out-badge">Agotado</span>` : '';
-                const img = p.imageUrl || 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=200';
+                let badge = props.stock <= 0 ? `<span class="out-badge">Agotado</span>` : '';
 
                 card.innerHTML = `
                     ${badge}
                     <div class="card-image-box">
-                        <img src="${img}" onerror="this.src='https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=200'">
+                        <img src="${props.img}" onerror="this.src='https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=200'">
                     </div>
-                    <h3 class="product-name">${p.name}</h3>
+                    <h3 class="product-name">${props.name}</h3>
                     <div class="card-bottom-row">
-                        <span class="price-text">$${parseFloat(p.price || 0).toFixed(2)}</span>
-                        ${stock <= 0 ? 
+                        <span class="price-text">$${props.price.toFixed(2)}</span>
+                        ${props.stock <= 0 ? 
                             `<button class="add-btn" disabled><i class="fas fa-ban"></i></button>` : 
-                            `<button class="add-btn" onclick="window.addItem('${p.id}')">+</button>`
+                            `<button class="add-btn" onclick="window.addItem('${props.id}')">+</button>`
                         }
                     </div>
                 `;
@@ -1221,18 +1243,18 @@
             const prod = products.find(p => p.id === id);
             if (!prod) return;
 
-            const stockLimit = parseInt(prod.stock || 0);
+            const props = getProductProps(prod);
             const exist = cart.find(c => c.id === id);
 
             if (exist) {
-                if (exist.quantity < stockLimit) {
+                if (exist.quantity < props.stock) {
                     exist.quantity++;
                     triggerToast("¡Añadida otra copia al carrito!");
                 } else {
                     triggerToast("No quedan más unidades en stock.");
                 }
             } else {
-                cart.push({ id: prod.id, name: prod.name, price: parseFloat(prod.price || 0), type: prod.type, category: prod.category, quantity: 1 });
+                cart.push({ id: props.id, name: props.name, price: props.price, type: props.type, category: props.category, quantity: 1 });
                 triggerToast("¡Añadido al carrito!");
             }
             updateCartUI();
@@ -1242,7 +1264,8 @@
             const item = cart.find(c => c.id === id);
             if (!item) return;
             const original = products.find(p => p.id === id);
-            const stock = original ? parseInt(original.stock || 0) : 1;
+            const props = original ? getProductProps(original) : null;
+            const stock = props ? props.stock : 1;
 
             item.quantity += val;
             if (item.quantity <= 0) cart = cart.filter(c => c.id !== id);
@@ -1332,8 +1355,9 @@
                         // Referencia corregida para la transacción con ruta separada exacta
                         const ref = doc(db, "artifacts", appId, "public", "data", coll, item.id);
                         const snap = await transaction.get(ref);
+                        const dbData = snap.data();
 
-                        const currentStock = parseInt(snap.data().stock || 0);
+                        const currentStock = parseInt(dbData.stock !== undefined ? dbData.stock : 0);
                         if (currentStock < item.quantity) throw `Stock agotado para: ${item.name}`;
 
                         transaction.update(ref, { stock: currentStock - item.quantity });
@@ -1342,7 +1366,7 @@
                     }
 
                     // Registrar en la colección de órdenes correcta: artifacts/{appId}/public/data/orders
-                    await addDoc(collection(db, "artifacts", appId, "public", "data", "orders"), {
+                    await addDoc(collection(db, "artifacts", appId, "public/data", "orders"), {
                         cliente: name,
                         metodoEntrega: deliv === 'shipping' ? 'Envío' : 'Punto de Entrega',
                         direccion: address,
