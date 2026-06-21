@@ -422,7 +422,7 @@
             color: var(--verde-ok);
         }
 
-        /* Botón de añadir Gigante */
+        /* Botón de agregar Gigante */
         .add-btn {
             background-color: var(--verde-ok);
             border: none;
@@ -708,6 +708,36 @@
             font-size: 0.85rem;
         }
 
+        .error-container {
+            grid-column: 1 / -1;
+            background-color: #fef2f2;
+            border: 2px dashed #ef4444;
+            color: #b91c1c;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin: 16px auto;
+            max-width: 600px;
+            font-size: 0.9rem;
+        }
+
+        .error-container h3 {
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .error-container code {
+            display: block;
+            background-color: #fee2e2;
+            padding: 8px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            text-align: left;
+            overflow-x: auto;
+        }
+
         .toast-box {
             position: fixed;
             bottom: 85px;
@@ -755,7 +785,6 @@
             </div>
         </div>
         <div class="carousel-container" id="carouselContainer">
-            <!-- Cargado automáticamente de las 8 cartas más valiosas -->
             <div class="spinner-container">Cargando las joyas del mazo...</div>
         </div>
     </section>
@@ -878,22 +907,42 @@
         const optPickup = document.getElementById('optPickup');
         const optShipping = document.getElementById('optShipping');
 
+        // Función para renderizar el error de permisos en pantalla en vez de dejar "Cargando..."
+        function handleFirebaseError(error, context) {
+            console.error(`Error en ${context}:`, error);
+            if (error.code === 'permission-denied' || error.message.includes('permission-denied')) {
+                productsGrid.innerHTML = `
+                    <div class="error-container">
+                        <h3>🔒 Error de Permisos en Firebase</h3>
+                        <p>Tu base de datos Firestore está rechazando las lecturas públicas. Por favor ingresa a las <strong>Reglas (Rules)</strong> de Firestore en tu Firebase Console y configúralas para permitir lecturas públicas.</p>
+                        <code>// Copia esto en tus reglas de Firestore:\nmatch /cards/{doc} { allow read: if true; }\nmatch /sealedProducts/{doc} { allow read: if true; }\nmatch /categories/{doc} { allow read: if true; }</code>
+                    </div>
+                `;
+                carouselContainer.innerHTML = `<div style="text-align:center; padding:10px; color:#b91c1c; font-size:0.8rem; font-weight:700;">No se pudieron cargar las Joyas debido a reglas de Firebase.</div>`;
+            } else {
+                triggerToast(`Error de conexión con Firebase (${context})`);
+            }
+        }
+
         async function init() {
-            await signInAnonymously(auth);
+            try {
+                await signInAnonymously(auth);
+            } catch (err) {
+                console.error("Error al autenticar de forma anónima:", err);
+            }
             
-            // Sincronizar categorías
             onSnapshot(collection(db, "categories"), (snap) => {
                 categories = [];
                 snap.forEach(d => categories.push(d.data()));
                 renderCategoriesUI();
+            }, (error) => {
+                handleFirebaseError(error, "categories");
             });
 
-            // Sincronizar cartas
             onSnapshot(collection(db, "cards"), (snap1) => {
                 let cardsList = [];
                 snap1.forEach(d => cardsList.push({ id: d.id, type: 'single', ...d.data() }));
 
-                // Sincronizar producto sellado (Para 'producto suelto')
                 onSnapshot(collection(db, "sealedProducts"), (snap2) => {
                     let sealedList = [];
                     snap2.forEach(d => sealedList.push({ id: d.id, type: 'sealed', ...d.data() }));
@@ -902,7 +951,11 @@
                     
                     renderCarouselUI(); // Construir carrusel de las 8 más caras
                     renderProductsUI(); // Construir grilla principal
+                }, (error) => {
+                    handleFirebaseError(error, "sealedProducts");
                 });
+            }, (error) => {
+                handleFirebaseError(error, "cards");
             });
         }
 
@@ -941,7 +994,7 @@
                 carouselContainer.appendChild(card);
             });
 
-            // Inicializar la interactividad premium del carrusel después de cargarse las cartas
+            // Inicializar la interactividad del carrusel
             initCarouselDragAndAutoplay();
         }
 
@@ -982,11 +1035,11 @@
                 if (!isDragging) return;
                 e.preventDefault();
                 const x = e.pageX - carousel.offsetLeft;
-                const walk = (x - startX) * 2.5; // Factor de velocidad de arrastre
+                const walk = (x - startX) * 2.5; // Velocidad de arrastre
                 carousel.scrollLeft = scrollLeft - walk;
             });
 
-            // Detener autoplay al tocar en dispositivos móviles
+            // Detener autoplay al tocar en celulares
             carousel.addEventListener('touchstart', () => {
                 stopAutoplay();
             });
@@ -1007,18 +1060,17 @@
             autoplayTimer = setInterval(() => {
                 const maxScrollLeft = carousel.scrollWidth - carousel.clientWidth;
                 
-                // Si ya llegó al final (con un margen de error de 15px), regresa al inicio de manera fluida
+                // Si ya llegó al final, regresa al inicio de manera fluida
                 if (carousel.scrollLeft >= maxScrollLeft - 15) {
                     carousel.scrollTo({ left: 0, behavior: 'smooth' });
                 } else {
-                    // Busca el ancho de una carta individual en tiempo real
                     const card = carousel.querySelector('.carousel-card');
                     if (card) {
                         const cardWidth = card.offsetWidth + 12; // Ancho + espacio entre tarjetas
                         carousel.scrollBy({ left: cardWidth, behavior: 'smooth' });
                     }
                 }
-            }, 3000); // Se mueve cada 3 segundos
+            }, 3000); // Cada 3 segundos
         }
 
         function stopAutoplay() {
